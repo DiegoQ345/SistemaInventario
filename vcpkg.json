@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "sistema-inventario",
+  "version": "0.1.0",
+  "description": "Sistema de Inventario con Qt 6",
+  "dependencies": [
+    {
+      "name": "qxlsx",
+      "version>=": "1.4.3"
+    }
+  ]
+}
