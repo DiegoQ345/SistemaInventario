@@ -7,23 +7,31 @@ import SistemaInventario 1.0
 Page {
     id: root
     title: qsTr("Ventas")
+    
+    Component.onCompleted: {
+        // Inicializar totales
+        updateTotals()
+    }
 
-    // ViewModel del carrito de ventas
+    // ViewModel del carrito de ventas (base de datos real)
     SalesCartViewModel {
         id: viewModel
 
         onProductAdded: function(productName, quantity) {
             console.log("Producto agregado:", productName, "x", quantity)
+            notificationLabel.text = "✓ Agregado: " + productName + " (x" + quantity + ")"
+            notificationLabel.visible = true
+            notificationTimer.restart()
         }
 
         onProductNotFound: function(code) {
-            notificationLabel.text = "Producto no encontrado: " + code
+            notificationLabel.text = "✗ Producto no encontrado: " + code
             notificationLabel.visible = true
             notificationTimer.restart()
         }
 
         onInsufficientStock: function(productName, available, requested) {
-            notificationLabel.text = "Stock insuficiente de " + productName + 
+            notificationLabel.text = "✗ Stock insuficiente de " + productName + 
                                      ". Disponible: " + available + ", solicitado: " + requested
             notificationLabel.visible = true
             notificationTimer.restart()
@@ -33,11 +41,36 @@ Page {
             successDialog.invoiceNumber = invoiceNumber
             successDialog.total = total
             successDialog.open()
+            searchField.text = ""
+            quantitySpinBox.value = 1
         }
 
         onSaleFailed: function(errorMessage) {
             errorDialog.errorMessage = errorMessage
             errorDialog.open()
+        }
+    }
+
+    // Modelo de productos para búsqueda (base de datos real)
+    ProductListModel {
+        id: productsModel
+        
+        Component.onCompleted: {
+            // Cargar todos los productos al iniciar
+            loadProducts()
+        }
+    }
+    
+    // Conexiones para actualizar totales automáticamente cuando cambia el carrito
+    Connections {
+        target: viewModel.cart
+        
+        function onSubtotalChanged() {
+            updateTotals()
+        }
+        
+        function onTotalChanged() {
+            updateTotals()
         }
     }
 
@@ -191,10 +224,7 @@ Page {
                         clip: true
                         spacing: 4
 
-                        model: ListModel {
-                            id: productsModel
-                            // Se llenará con búsquedas
-                        }
+                        model: productsModel
 
                         delegate: ItemDelegate {
                             width: ListView.view.width
@@ -234,7 +264,7 @@ Page {
                                 }
 
                                 Label {
-                                    text: "$" + model.salePrice.toFixed(2)
+                                    text: "S/" + model.salePrice.toFixed(2)
                                     font.pixelSize: 16
                                     font.weight: Font.Bold
                                     color: Material.primary
@@ -279,7 +309,6 @@ Page {
                             opacity: 0.5
                             visible: productsListView.count === 0
                             color: Material.foreground
-                            visible: productsListView.count === 0
                         }
                     }
                 }
@@ -287,30 +316,37 @@ Page {
         }
 
         // ===== COLUMNA DERECHA: Carrito y Total =====
-        ColumnLayout {
+        ScrollView {
             Layout.fillHeight: true
             Layout.preferredWidth: parent.width * 0.4
             Layout.minimumWidth: 400
-            spacing: 16
+            clip: true
+            
+            ScrollBar.vertical.policy: ScrollBar.AsNeeded
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            
+            ColumnLayout {
+                width: parent.width
+                spacing: 16
 
-            // Header del carrito
-            RowLayout {
-                Layout.fillWidth: true
-
-                Label {
-                    text: "\uE7BF  " + qsTr("Carrito de Compras")
-                    font.family: "Segoe MDL2 Assets"
-                    font.pixelSize: 20
-                    font.weight: Font.Bold
+                // Header del carrito
+                RowLayout {
                     Layout.fillWidth: true
-                }
 
-                Label {
-                    text: cartModel.count + " items"
-                    font.pixelSize: 12
-                    opacity: 0.7
+                    Label {
+                        text: "\uE7BF  " + qsTr("Carrito de Compras")
+                        font.family: "Segoe MDL2 Assets"
+                        font.pixelSize: 20
+                        font.weight: Font.Bold
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: viewModel.cart.rowCount() + " items"
+                        font.pixelSize: 12
+                        opacity: 0.7
+                    }
                 }
-            }
 
             // Items del carrito
             Rectangle {
@@ -328,90 +364,205 @@ Page {
                     clip: true
                     spacing: 8
 
-                    model: ListModel {
-                        id: cartModel
-                        // Se llenará dinámicamente
-                    }
+                    model: viewModel.cart
 
-                    delegate: Rectangle {
+                    delegate: Item {
                         width: ListView.view.width
-                        height: 90
-                        color: Material.background
-                        border.color: Material.frameColor
-                        border.width: 1
-                        radius: 6
-
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.margins: 12
-                            spacing: 12
-
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                Layout.alignment: Qt.AlignVCenter
-                                spacing: 4
-
-                                Label {
-                                    text: model.productName
-                                    font.pixelSize: 13
-                                    font.weight: Font.Medium
-                                    elide: Text.ElideRight
-                                    Layout.fillWidth: true
-                                    color: Material.foreground
-                                }
-
-                                Label {
-                                    text: "$" + model.unitPrice.toFixed(2) + " × " + model.quantity
-                                    font.pixelSize: 11
-                                    opacity: 0.7
-                                    color: Material.foreground
-                                }
-
-                                Label {
-                                    text: "Subtotal: $" + model.subtotal.toFixed(2)
-                                    font.pixelSize: 12
-                                    font.weight: Font.Bold
-                                    color: Material.primary
+                        height: cardRect.height + 6
+                        
+                        // Sombra simulada con rectángulo de fondo
+                        Rectangle {
+                            anchors.fill: cardRect
+                            anchors.topMargin: 3
+                            anchors.leftMargin: 2
+                            anchors.rightMargin: 2
+                            radius: 8
+                            color: "#20000000"
+                            visible: true
+                        }
+                        
+                        Rectangle {
+                            id: cardRect
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            height: itemContent.implicitHeight + 24
+                            color: Material.theme === Material.Dark ? 
+                                   Qt.lighter(Material.background, 1.2) : 
+                                   "white"
+                            border.color: Material.primary
+                            border.width: 1
+                            radius: 8
+                            visible: true
+                            
+                            // Efecto hover
+                            scale: itemMouseArea.containsMouse ? 1.015 : 1.0
+                            
+                            Behavior on scale {
+                                NumberAnimation {
+                                    duration: 150
+                                    easing.type: Easing.OutQuad
                                 }
                             }
+                            
+                            MouseArea {
+                                id: itemMouseArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                propagateComposedEvents: true
+                            }
+                            
+                            // Indicador lateral colorido
+                            Rectangle {
+                                width: 4
+                                height: parent.height - 16
+                                anchors.left: parent.left
+                                anchors.leftMargin: 6
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: Material.primary
+                                radius: 2
+                            }
 
-                            ColumnLayout {
-                                Layout.alignment: Qt.AlignVCenter
-                                spacing: 6
+                            RowLayout {
+                                id: itemContent
+                                anchors.fill: parent
+                                anchors.leftMargin: 18
+                                anchors.rightMargin: 12
+                                anchors.topMargin: 12
+                                anchors.bottomMargin: 12
+                                spacing: 12
 
-                                SpinBox {
-                                    id: itemQuantitySpinBox
-                                    from: 1
-                                    to: model.maxQuantity
-                                    value: model.quantity
-                                    editable: true
-                                    Layout.preferredWidth: 110
-                                    Layout.alignment: Qt.AlignHCenter
-
-                                    onValueModified: {
-                                        updateCartItemQuantity(index, value)
+                                // Icono del producto
+                                Rectangle {
+                                    Layout.preferredWidth: 50
+                                    Layout.preferredHeight: 50
+                                    Layout.alignment: Qt.AlignVCenter
+                                    radius: 8
+                                    color: Material.theme === Material.Dark ?
+                                           Qt.darker(Material.primary, 1.5) :
+                                           Material.color(Material.primary, Material.Shade100)
+                                    
+                                    Label {
+                                        anchors.centerIn: parent
+                                        text: "\uE7BF"  // Shopping bag icon
+                                        font.family: "Segoe MDL2 Assets"
+                                        font.pixelSize: 26
+                                        color: Material.primary
                                     }
                                 }
 
-                                RoundButton {
-                                    text: "\uE74D"  // Delete icon
-                                    font.family: "Segoe MDL2 Assets"
-                                    font.pixelSize: 16
-                                    flat: true
-                                    Layout.alignment: Qt.AlignHCenter
-                                    implicitWidth: 36
-                                    implicitHeight: 36
-                                    
-                                    Material.foreground: Material.color(Material.Red)
-                                    
-                                    background: Rectangle {
-                                        radius: 18
-                                        color: parent.hovered ? Material.color(Material.Red, Material.Shade100) : "transparent"
-                                        
-                                        Behavior on color { ColorAnimation { duration: 150 } }
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    Layout.alignment: Qt.AlignVCenter
+                                    spacing: 6
+
+                                    Label {
+                                        text: model.productName
+                                        font.pixelSize: 14
+                                        font.weight: Font.DemiBold
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                        Layout.maximumWidth: 180
+                                        color: Material.foreground
                                     }
-                                    
-                                    onClicked: removeCartItem(index)
+
+                                    RowLayout {
+                                        spacing: 8
+                                        Layout.fillWidth: true
+                                        
+                                        Label {
+                                            text: "S/" + model.unitPrice.toFixed(2)
+                                            font.pixelSize: 11
+                                            opacity: 0.6
+                                            color: Material.foreground
+                                        }
+                                        
+                                        Label {
+                                            text: "×"
+                                            font.pixelSize: 11
+                                            opacity: 0.6
+                                            color: Material.foreground
+                                        }
+                                        
+                                        Rectangle {
+                                            width: quantityLabel.width + 10
+                                            height: quantityLabel.height + 6
+                                            radius: 4
+                                            color: Material.theme === Material.Dark ?
+                                                   Qt.darker(Material.accent, 1.5) :
+                                                   Material.color(Material.Grey, Material.Shade200)
+                                            
+                                            Label {
+                                                id: quantityLabel
+                                                anchors.centerIn: parent
+                                                text: model.quantity
+                                                font.pixelSize: 11
+                                                font.weight: Font.Bold
+                                                color: Material.foreground
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        Layout.preferredHeight: 26
+                                        Layout.preferredWidth: subtotalLabel.width + 18
+                                        radius: 5
+                                        color: Material.theme === Material.Dark ?
+                                               Qt.darker(Material.primary, 1.8) :
+                                               Material.color(Material.primary, Material.Shade50)
+                                        
+                                        Label {
+                                            id: subtotalLabel
+                                            anchors.centerIn: parent
+                                            text: "S/" + model.subtotal.toFixed(2)
+                                            font.pixelSize: 13
+                                            font.weight: Font.Bold
+                                            color: Material.primary
+                                        }
+                                    }
+                                }
+
+                                ColumnLayout {
+                                    Layout.alignment: Qt.AlignVCenter
+                                    spacing: 10
+
+                                    SpinBox {
+                                        id: itemQuantitySpinBox
+                                        from: 1
+                                        to: model.maxQuantity
+                                        value: model.quantity
+                                        editable: true
+                                        Layout.preferredWidth: 110
+                                        Layout.preferredHeight: 40
+
+                                        onValueModified: {
+                                            updateCartItemQuantity(index, value)
+                                        }
+                                    }
+
+                                    Button {
+                                        text: "\uE74D"  // Delete icon
+                                        font.family: "Segoe MDL2 Assets"
+                                        font.pixelSize: 18
+                                        flat: true
+                                        Layout.preferredWidth: 44
+                                        Layout.preferredHeight: 44
+                                        
+                                        Material.foreground: Material.color(Material.Red)
+                                        
+                                        background: Rectangle {
+                                            radius: 6
+                                            color: parent.down ? Material.color(Material.Red, Material.Shade200) :
+                                                   parent.hovered ? Material.color(Material.Red, Material.Shade100) : "transparent"
+                                            border.width: parent.hovered ? 1 : 0
+                                            border.color: Material.color(Material.Red)
+                                            
+                                            Behavior on color { ColorAnimation { duration: 150 } }
+                                        }
+                                        
+                                        onClicked: removeCartItem(index)
+                                    }
                                 }
                             }
                         }
@@ -484,7 +635,7 @@ Page {
 
                         Label {
                             id: subtotalLabel
-                            text: "$0.00"
+                            text: "S/0.00"
                             font.pixelSize: 14
                             font.weight: Font.Medium
                             color: Material.foreground
@@ -513,11 +664,11 @@ Page {
                             property real realValue: value / 100
 
                             textFromValue: function(value) {
-                                return "$" + (value / 100).toFixed(2)
+                                return "S/" + (value / 100).toFixed(2)
                             }
 
                             valueFromText: function(text) {
-                                return parseFloat(text.replace("$", "")) * 100
+                                return parseFloat(text.replace("S/", "")) * 100
                             }
 
                             onValueModified: updateTotals()
@@ -543,7 +694,7 @@ Page {
 
                         Label {
                             id: totalLabel
-                            text: "$0.00"
+                            text: "S/0.00"
                             font.pixelSize: 24
                             font.weight: Font.Bold
                             color: Material.primary
@@ -679,7 +830,7 @@ Page {
                 Button {
                     text: qsTr("Procesar Venta")
                     Layout.fillWidth: true
-                    enabled: cartModel.count > 0 && (!facturaRadio.checked || (rucField.acceptableInput && businessNameField.text !== ""))
+                    enabled: viewModel.cart.rowCount() > 0 && (!facturaRadio.checked || (rucField.acceptableInput && businessNameField.text !== ""))
                     Material.background: Material.primary
                     Material.foreground: "white"
                     
@@ -702,129 +853,127 @@ Page {
                     onClicked: printVoucher()
                 }
             }
-        }
+        }  // Fin ColumnLayout dentro de ScrollView
+        }  // Fin ScrollView columna derecha
     }
 
     // ===== FUNCIONES JAVASCRIPT =====
 
     function searchProducts(searchText) {
-        // TODO: Implementar búsqueda real cuando se conecte el ViewModel
+        // Buscar productos en la base de datos real
         console.log("Buscando productos:", searchText)
-        
-        // Simulación de datos
-        productsModel.clear()
-        productsModel.append({
-            productId: 1,
-            name: "Producto Demo 1",
-            sku: "PROD001",
-            currentStock: 50,
-            salePrice: 99.99
-        })
-        productsModel.append({
-            productId: 2,
-            name: "Producto Demo 2",
-            sku: "PROD002",
-            currentStock: 30,
-            salePrice: 149.99
-        })
+        productsModel.searchProducts(searchText)
     }
 
     function addProductToCart(code) {
-        // TODO: Conectar con viewModel.searchAndAddProduct(code, quantitySpinBox.value)
+        // Usar el ViewModel real para agregar productos
         console.log("Agregando producto por código:", code, "cantidad:", quantitySpinBox.value)
         
-        // Simulación: agregar al carrito
-        cartModel.append({
-            productId: cartModel.count + 1,
-            productName: "Producto " + code,
-            quantity: quantitySpinBox.value,
-            unitPrice: 99.99,
-            subtotal: 99.99 * quantitySpinBox.value,
-            maxQuantity: 100
-        })
+        let success = viewModel.searchAndAddProduct(code, quantitySpinBox.value)
         
-        quantitySpinBox.value = 1
-        updateTotals()
+        if (success) {
+            searchField.text = ""
+            quantitySpinBox.value = 1
+        }
     }
 
     function addProductByIdToCart(productId, quantity) {
-        // TODO: Conectar con viewModel.addProductById(productId, quantity)
-        console.log("Agregando producto ID:", productId, "cantidad:", quantity)
+        // Usar el ViewModel real para agregar por ID
+        console.log("Agregando producto por ID:", productId, "cantidad:", quantity)
         
-        // Buscar en productsModel
-        for (let i = 0; i < productsModel.count; i++) {
-            let product = productsModel.get(i)
-            if (product.productId === productId) {
-                cartModel.append({
-                    productId: product.productId,
-                    productName: product.name,
-                    quantity: quantity,
-                    unitPrice: product.salePrice,
-                    subtotal: product.salePrice * quantity,
-                    maxQuantity: product.currentStock
-                })
-                updateTotals()
-                break
-            }
+        let success = viewModel.addProductById(productId, quantity)
+        
+        if (success) {
+            quantitySpinBox.value = 1
         }
     }
 
     function removeCartItem(index) {
-        // TODO: Conectar con viewModel.cart.removeItem(index)
-        cartModel.remove(index)
-        updateTotals()
+        // Usar el cart del viewModel real
+        viewModel.cart.removeItem(index)
     }
 
     function updateCartItemQuantity(index, newQuantity) {
-        // TODO: Conectar con viewModel.cart.updateQuantity(index, newQuantity)
-        let item = cartModel.get(index)
-        item.quantity = newQuantity
-        item.subtotal = item.unitPrice * newQuantity
-        updateTotals()
+        // Usar el cart del viewModel real
+        viewModel.cart.updateQuantity(index, newQuantity)
     }
 
     function updateTotals() {
-        let subtotal = 0
-        for (let i = 0; i < cartModel.count; i++) {
-            subtotal += cartModel.get(i).subtotal
-        }
+        // Los totales se calculan automáticamente en el cart del viewModel
+        let subtotal = viewModel.cart.subtotal
         
-        subtotalLabel.text = "$" + subtotal.toFixed(2)
+        subtotalLabel.text = "S/" + subtotal.toFixed(2)
         
         let discount = discountSpinBox.realValue
         let total = subtotal - discount
         
-        totalLabel.text = "$" + total.toFixed(2)
+        totalLabel.text = "S/" + total.toFixed(2)
     }
 
     function cancelSale() {
-        // TODO: Conectar con viewModel.cancelSale()
-        cartModel.clear()
+        // Usar el viewModel real
+        viewModel.cancelSale()
         discountSpinBox.value = 0
         searchField.text = ""
         quantitySpinBox.value = 1
-        updateTotals()
     }
 
     function processSale() {
-        // TODO: Conectar con viewModel.processSale()
+        // Usar el viewModel real para procesar la venta
         console.log("Procesando venta...")
         
-        // Simulación
-        let total = parseFloat(totalLabel.text.replace("$", ""))
+        // Datos del cliente (por ahora sin cliente específico)
+        let customerId = 0  // 0 = cliente genérico
+        let customerName = "Cliente General"
+        
+        // Método de pago desde el ComboBox
+        let paymentMethodId = paymentMethodComboBox.currentIndex + 1  // 1=Efectivo, 2=Tarjeta, 3=Transferencia
+        let paymentMethodName = paymentMethodComboBox.currentText
+        
+        // Descuento
+        let discount = discountSpinBox.realValue
+        
+        // Notas adicionales
         let voucherType = facturaRadio.checked ? "FACTURA" : "BOLETA"
+        let notes = voucherType
+        if (facturaRadio.checked) {
+            notes += " - RUC: " + rucField.text + " - " + businessNameField.text
+        }
         
-        // Guardar datos para impresión
-        successDialog.voucherType = voucherType
-        successDialog.ruc = facturaRadio.checked ? rucField.text : ""
-        successDialog.businessName = facturaRadio.checked ? businessNameField.text : ""
-        successDialog.address = facturaRadio.checked ? addressField.text : ""
+        console.log("Parámetros de venta:", {
+            customerId: customerId,
+            customerName: customerName,
+            paymentMethodId: paymentMethodId,
+            paymentMethodName: paymentMethodName,
+            discount: discount,
+            notes: notes
+        })
         
-        // Mostrar mensaje de éxito
-        successDialog.open()
+        // Procesar venta en el backend
+        let success = viewModel.processSale(
+            customerId, 
+            customerName, 
+            paymentMethodId, 
+            paymentMethodName, 
+            discount, 
+            notes
+        )
         
-        // Limpiar carrito
-        cancelSale()
+        console.log("Resultado de processSale:", success)
+        
+        if (success) {
+            // Guardar datos para impresión
+            successDialog.voucherType = voucherType
+            successDialog.ruc = facturaRadio.checked ? rucField.text : ""
+            successDialog.businessName = facturaRadio.checked ? businessNameField.text : ""
+            successDialog.address = facturaRadio.checked ? addressField.text : ""
+            successDialog.total = viewModel.cart.total
+            
+            // Mostrar mensaje de éxito
+            successDialog.open()
+        } else {
+            console.error("Error: processSale retornó false")
+        }
     }
 
     function printVoucher() {
@@ -893,11 +1042,11 @@ Page {
                     }
 
                     Label {
-                        text: qsTr("Total: $") + successDialog.total.toFixed(2)
+                        text: qsTr("Total: S/") + successDialog.total.toFixed(2)
                         font.pixelSize: 18
                         font.weight: Font.Bold
                         Layout.alignment: Qt.AlignHCenter
-                        color: Material.accent
+                        color: Material.primary
                     }
                 }
             }
@@ -961,6 +1110,39 @@ Page {
                     
                     onClicked: successDialog.close()
                 }
+            }
+        }
+    }
+
+    // Diálogo de error
+    Dialog {
+        id: errorDialog
+        title: qsTr("Error en la Venta")
+        modal: true
+        anchors.centerIn: parent
+        width: 400
+
+        property string errorMessage: ""
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 16
+
+            Label {
+                text: errorDialog.errorMessage
+                font.pixelSize: 14
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+                color: Material.color(Material.Red)
+            }
+
+            Button {
+                text: qsTr("Cerrar")
+                Layout.fillWidth: true
+                Material.background: Material.primary
+                Material.foreground: "white"
+                
+                onClicked: errorDialog.close()
             }
         }
     }
@@ -1113,7 +1295,7 @@ Page {
                         }
 
                         Repeater {
-                            model: cartModel
+                            model: viewModel.cart
                             delegate: GridLayout {
                                 Layout.fillWidth: true
                                 columns: 3
@@ -1130,7 +1312,7 @@ Page {
                                     color: "#000"
                                 }
                                 Label {
-                                    text: "$" + model.subtotal.toFixed(2)
+                                    text: "S/" + model.subtotal.toFixed(2)
                                     font.pixelSize: 9
                                     horizontalAlignment: Text.AlignRight
                                     Layout.fillWidth: true
@@ -1173,7 +1355,7 @@ Page {
                                 color: "#000"
                             }
                             Label {
-                                text: "-$" + discountSpinBox.realValue.toFixed(2)
+                                text: "-S/" + discountSpinBox.realValue.toFixed(2)
                                 font.pixelSize: 10
                                 color: "#000"
                             }
@@ -1253,23 +1435,6 @@ Page {
         }
     }
 
-    // Diálogo de error
-    Dialog {
-        id: errorDialog
-        title: qsTr("❌ Error")
-        standardButtons: Dialog.Ok
-        modal: true
-        anchors.centerIn: parent
-
-        property string errorMessage: ""
-
-        Label {
-            text: errorDialog.errorMessage
-            font.pixelSize: 14
-            wrapMode: Text.WordWrap
-        }
-    }
-
     // Barra de notificaciones
     Rectangle {
         id: notificationBar
@@ -1279,7 +1444,7 @@ Page {
         anchors.margins: 20
         height: 50
         radius: 8
-        color: Material.accent
+        color: Material.primary
         visible: notificationLabel.visible
         z: 999
 

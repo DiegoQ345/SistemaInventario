@@ -129,11 +129,12 @@ ApplicationWindow {
                 delegate: ItemDelegate {
                     width: navigationList.width
                     height: 56
-                    highlighted: ListView.isCurrentItem
                     
                     background: Rectangle {
-                        color: highlighted ? currentColors.container : "transparent"
-                        radius: highlighted ? 28 : 0
+                        color: ListView.isCurrentItem ? 
+                               Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.12) : 
+                               "transparent"
+                        radius: ListView.isCurrentItem ? 28 : 0
                         anchors.leftMargin: 12
                         anchors.rightMargin: 12
                         
@@ -152,7 +153,7 @@ ApplicationWindow {
                             text: getIconChar(model.iconName)
                             font.family: "Segoe MDL2 Assets" // Windows 10+ icons
                             font.pixelSize: 20
-                            color: highlighted ? Material.primary : Material.foreground
+                            color: ListView.isCurrentItem ? Material.primary : Material.foreground
                             Layout.preferredWidth: 24
                             horizontalAlignment: Text.AlignHCenter
                             
@@ -177,9 +178,9 @@ ApplicationWindow {
                         Label {
                             text: model.title
                             font.pixelSize: 14
-                            font.weight: highlighted ? Font.Medium : Font.Normal
+                            font.weight: ListView.isCurrentItem ? Font.Medium : Font.Normal
                             Layout.fillWidth: true
-                            color: highlighted ? Material.primary : Material.foreground
+                            color: ListView.isCurrentItem ? Material.primary : Material.foreground
                         }
                     }
 
@@ -344,15 +345,15 @@ ApplicationWindow {
                     width: 320
                     
                     MenuItem {
-                        text: "🔔 Producto bajo stock: Laptop HP"
+                        text: "Producto bajo stock: Laptop HP"
                         font.pixelSize: 12
                     }
                     MenuItem {
-                        text: "💰 Nueva venta registrada: $150.00"
+                        text: "Nueva venta registrada: S/150.00"
                         font.pixelSize: 12
                     }
                     MenuItem {
-                        text: "📦 Inventario actualizado"
+                        text: "Inventario actualizado"
                         font.pixelSize: 12
                     }
                     MenuSeparator {}
@@ -499,7 +500,7 @@ ApplicationWindow {
                 
                 Button {
                     text: qsTr("Volver al Dashboard")
-                    Material.background: Material.accentColor
+                    Material.background: Material.primary
                     Layout.alignment: Qt.AlignHCenter
                     onClicked: stackView.replace("qml/pages/DashboardPage.qml")
                 }

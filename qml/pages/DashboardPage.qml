@@ -46,7 +46,7 @@ Page {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 120
                     title: qsTr("Ventas del Día")
-                    value: "$" + viewModel.todaySales.toFixed(2)
+                    value: "S/" + viewModel.todaySales.toFixed(2)
                     subtitle: viewModel.todayTransactions + " transacciones"
                     icon: "󰄫"
                     accentColor: Material.color(Material.Green)
@@ -57,8 +57,8 @@ Page {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 120
                     title: qsTr("Ventas del Mes")
-                    value: "$" + viewModel.monthSales.toFixed(2)
-                    subtitle: "Ticket promedio: $" + viewModel.averageTicket.toFixed(2)
+                    value: "S/" + viewModel.monthSales.toFixed(2)
+                    subtitle: "Ticket promedio: S/" + viewModel.averageTicket.toFixed(2)
                     icon: "󰄬"
                     accentColor: Material.color(Material.Blue)
                 }
@@ -169,7 +169,7 @@ Page {
         property string value: ""
         property string subtitle: ""
         property string icon: ""
-        property color accentColor: Material.accentColor
+        property color accentColor: Material.primary
         property bool warning: false
 
         radius: 16
@@ -245,7 +245,7 @@ Page {
         icon.name: "refresh"
         text: "↻"
         font.pixelSize: 24
-        Material.background: Material.accentColor
+        Material.background: Material.primary
         Material.foreground: "white"
         
         onClicked: viewModel.refresh()

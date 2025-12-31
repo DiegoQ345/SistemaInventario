@@ -101,6 +101,11 @@ private:
      */
     int getCurrentSchemaVersion();
     bool setSchemaVersion(int version);
+    
+    /**
+     * @brief Insertar datos de ejemplo en la base de datos
+     */
+    bool insertSampleData();
 
     QSqlDatabase m_database;
     QString m_lastError;

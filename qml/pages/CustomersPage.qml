@@ -13,7 +13,7 @@ Page {
         spacing: 20
 
         Label {
-            text: qsTr("👥 Gestión de Clientes")
+            text: qsTr("Gestión de Clientes")
             font.pixelSize: 32
             font.weight: Font.Bold
         }
@@ -37,7 +37,7 @@ Page {
                 spacing: 16
 
                 Label {
-                    text: "🚧"
+                    text: "⚠"
                     font.pixelSize: 64
                     Layout.alignment: Qt.AlignHCenter
                 }

@@ -198,7 +198,7 @@ Page {
                     }
 
                     Label {
-                        text: "$" + model.salePrice.toFixed(2)
+                        text: "S/" + model.salePrice.toFixed(2)
                         Layout.preferredWidth: 100
                         font.bold: true
                     }
