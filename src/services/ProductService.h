@@ -129,6 +129,11 @@ private:
      * @brief Obtener ID de tipo de movimiento por código
      */
     int getMovementTypeId(const QString& code);
+
+    /**
+     * @brief Obtener o crear categoría por nombre
+     */
+    int getOrCreateCategoryId(const QString& categoryName);
 };
 
 #endif // PRODUCTSERVICE_H

@@ -16,6 +16,11 @@ bool ProductService::createProduct(Product& product, QString& errorMessage)
         return false;
     }
 
+    // Obtener o crear categoryId a partir del nombre
+    if (!product.categoryName.isEmpty()) {
+        product.categoryId = getOrCreateCategoryId(product.categoryName);
+    }
+
     // Crear producto
     int productId = m_productRepo.create(product);
     if (productId == 0) {
@@ -48,8 +53,19 @@ bool ProductService::updateProduct(const Product& product, QString& errorMessage
         return false;
     }
 
+    // Crear copia mutable del producto para actualizar categoryId
+    Product updatedProduct = product;
+    
+    // Obtener o crear categoryId a partir del nombre si cambió
+    if (!updatedProduct.categoryName.isEmpty() && 
+        updatedProduct.categoryName != currentProduct->categoryName) {
+        updatedProduct.categoryId = getOrCreateCategoryId(updatedProduct.categoryName);
+    } else if (updatedProduct.categoryName.isEmpty()) {
+        updatedProduct.categoryId = 0;
+    }
+
     // Actualizar producto
-    if (!m_productRepo.update(product)) {
+    if (!m_productRepo.update(updatedProduct)) {
         errorMessage = "Error al actualizar el producto";
         return false;
     }
@@ -367,5 +383,33 @@ int ProductService::getMovementTypeId(const QString& code)
         return query.value(0).toInt();
     }
 
+    return 0;
+}
+
+int ProductService::getOrCreateCategoryId(const QString& categoryName)
+{
+    if (categoryName.isEmpty()) {
+        return 0;
+    }
+
+    QSqlQuery query(DatabaseManager::instance().database());
+    
+    // Buscar categoría existente
+    query.prepare("SELECT id FROM categories WHERE name = :name COLLATE NOCASE");
+    query.bindValue(":name", categoryName.trimmed());
+    
+    if (query.exec() && query.next()) {
+        return query.value(0).toInt();
+    }
+    
+    // Si no existe, crear nueva categoría
+    query.prepare("INSERT INTO categories (name) VALUES (:name)");
+    query.bindValue(":name", categoryName.trimmed());
+    
+    if (query.exec()) {
+        return query.lastInsertId().toInt();
+    }
+    
+    qWarning() << "Error al crear categoría:" << query.lastError().text();
     return 0;
 }

@@ -113,6 +113,35 @@ void ProductListModel::filterByCategory(int categoryId)
     setIsLoading(false);
 }
 
+void ProductListModel::filterByCategoryName(const QString& categoryName)
+{
+    setIsLoading(true);
+
+    if (categoryName.isEmpty() || categoryName == "Todas") {
+        // Si no hay categoría o es "Todas", cargar todos los productos
+        loadProducts();
+        return;
+    }
+
+    ProductService service;
+    auto allProducts = service.getAllProducts(true);
+    
+    // Filtrar por nombre de categoría
+    QList<Product> filteredProducts;
+    for (const auto& product : allProducts) {
+        if (product.categoryName.compare(categoryName, Qt::CaseInsensitive) == 0) {
+            filteredProducts.append(product);
+        }
+    }
+
+    beginResetModel();
+    m_products = filteredProducts;
+    endResetModel();
+
+    emit countChanged();
+    setIsLoading(false);
+}
+
 void ProductListModel::filterLowStock()
 {
     setIsLoading(true);
@@ -152,6 +181,7 @@ bool ProductListModel::addProduct(const QVariantMap& productData)
     product.name = productData.value("name").toString().trimmed();
     product.sku = productData.value("sku").toString().trimmed();
     product.barcode = productData.value("barcode").toString().trimmed();
+    product.categoryName = productData.value("category").toString().trimmed();
     product.categoryId = productData.value("categoryId", 0).toInt();
     product.currentStock = productData.value("currentStock", 0.0).toDouble();
     product.minimumStock = productData.value("minimumStock", 0.0).toDouble();
@@ -202,7 +232,13 @@ bool ProductListModel::updateProduct(int productId, const QVariantMap& productDa
     currentProduct->name = productData.value("name", currentProduct->name).toString().trimmed();
     currentProduct->sku = productData.value("sku", currentProduct->sku).toString().trimmed();
     currentProduct->barcode = productData.value("barcode", currentProduct->barcode).toString().trimmed();
-    currentProduct->categoryId = productData.value("categoryId", currentProduct->categoryId).toInt();
+    
+    // Actualizar categoría - usar nombre de categoría si está disponible
+    if (productData.contains("category")) {
+        currentProduct->categoryName = productData.value("category").toString().trimmed();
+        // categoryId se mantiene igual (la BD no usa IDs reales de categoría por ahora)
+    }
+    
     currentProduct->currentStock = productData.value("currentStock", currentProduct->currentStock).toDouble();
     currentProduct->minimumStock = productData.value("minimumStock", currentProduct->minimumStock).toDouble();
     currentProduct->purchasePrice = productData.value("purchasePrice", currentProduct->purchasePrice).toDouble();

@@ -62,6 +62,11 @@ public slots:
     void filterByCategory(int categoryId);
 
     /**
+     * @brief Filtrar por nombre de categoría
+     */
+    Q_INVOKABLE void filterByCategoryName(const QString& categoryName);
+
+    /**
      * @brief Filtrar productos con stock bajo
      */
     void filterLowStock();

@@ -89,6 +89,38 @@ Page {
                     }
                 }
 
+                ComboBox {
+                    id: categoryFilterCombo
+                    Layout.preferredWidth: 200
+                    Layout.preferredHeight: 48
+                    model: [
+                        "Todas",
+                        "Alimentos y Bebidas",
+                        "Lácteos",
+                        "Carnes y Embutidos",
+                        "Frutas y Verduras",
+                        "Panadería y Pastelería",
+                        "Snacks y Golosinas",
+                        "Bebidas",
+                        "Productos de Limpieza",
+                        "Cuidado Personal",
+                        "Hogar y Decoración",
+                        "Electrónica",
+                        "Papelería y Oficina",
+                        "Juguetes y Entretenimiento",
+                        "Mascotas",
+                        "Ferretería",
+                        "Otros"
+                    ]
+                    
+                    displayText: "\uE71C  " + currentText
+                    font.family: "Segoe MDL2 Assets"
+                    
+                    onCurrentTextChanged: {
+                        productModel.filterByCategoryName(currentText)
+                    }
+                }
+
                 Button {
                     text: "\uE9D2  " + qsTr("Stock Bajo")
                     font.family: "Segoe MDL2 Assets"
@@ -119,9 +151,12 @@ Page {
                     font.family: "Segoe MDL2 Assets"
                     font.weight: Font.Medium
                     Material.background: Material.primary
-                    Material.foreground: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
+                    Material.foreground: "white"
                     
-                    onClicked: productModel.loadProducts()
+                    onClicked: {
+                        categoryFilterCombo.currentIndex = 0
+                        productModel.loadProducts()
+                    }
                 }
 
                 Button {
@@ -129,7 +164,7 @@ Page {
                     font.family: "Segoe MDL2 Assets"
                     font.weight: Font.Medium
                     Material.background: Material.primary
-                    Material.foreground: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
+                    Material.foreground: "white"
                     onClicked: newProductDialog.openNew()
                 }
             }
@@ -317,7 +352,8 @@ Page {
             nameField.text = ""
             skuField.text = ""
             barcodeField.text = ""
-            categoryField.text = ""
+            categoryField.currentIndex = -1
+            categoryField.editText = ""
             stockField.text = "0"
             minStockField.text = "0"
             purchasePriceField.text = "0.00"
@@ -338,7 +374,17 @@ Page {
                 nameField.text = product.name || ""
                 skuField.text = product.sku || ""
                 barcodeField.text = product.barcode || ""
-                categoryField.text = product.category || ""
+                
+                // Configurar categoría en el ComboBox
+                var category = product.category || ""
+                var index = categoryField.find(category)
+                if (index !== -1) {
+                    categoryField.currentIndex = index
+                } else {
+                    categoryField.currentIndex = -1
+                    categoryField.editText = category
+                }
+                
                 stockField.text = product.currentStock ? product.currentStock.toString() : "0"
                 minStockField.text = product.minimumStock ? product.minimumStock.toString() : "0"
                 purchasePriceField.text = product.purchasePrice ? product.purchasePrice.toFixed(2) : "0.00"
@@ -394,10 +440,36 @@ Page {
                 }
 
                 Label { text: qsTr("Categoría:"); font.weight: Font.Medium }
-                TextField {
+                ComboBox {
                     id: categoryField
                     Layout.fillWidth: true
-                    placeholderText: qsTr("Categoría del producto")
+                    editable: true
+                    model: [
+                        "Alimentos y Bebidas",
+                        "Lácteos",
+                        "Carnes y Embutidos",
+                        "Frutas y Verduras",
+                        "Panadería y Pastelería",
+                        "Snacks y Golosinas",
+                        "Bebidas",
+                        "Productos de Limpieza",
+                        "Cuidado Personal",
+                        "Hogar y Decoración",
+                        "Electrónica",
+                        "Papelería y Oficina",
+                        "Juguetes y Entretenimiento",
+                        "Mascotas",
+                        "Ferretería",
+                        "Otros"
+                    ]
+                    
+                    property string text: editable ? editText : currentText
+                    
+                    onAccepted: {
+                        if (find(editText) === -1) {
+                            currentIndex = -1
+                        }
+                    }
                 }
 
                 Label { text: qsTr("Stock Actual:") + "*"; font.weight: Font.Medium }
@@ -436,13 +508,28 @@ Page {
             Label { text: qsTr("Descripción:"); font.weight: Font.Medium }
             ScrollView {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 100
+                Layout.preferredHeight: 120
+                Layout.minimumHeight: 80
                 clip: true
+                
+                ScrollBar.vertical.policy: ScrollBar.AlwaysOn
                 
                 TextArea {
                     id: descriptionField
                     placeholderText: qsTr("Descripción del producto (opcional)")
                     wrapMode: TextArea.Wrap
+                    selectByMouse: true
+                    
+                    background: Rectangle {
+                        color: Material.theme === Material.Dark ? 
+                            Qt.lighter(Material.background, 1.2) : 
+                            "white"
+                        border.color: descriptionField.activeFocus ? 
+                            Material.primary : 
+                            Material.color(Material.Grey, Material.Shade400)
+                        border.width: descriptionField.activeFocus ? 2 : 1
+                        radius: 4
+                    }
                 }
             }
         }
@@ -457,7 +544,7 @@ Page {
                 name: nameField.text,
                 sku: skuField.text,
                 barcode: barcodeField.text,
-                // categoryId se mantiene del producto original, category es solo para mostrar
+                category: categoryField.text,
                 currentStock: parseFloat(stockField.text || "0"),
                 minimumStock: parseFloat(minStockField.text || "0"),
                 purchasePrice: parseFloat(purchasePriceField.text || "0"),
