@@ -52,7 +52,7 @@ Item {
         anchors.leftMargin: 2
         anchors.rightMargin: 2
         radius: 8
-        color: "#20000000"
+        color: Material.theme === Material.Dark ? "#20000000" : "#15000000"
         visible: true
     }
     
@@ -65,7 +65,9 @@ Item {
         color: Material.theme === Material.Dark ? 
                Qt.lighter(Material.background, 1.2) : 
                "white"
-        border.color: Material.primary
+        border.color: Material.theme === Material.Dark ?
+                      Material.primary :
+                      Material.color(Material.Grey, Material.Shade300)
         border.width: 1
         radius: 8
         
@@ -95,6 +97,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             color: Material.primary
             radius: 2
+            opacity: Material.theme === Material.Dark ? 1.0 : 0.8
         }
 
         RowLayout {
@@ -112,16 +115,14 @@ Item {
                 Layout.preferredHeight: 50
                 Layout.alignment: Qt.AlignVCenter
                 radius: 8
-                color: Material.theme === Material.Dark ?
-                       Qt.darker(Material.primary, 1.5) :
-                       Material.color(Material.primary, Material.Shade100)
+                color: Material.primary
                 
                 Label {
                     anchors.centerIn: parent
                     text: "\uE7BF"  // Shopping bag icon
                     font.family: "Segoe MDL2 Assets"
                     font.pixelSize: 26
-                    color: Material.primary
+                    color: "white"
                 }
             }
 
@@ -184,8 +185,8 @@ Item {
                     Layout.preferredWidth: itemSubtotalLabel.width + 18
                     radius: 5
                     color: Material.theme === Material.Dark ?
-                           Qt.darker(Material.primary, 1.8) :
-                           Material.color(Material.primary, Material.Shade50)
+                           Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.2) :
+                           Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.15)
                     
                     Label {
                         id: itemSubtotalLabel
@@ -225,14 +226,17 @@ Item {
                     Layout.preferredWidth: 44
                     Layout.preferredHeight: 44
                     
-                    Material.foreground: Material.color(Material.Red)
+                    Material.foreground: "white"
                     
                     background: Rectangle {
-                        radius: 6
-                        color: parent.down ? Material.color(Material.Red, Material.Shade200) :
-                               parent.hovered ? Material.color(Material.Red, Material.Shade100) : "transparent"
-                        border.width: parent.hovered ? 1 : 0
-                        border.color: Material.color(Material.Red)
+                        radius: 8
+                        color: Material.theme === Material.Light ?
+                               (parent.down ? Material.color(Material.Red, Material.Shade700) :
+                                parent.hovered ? Material.color(Material.Red, Material.Shade600) :
+                                Material.color(Material.Red, Material.Shade500)) :
+                               (parent.down ? "#1a1a1a" :
+                                parent.hovered ? "#333333" : "#000000")
+                        border.width: 0
                         
                         Behavior on color { ColorAnimation { duration: 150 } }
                     }

@@ -276,7 +276,7 @@ Page {
 
                             delegate: Item {
                                 width: ListView.view.width
-                                height: 60
+                                height: 64
 
                                 Rectangle {
                                     anchors.fill: parent
@@ -301,20 +301,29 @@ Page {
                                         }
                                     }
 
-                                    RowLayout {
+                                    // Layout tipo tabla con anchos fijos
+                                    Item {
                                         anchors.fill: parent
-                                        anchors.margins: 8
-                                        spacing: 12
+                                        anchors.leftMargin: 12
+                                        anchors.rightMargin: 12
+                                        anchors.topMargin: 10
+                                        anchors.bottomMargin: 10
 
+                                        // Columna 1: Nombre y detalles (ocupa espacio restante)
                                         ColumnLayout {
-                                            Layout.fillWidth: true
-                                            spacing: 2
+                                            anchors.left: parent.left
+                                            anchors.right: priceLabel.left
+                                            anchors.rightMargin: 12
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            spacing: 4
 
                                             Label {
                                                 text: model.name
                                                 font.pixelSize: 14
                                                 font.weight: Font.Medium
                                                 color: Material.foreground
+                                                elide: Text.ElideRight
+                                                Layout.fillWidth: true
                                             }
 
                                             Label {
@@ -322,27 +331,40 @@ Page {
                                                 font.pixelSize: 11
                                                 opacity: 0.7
                                                 color: Material.foreground
+                                                elide: Text.ElideRight
+                                                Layout.fillWidth: true
                                             }
                                         }
 
+                                        // Columna 2: Precio (ancho fijo 90px, alineado derecha)
                                         Label {
+                                            id: priceLabel
+                                            anchors.right: addButton.left
+                                            anchors.rightMargin: 12
+                                            anchors.verticalCenter: parent.verticalCenter
                                             text: "S/" + model.salePrice.toFixed(2)
-                                            font.pixelSize: 16
+                                            font.pixelSize: 15
                                             font.weight: Font.Bold
                                             color: Material.primary
+                                            width: 90
+                                            horizontalAlignment: Text.AlignRight
                                         }
 
+                                        // Columna 3: Botón (ancho fijo 36px)
                                         RoundButton {
+                                            id: addButton
+                                            anchors.right: parent.right
+                                            anchors.verticalCenter: parent.verticalCenter
                                             text: "\uE710"  // Add icon (+)
                                             font.family: "Segoe MDL2 Assets"
-                                            font.pixelSize: 20
+                                            font.pixelSize: 18
                                             flat: true
-                                            implicitWidth: 40
-                                            implicitHeight: 40
+                                            width: 36
+                                            height: 36
                                             Material.foreground: Material.primary
 
                                             background: Rectangle {
-                                                radius: 20
+                                                radius: 18
                                                 color: parent.down ?
                                                     (Material.theme === Material.Dark ?
                                                         Qt.lighter(Material.background, 1.4) :
@@ -451,7 +473,7 @@ Page {
                                     anchors.leftMargin: 2
                                     anchors.rightMargin: 2
                                     radius: 8
-                                    color: "#20000000"
+                                    color: Material.theme === Material.Dark ? "#20000000" : "#15000000"
                                     visible: true
                                 }
 
@@ -512,16 +534,14 @@ Page {
                                         Layout.preferredHeight: 50
                                         Layout.alignment: Qt.AlignVCenter
                                         radius: 8
-                                        color: Material.theme === Material.Dark ?
-                                            Qt.darker(Material.primary, 1.5) :
-                                            Material.color(Material.primary, Material.Shade100)
+                                        color: Material.primary
 
                                         Label {
                                             anchors.centerIn: parent
                                             text: "\uE7BF"  // Shopping bag icon
                                             font.family: "Segoe MDL2 Assets"
                                             font.pixelSize: 26
-                                            color: Material.primary
+                                            color: "white"
                                         }
                                     }
 
@@ -583,8 +603,8 @@ Page {
                                             Layout.preferredWidth: itemSubtotalLabel.width + 18
                                             radius: 5
                                             color: Material.theme === Material.Dark ?
-                                                Qt.darker(Material.primary, 1.8) :
-                                                Material.color(Material.primary, Material.Shade50)
+                                                Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.2) :
+                                                Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.15)
 
                                             Label {
                                                 id: itemSubtotalLabel
@@ -623,14 +643,17 @@ Page {
                                             Layout.preferredWidth: 44
                                             Layout.preferredHeight: 44
 
-                                            Material.foreground: Material.color(Material.Red)
+                                            Material.foreground: "white"
 
                                             background: Rectangle {
-                                                radius: 6
-                                                color: parent.down ? Material.color(Material.Red, Material.Shade200) :
-                                                    parent.hovered ? Material.color(Material.Red, Material.Shade100) : Qt.transparent
-                                                border.width: parent.hovered ? 1 : 0
-                                                border.color: Material.color(Material.Red)
+                                                radius: 8
+                                                color: Material.theme === Material.Light ?
+                                                       (parent.down ? Material.color(Material.Red, Material.Shade700) :
+                                                        parent.hovered ? Material.color(Material.Red, Material.Shade600) :
+                                                        Material.color(Material.Red, Material.Shade500)) :
+                                                       (parent.down ? "#1a1a1a" :
+                                                        parent.hovered ? "#333333" : "#000000")
+                                                border.width: 0
 
                                                 Behavior on color { ColorAnimation { duration: 150 } }
                                             }
