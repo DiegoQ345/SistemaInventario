@@ -7,6 +7,7 @@
 #include "src/viewmodels/SalesCartViewModel.h"
 #include "src/viewmodels/PrintViewModel.h"
 #include "src/viewmodels/ExcelImportViewModel.h"
+#include "src/viewmodels/ReportsViewModel.h"
 #include "src/utils/BarcodeScannerHandler.h"
 
 int main(int argc, char *argv[])
@@ -41,6 +42,7 @@ int main(int argc, char *argv[])
     qmlRegisterType<CartItemModel>("SistemaInventario", 1, 0, "CartItemModel");
     qmlRegisterType<PrintViewModel>("SistemaInventario", 1, 0, "PrintViewModel");
     qmlRegisterType<ExcelImportViewModel>("SistemaInventario", 1, 0, "ExcelImportViewModel");
+    qmlRegisterType<ReportsViewModel>("SistemaInventario", 1, 0, "ReportsViewModel");
     qmlRegisterType<BarcodeScannerHandler>("SistemaInventario", 1, 0, "BarcodeScannerHandler");
 
     // Crear motor QML

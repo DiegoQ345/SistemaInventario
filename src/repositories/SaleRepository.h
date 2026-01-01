@@ -62,6 +62,27 @@ public:
     SalesStats getStatsForDate(const QDate& date);
     SalesStats getStatsForDateRange(const QDate& from, const QDate& to);
 
+    /**
+     * @brief Obtener ventas agrupadas por día en un rango
+     */
+    struct DailySales {
+        QDate date;
+        double totalSales = 0.0;
+        int transactionCount = 0;
+    };
+    QList<DailySales> getDailySalesInRange(const QDate& from, const QDate& to);
+
+    /**
+     * @brief Obtener productos más vendidos en un rango de fechas
+     */
+    struct TopProduct {
+        int productId = 0;
+        QString productName;
+        double quantitySold = 0.0;
+        double totalRevenue = 0.0;
+    };
+    QList<TopProduct> getTopProducts(const QDate& from, const QDate& to, int limit = 10);
+
 private:
     Sale mapFromQuery(const class QSqlQuery& query);
     QList<SaleItem> loadSaleItems(int saleId);

@@ -80,6 +80,7 @@ set(HEADER_FILES
     src/viewmodels/SalesCartViewModel.h
     src/viewmodels/PrintViewModel.h
     src/viewmodels/ExcelImportViewModel.h
+    src/viewmodels/ReportsViewModel.h
     src/utils/BarcodeScannerHandler.h
 )
 
@@ -97,6 +98,7 @@ set(SOURCE_FILES
     src/viewmodels/SalesCartViewModel.cpp
     src/viewmodels/PrintViewModel.cpp
     src/viewmodels/ExcelImportViewModel.cpp
+    src/viewmodels/ReportsViewModel.cpp
     src/utils/BarcodeScannerHandler.cpp
 )
 

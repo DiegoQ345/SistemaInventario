@@ -262,6 +262,76 @@ SaleRepository::SalesStats SaleRepository::getStatsForDateRange(const QDate& fro
     return stats;
 }
 
+QList<SaleRepository::DailySales> SaleRepository::getDailySalesInRange(const QDate& from, const QDate& to)
+{
+    QList<DailySales> dailySales;
+    QSqlQuery query(DatabaseManager::instance().database());
+    
+    query.prepare(
+        "SELECT DATE(created_at) as sale_date, "
+        "COUNT(*) as transaction_count, "
+        "SUM(total) as total_sales "
+        "FROM sales "
+        "WHERE DATE(created_at) BETWEEN :from AND :to "
+        "AND status != 'CANCELLED' "
+        "GROUP BY DATE(created_at) "
+        "ORDER BY sale_date ASC"
+    );
+    query.bindValue(":from", from.toString(Qt::ISODate));
+    query.bindValue(":to", to.toString(Qt::ISODate));
+
+    if (query.exec()) {
+        while (query.next()) {
+            DailySales daily;
+            daily.date = QDate::fromString(query.value("sale_date").toString(), Qt::ISODate);
+            daily.transactionCount = query.value("transaction_count").toInt();
+            daily.totalSales = query.value("total_sales").toDouble();
+            dailySales.append(daily);
+        }
+    } else {
+        qCritical() << "Error obteniendo ventas diarias:" << query.lastError().text();
+    }
+
+    return dailySales;
+}
+
+QList<SaleRepository::TopProduct> SaleRepository::getTopProducts(const QDate& from, const QDate& to, int limit)
+{
+    QList<TopProduct> topProducts;
+    QSqlQuery query(DatabaseManager::instance().database());
+    
+    query.prepare(
+        "SELECT si.product_id, si.product_name, "
+        "SUM(si.quantity) as total_quantity, "
+        "SUM(si.subtotal) as total_revenue "
+        "FROM sale_items si "
+        "INNER JOIN sales s ON si.sale_id = s.id "
+        "WHERE DATE(s.created_at) BETWEEN :from AND :to "
+        "AND s.status != 'CANCELLED' "
+        "GROUP BY si.product_id, si.product_name "
+        "ORDER BY total_revenue DESC "
+        "LIMIT :limit"
+    );
+    query.bindValue(":from", from.toString(Qt::ISODate));
+    query.bindValue(":to", to.toString(Qt::ISODate));
+    query.bindValue(":limit", limit);
+
+    if (query.exec()) {
+        while (query.next()) {
+            TopProduct product;
+            product.productId = query.value("product_id").toInt();
+            product.productName = query.value("product_name").toString();
+            product.quantitySold = query.value("total_quantity").toDouble();
+            product.totalRevenue = query.value("total_revenue").toDouble();
+            topProducts.append(product);
+        }
+    } else {
+        qCritical() << "Error obteniendo productos más vendidos:" << query.lastError().text();
+    }
+
+    return topProducts;
+}
+
 Sale SaleRepository::mapFromQuery(const QSqlQuery& query)
 {
     Sale sale;
