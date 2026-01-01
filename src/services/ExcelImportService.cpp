@@ -27,15 +27,24 @@ QStringList ExcelImportService::loadExcelFile(const QString& filePath)
 
     m_currentFilePath = filePath;
 
-    // Leer primera fila (encabezados)
+    // Leer primera fila (encabezados) - TODAS las columnas hasta la última con datos
     int maxCol = xlsx.dimension().lastColumn();
+    qDebug() << "[ExcelImportService] Leyendo columnas del Excel, total:" << maxCol;
+    
     for (int col = 1; col <= maxCol; ++col) {
         QVariant cellValue = xlsx.read(1, col);
-        if (!cellValue.isNull() && !cellValue.toString().isEmpty()) {
-            columns.append(cellValue.toString().trimmed());
+        QString columnName = cellValue.toString().trimmed();
+        
+        // Si la columna está vacía, usar un nombre genérico
+        if (columnName.isEmpty()) {
+            columnName = QString("Columna %1").arg(col);
         }
+        
+        columns.append(columnName);
+        qDebug() << "  Columna" << col << ":" << columnName;
     }
 
+    qDebug() << "[ExcelImportService] Total columnas detectadas:" << columns.size();
     return columns;
 }
 
@@ -90,18 +99,36 @@ ExcelImportService::ImportResult ExcelImportService::importProducts(
 
     emit importProgress(0, "Iniciando importación...");
 
+    qDebug() << "[ExcelImportService] Iniciando importación:";
+    qDebug() << "  Total filas:" << totalRows;
+    qDebug() << "  Fila inicial:" << startRow;
+    qDebug() << "  Mapeos activos:" << columnMappings.size();
+    for (const auto& m : columnMappings) {
+        if (m.isMapped) {
+            qDebug() << "    " << m.excelColumn << "(índice" << m.columnIndex << ") ->" << m.fieldName;
+        }
+    }
+    
     for (int rowIndex = startRow; rowIndex <= totalRows; ++rowIndex) {
         // Actualizar progreso
         int progress = ((rowIndex - startRow + 1) * 100) / result.totalRows;
         emit importProgress(progress, QString("Procesando fila %1 de %2...")
                           .arg(rowIndex - startRow + 1).arg(result.totalRows));
 
+        qDebug() << "\n=== FILA" << rowIndex << "===";
+        
         // Leer fila
         QMap<QString, QVariant> rowData = readRow(xlsx, rowIndex, columnMappings);
+
+        if (rowData.isEmpty()) {
+            qWarning() << "Fila vacía, saltando...";
+            continue;
+        }
 
         // Validar
         QString errorMessage;
         if (!validateProductData(rowData, columnMappings, errorMessage)) {
+            qWarning() << "Validación falló:" << errorMessage;
             result.failedRows++;
             result.errors.append(QString("Fila %1: %2").arg(rowIndex).arg(errorMessage));
             continue;
@@ -110,17 +137,45 @@ ExcelImportService::ImportResult ExcelImportService::importProducts(
         // Convertir a Product
         Product product = mapRowToProduct(rowData, columnMappings, errorMessage);
         if (!errorMessage.isEmpty()) {
+            qWarning() << "Mapeo falló:" << errorMessage;
             result.failedRows++;
             result.errors.append(QString("Fila %1: %2").arg(rowIndex).arg(errorMessage));
             continue;
         }
 
-        // Guardar producto
-        if (productService.createProduct(product, errorMessage)) {
-            result.importedRows++;
+        qDebug() << "Producto mapeado:" << product.name << "|" << product.sku;
+        
+        // Verificar si el SKU ya existe
+        auto existingProduct = productService.getProductBySku(product.sku);
+        
+        if (existingProduct.has_value()) {
+            // El producto ya existe, ACTUALIZAR en lugar de crear
+            qDebug() << "  ⚠️ Producto existente encontrado (ID:" << existingProduct->id << "), actualizando...";
+            
+            // Mantener el ID del producto existente
+            product.id = existingProduct->id;
+            
+            // Actualizar producto
+            if (productService.updateProduct(product, errorMessage)) {
+                qDebug() << "✓ Producto actualizado exitosamente";
+                result.importedRows++;
+            } else {
+                qWarning() << "✗ Error actualizando:" << errorMessage;
+                result.failedRows++;
+                result.errors.append(QString("Fila %1: %2").arg(rowIndex).arg(errorMessage));
+            }
         } else {
-            result.failedRows++;
-            result.errors.append(QString("Fila %1: %2").arg(rowIndex).arg(errorMessage));
+            // El producto no existe, CREAR nuevo
+            qDebug() << "  ➕ Producto nuevo, creando...";
+            
+            if (productService.createProduct(product, errorMessage)) {
+                qDebug() << "✓ Producto creado exitosamente";
+                result.importedRows++;
+            } else {
+                qWarning() << "✗ Error creando:" << errorMessage;
+                result.failedRows++;
+                result.errors.append(QString("Fila %1: %2").arg(rowIndex).arg(errorMessage));
+            }
         }
     }
 
@@ -259,10 +314,13 @@ Product ExcelImportService::mapRowToProduct(const QMap<QString, QVariant>& row,
     Product product;
     product.active = true;
 
+    qDebug() << "[ExcelImportService] Mapeando fila a Product:";
+    
     for (const auto& mapping : mappings) {
         if (!mapping.isMapped) continue;
 
         QVariant value = row.value(mapping.fieldName);
+        qDebug() << "  " << mapping.fieldName << ":" << value;
 
         if (mapping.fieldName == "name") {
             product.name = value.toString().trimmed();
@@ -270,22 +328,20 @@ Product ExcelImportService::mapRowToProduct(const QMap<QString, QVariant>& row,
             product.sku = value.toString().trimmed();
         } else if (mapping.fieldName == "barcode") {
             product.barcode = value.toString().trimmed();
-        } else if (mapping.fieldName == "category") {
-            // TODO: Buscar o crear categoría
-            // Por ahora solo guardamos el nombre
-        } else if (mapping.fieldName == "stock") {
+        } else if (mapping.fieldName == "currentStock") {
             product.currentStock = value.toDouble();
-        } else if (mapping.fieldName == "minimum_stock") {
+        } else if (mapping.fieldName == "minimumStock") {
             product.minimumStock = value.toDouble();
-        } else if (mapping.fieldName == "purchase_price") {
+        } else if (mapping.fieldName == "purchasePrice") {
             product.purchasePrice = value.toDouble();
-        } else if (mapping.fieldName == "sale_price") {
+        } else if (mapping.fieldName == "salePrice") {
             product.salePrice = value.toDouble();
         } else if (mapping.fieldName == "description") {
             product.description = value.toString();
         }
     }
 
+    qDebug() << "  Product creado:" << product.name << "|" << product.sku << "|" << product.salePrice;
     return product;
 }
 
@@ -300,11 +356,20 @@ bool ExcelImportService::validateProductData(const QMap<QString, QVariant>& row,
         return false;
     }
 
-    // Verificar precio de venta
-    double salePrice = row.value("sale_price").toDouble();
-    if (salePrice < 0) {
-        errorMessage = "El precio de venta no puede ser negativo";
+    // Verificar que tenga SKU
+    QString sku = row.value("sku").toString().trimmed();
+    if (sku.isEmpty()) {
+        errorMessage = "El SKU es obligatorio";
         return false;
+    }
+
+    // Verificar precio de venta si está presente
+    if (row.contains("salePrice")) {
+        double salePrice = row.value("salePrice").toDouble();
+        if (salePrice < 0) {
+            errorMessage = "El precio de venta no puede ser negativo";
+            return false;
+        }
     }
 
     return true;
@@ -316,14 +381,23 @@ QMap<QString, QVariant> ExcelImportService::readRow(const QXlsx::Document& xlsx,
 {
     QMap<QString, QVariant> row;
 
+    qDebug() << "[ExcelImportService] Leyendo fila" << rowIndex;
+    
     for (const auto& mapping : mappings) {
         if (!mapping.isMapped || mapping.columnIndex < 0) continue;
 
-        QVariant cellValue = xlsx.read(rowIndex, mapping.columnIndex + 1);  // QXlsx usa índice 1
+        // QXlsx usa índices base 1, columnIndex ya está en base 0, así que sumamos 1
+        int excelColIndex = mapping.columnIndex + 1;
+        QVariant cellValue = xlsx.read(rowIndex, excelColIndex);
+        
+        qDebug() << "  Col" << excelColIndex << "(" << mapping.excelColumn << ") ->" 
+                 << mapping.fieldName << ":" << cellValue;
+        
         QVariant convertedValue = convertValue(mapping.fieldName, cellValue);
         row[mapping.fieldName] = convertedValue;
     }
 
+    qDebug() << "  Datos leídos:" << row;
     return row;
 }
 
@@ -334,9 +408,15 @@ QVariant ExcelImportService::convertValue(const QString& fieldName, const QVaria
     }
 
     // Campos numéricos
-    if (fieldName == "stock" || fieldName == "minimum_stock" ||
-        fieldName == "purchase_price" || fieldName == "sale_price") {
-        return value.toDouble();
+    if (fieldName == "currentStock" || fieldName == "minimumStock" ||
+        fieldName == "purchasePrice" || fieldName == "salePrice") {
+        bool ok;
+        double numValue = value.toDouble(&ok);
+        if (!ok) {
+            qWarning() << "[ExcelImportService] No se pudo convertir a número:" << fieldName << value;
+            return 0.0;
+        }
+        return numValue;
     }
 
     // Campos de texto

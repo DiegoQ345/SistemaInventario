@@ -30,7 +30,7 @@ Page {
                 text: qsTr("Panel de Control")
                 font.pixelSize: 32
                 font.weight: Font.Bold
-                color: "#1D1B20"
+                color: Material.foreground
                 Layout.bottomMargin: 8
             }
 
@@ -102,8 +102,8 @@ Page {
                         Layout.fillWidth: true
                         text: "\uE8C8  " + qsTr("Nueva Venta")
                         font.family: "Segoe MDL2 Assets"
-                        Material.background: "#6750A4"
-                        Material.foreground: "#FFFFFF"
+                        Material.background: Material.primary
+                        Material.foreground: "white"
                         font.weight: Font.Medium
                         onClicked: {
                             // Navegar a nueva venta
@@ -114,8 +114,10 @@ Page {
                         Layout.fillWidth: true
                         text: "\uE710  " + qsTr("Nuevo Producto")
                         font.family: "Segoe MDL2 Assets"
-                        Material.background: "#E8DEF8"
-                        Material.foreground: "#6750A4"
+                        Material.background: Material.theme === Material.Dark ?
+                            Qt.lighter(Material.primary, 1.2) :
+                            Material.color(Material.primary, Material.Shade100)
+                        Material.foreground: Material.primary
                         font.weight: Font.Medium
                         onClicked: {
                             // Navegar a nuevo producto
@@ -126,8 +128,10 @@ Page {
                         Layout.fillWidth: true
                         text: "\uE898  " + qsTr("Importar Excel")
                         font.family: "Segoe MDL2 Assets"
-                        Material.background: "#E8DEF8"
-                        Material.foreground: "#6750A4"
+                        Material.background: Material.theme === Material.Dark ?
+                            Qt.lighter(Material.primary, 1.2) :
+                            Material.color(Material.primary, Material.Shade100)
+                        Material.foreground: Material.primary
                         font.weight: Font.Medium
                         onClicked: {
                             // Navegar a importación
@@ -138,8 +142,10 @@ Page {
                         Layout.fillWidth: true
                         text: "\uE9D9  " + qsTr("Ver Reportes")
                         font.family: "Segoe MDL2 Assets"
-                        Material.background: "#E8DEF8"
-                        Material.foreground: "#6750A4"
+                        Material.background: Material.theme === Material.Dark ?
+                            Qt.lighter(Material.primary, 1.2) :
+                            Material.color(Material.primary, Material.Shade100)
+                        Material.foreground: Material.primary
                         font.weight: Font.Medium
                         onClicked: {
                             // Navegar a reportes
@@ -173,9 +179,11 @@ Page {
         property bool warning: false
 
         radius: 16
-        color: "#FFFFFF"
+        color: Material.theme === Material.Dark ?
+            Qt.lighter(Material.background, 1.15) :
+            Material.background
         border.width: 1
-        border.color: warning ? "#F9A825" : "#E7E0EC"
+        border.color: warning ? Material.color(Material.Orange) : Material.frameColor
         
         layer.enabled: true
         // DropShadow requiere Qt5Compat - comentado por ahora
@@ -215,21 +223,21 @@ Page {
                     font.pixelSize: 13
                     font.weight: Font.Medium
                     opacity: 0.6
-                    color: "#1D1B20"
+                    color: Material.foreground
                 }
 
                 Label {
                     text: parent.parent.parent.value
                     font.pixelSize: 28
                     font.weight: Font.Bold
-                    color: "#1D1B20"
+                    color: Material.foreground
                 }
 
                 Label {
                     text: parent.parent.parent.subtitle
                     font.pixelSize: 12
                     opacity: 0.5
-                    color: "#49454F"
+                    color: Material.foreground
                 }
             }
         }
