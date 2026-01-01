@@ -115,8 +115,8 @@ Page {
                         text: "\uE710  " + qsTr("Nuevo Producto")
                         font.family: "Segoe MDL2 Assets"
                         Material.background: Material.theme === Material.Dark ?
-                            Qt.lighter(Material.primary, 1.2) :
-                            Material.color(Material.primary, Material.Shade100)
+                            Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.3) :
+                            Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.1)
                         Material.foreground: Material.primary
                         font.weight: Font.Medium
                         onClicked: {
@@ -129,8 +129,8 @@ Page {
                         text: "\uE898  " + qsTr("Importar Excel")
                         font.family: "Segoe MDL2 Assets"
                         Material.background: Material.theme === Material.Dark ?
-                            Qt.lighter(Material.primary, 1.2) :
-                            Material.color(Material.primary, Material.Shade100)
+                            Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.3) :
+                            Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.1)
                         Material.foreground: Material.primary
                         font.weight: Font.Medium
                         onClicked: {
@@ -143,8 +143,8 @@ Page {
                         text: "\uE9D9  " + qsTr("Ver Reportes")
                         font.family: "Segoe MDL2 Assets"
                         Material.background: Material.theme === Material.Dark ?
-                            Qt.lighter(Material.primary, 1.2) :
-                            Material.color(Material.primary, Material.Shade100)
+                            Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.3) :
+                            Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.1)
                         Material.foreground: Material.primary
                         font.weight: Font.Medium
                         onClicked: {

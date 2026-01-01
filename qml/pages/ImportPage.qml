@@ -161,12 +161,12 @@ Page {
                 StyledGroupBox {
                 title: qsTr("PASO 1: Selecciona tu archivo Excel")
                 Layout.fillWidth: true
-                Layout.preferredHeight: dropContent.implicitHeight + 60
+                Layout.preferredHeight: 380
 
                 Rectangle {
                     id: dropContent
                     anchors.fill: parent
-                    anchors.margins: 16
+                    anchors.margins: 20
                     color: dropArea.containsDrag ?
                            (Material.theme === Material.Dark ? 
                             Qt.rgba(0.2, 0.4, 0.8, 0.25) :
@@ -241,13 +241,13 @@ Page {
 
                         ColumnLayout {
                             anchors.centerIn: parent
-                            spacing: 20
-                            width: parent.width - 32
+                            spacing: 28
+                            width: parent.width - 40
 
                             Label {
                                 text: "\uE8B7"
                                 font.family: "Segoe MDL2 Assets"
-                                font.pixelSize: 72
+                                font.pixelSize: 84
                                 color: dropArea.containsDrag ? 
                                        Material.primary : 
                                        importViewModel.hasFile ? 
@@ -273,7 +273,7 @@ Page {
                                       importViewModel.hasFile ?
                                       qsTr("Archivo cargado correctamente") :
                                       qsTr("Arrastra tu archivo Excel aquí")
-                                font.pixelSize: 18
+                                font.pixelSize: 20
                                 font.weight: Font.DemiBold
                                 Layout.alignment: Qt.AlignHCenter
                                 color: dropArea.containsDrag ? Material.primary : Material.foreground
@@ -285,7 +285,7 @@ Page {
 
                             Label {
                                 text: qsTr("Formatos: .xlsx, .xls")
-                                font.pixelSize: 13
+                                font.pixelSize: 14
                                 opacity: 0.6
                                 Layout.alignment: Qt.AlignHCenter
                             }
@@ -302,7 +302,7 @@ Page {
                                 text: qsTr("Seleccionar archivo")
                                 iconText: "\uE8E5"
                                 Layout.alignment: Qt.AlignHCenter
-                                Layout.preferredHeight: 44
+                                Layout.preferredHeight: 48
                                 onClicked: fileDialog.open()
                             }
                         }
