@@ -173,6 +173,43 @@ void CartItemModel::clear()
     notifyTotalsChanged();
 }
 
+void CartItemModel::removeItemByProductId(int productId)
+{
+    for (int i = 0; i < m_items.count(); ++i) {
+        if (m_items[i].productId == productId) {
+            removeItem(i);
+            return;
+        }
+    }
+    qWarning() << "CartItemModel::removeItemByProductId - Product not found:" << productId;
+}
+
+void CartItemModel::updateQuantityByProductId(int productId, double quantity)
+{
+    for (int i = 0; i < m_items.count(); ++i) {
+        if (m_items[i].productId == productId) {
+            updateQuantity(i, quantity);
+            return;
+        }
+    }
+    qWarning() << "CartItemModel::updateQuantityByProductId - Product not found:" << productId;
+}
+
+QVariantList CartItemModel::itemsAsVariantList() const
+{
+    QVariantList list;
+    for (const auto& item : m_items) {
+        QVariantMap map;
+        map["productId"] = item.productId;
+        map["productName"] = item.productName;
+        map["quantity"] = item.quantity;
+        map["unitPrice"] = item.unitPrice;
+        map["subtotal"] = item.subtotal;
+        list.append(map);
+    }
+    return list;
+}
+
 void CartItemModel::notifyTotalsChanged()
 {
     emit subtotalChanged();
@@ -187,6 +224,9 @@ SalesCartViewModel::SalesCartViewModel(QObject *parent)
     : QObject(parent)
     , m_cart(new CartItemModel(this))
 {
+    // Conectar señales del cart para actualizar canProcessSale
+    connect(m_cart, &CartItemModel::countChanged, this, &SalesCartViewModel::canProcessSaleChanged);
+    connect(m_cart, &CartItemModel::subtotalChanged, this, &SalesCartViewModel::totalWithDiscountChanged);
 }
 
 SalesCartViewModel::~SalesCartViewModel()
@@ -260,8 +300,12 @@ bool SalesCartViewModel::processSale(int customerId, const QString& customerName
                                      int paymentMethodId, const QString& paymentMethodName,
                                      double discount, const QString& notes)
 {
+    qDebug() << "=== processSale ===";
+    
     if (m_cart->items().isEmpty()) {
-        emit saleFailed("El carrito está vacío");
+        QString error = "El carrito está vacío";
+        qWarning() << error;
+        emit saleFailed(error);
         return false;
     }
 
@@ -278,15 +322,20 @@ bool SalesCartViewModel::processSale(int customerId, const QString& customerName
     sale.items = m_cart->items();
     sale.calculateTotals();
 
+    qDebug() << "  Sale created - Items:" << sale.items.count();
+    qDebug() << "  Sale Total:" << sale.total;
+
     QString errorMessage;
     bool success = m_salesService.createSale(sale, errorMessage);
 
     if (success) {
         m_lastInvoiceNumber = sale.invoiceNumber;
+        qDebug() << "  Sale created successfully - Invoice:" << m_lastInvoiceNumber;
         emit lastInvoiceNumberChanged();
-        emit saleCompleted(sale.invoiceNumber, sale.total);
-        m_cart->clear();
+        // NO emitir saleCompleted aquí - se hace en processSaleWithInvoiceData
+        // La limpieza del carrito se hace después de capturar los datos
     } else {
+        qCritical() << "  Sale failed:" << errorMessage;
         emit saleFailed(errorMessage);
     }
 
@@ -339,4 +388,90 @@ bool SalesCartViewModel::validateStock(const Product& product, double quantity, 
     }
 
     return true;
+}
+
+void SalesCartViewModel::setDiscount(double discount)
+{
+    if (qFuzzyCompare(m_discount, discount))
+        return;
+    
+    m_discount = qMax(0.0, discount);  // No permitir descuentos negativos
+    emit discountChanged();
+    emit totalWithDiscountChanged();
+    emit canProcessSaleChanged();
+}
+
+double SalesCartViewModel::totalWithDiscount() const
+{
+    return qMax(0.0, m_cart->subtotal() - m_discount);
+}
+
+bool SalesCartViewModel::canProcessSale() const
+{
+    return m_cart->rowCount() > 0 && !m_isProcessing;
+}
+
+bool SalesCartViewModel::processSaleWithInvoiceData(
+    int customerId,
+    const QString& customerName,
+    int paymentMethodId,
+    const QString& paymentMethodName,
+    bool isInvoice,
+    const QString& ruc,
+    const QString& businessName,
+    const QString& address)
+{
+    qDebug() << "=== processSaleWithInvoiceData ===";
+    qDebug() << "  Customer:" << customerName;
+    qDebug() << "  Payment Method:" << paymentMethodName;
+    qDebug() << "  Is Invoice:" << isInvoice;
+    qDebug() << "  Items count:" << m_cart->rowCount();
+    qDebug() << "  Subtotal:" << m_cart->subtotal();
+    qDebug() << "  Discount:" << m_discount;
+    
+    // Validar que haya items en el carrito
+    if (m_cart->items().isEmpty()) {
+        qWarning() << "Error: Carrito vacío";
+        emit saleFailed("El carrito está vacío");
+        return false;
+    }
+    
+    // Capturar datos ANTES de procesar (para enviar en la señal)
+    QString voucherType = isInvoice ? "FACTURA" : "BOLETA";
+    QVariantList items = m_cart->itemsAsVariantList();
+    double subtotal = m_cart->subtotal();
+    double discountAmount = m_discount;
+    double total = totalWithDiscount();
+    
+    qDebug() << "  Total with discount:" << total;
+    
+    // Construir las notas con los datos de la factura
+    QString notes = voucherType;
+    if (isInvoice) {
+        notes += QString(" - RUC: %1 - %2").arg(ruc, businessName);
+    }
+    
+    // Procesar la venta
+    qDebug() << "  Calling processSale...";
+    bool success = processSale(customerId, customerName, paymentMethodId, 
+                              paymentMethodName, m_discount, notes);
+    
+    qDebug() << "  processSale result:" << success;
+    
+    if (success) {
+        qDebug() << "  Invoice Number:" << m_lastInvoiceNumber;
+        
+        // Limpiar el carrito DESPUÉS de procesar
+        m_cart->clear();
+        
+        // Emitir señal con todos los datos capturados para que QML los use
+        emit saleCompleted(m_lastInvoiceNumber, total, voucherType, 
+                          items, subtotal, discountAmount);
+        
+        qDebug() << "  saleCompleted signal emitted";
+    } else {
+        qDebug() << "  Sale failed - error should be emitted by processSale";
+    }
+    
+    return success;
 }

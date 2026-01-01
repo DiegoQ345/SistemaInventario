@@ -48,19 +48,19 @@ public slots:
      * @return true si se imprimió correctamente
      */
     bool printVoucher(const Sale& sale, VoucherType type, 
-                      const InvoiceData& invoiceData = InvoiceData());
+                      const InvoiceData& invoiceData = InvoiceData{});
 
     /**
      * @brief Mostrar vista previa de impresión
      */
     bool showPrintPreview(const Sale& sale, VoucherType type,
-                          const InvoiceData& invoiceData = InvoiceData());
+                          const InvoiceData& invoiceData = InvoiceData{});
 
     /**
      * @brief Imprimir ticket (formato térmico pequeño)
      */
     bool printTicket(const Sale& sale, VoucherType type,
-                     const InvoiceData& invoiceData = InvoiceData());
+                     const InvoiceData& invoiceData = InvoiceData{});
 
     /**
      * @brief Configurar impresora predeterminada

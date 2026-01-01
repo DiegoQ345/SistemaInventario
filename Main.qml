@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
 import Qt.labs.settings
+import "qml/components"
 
 ApplicationWindow {
     id: root
@@ -59,6 +60,17 @@ ApplicationWindow {
         id: drawer
         width: Math.min(250, root.width * 0.3)
         height: root.height
+        modal: true
+        
+        // Overlay con efecto de difuminado en el contenido de fondo
+        Overlay.modal: Rectangle {
+            color: settings.isDarkMode ? 
+                Qt.rgba(0, 0, 0, 0.5) : 
+                Qt.rgba(1, 1, 1, 0.5)
+            
+            // Efecto de desenfoque deshabilitado (requiere Qt Shader Tools en Qt 6)
+            layer.enabled: true
+        }
         
         ColumnLayout {
             anchors.fill: parent
@@ -69,17 +81,6 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 180
                 color: currentColors.container
-                
-                // Decoración de fondo
-                Rectangle {
-                    anchors.bottom: parent.bottom
-                    anchors.right: parent.right
-                    width: 200
-                    height: 200
-                    radius: 100
-                    color: Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.15)
-                    transform: Translate { x: 50; y: 50 }
-                }
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -97,13 +98,13 @@ ApplicationWindow {
                         text: qsTr("Sistema de Inventario")
                         font.pixelSize: 18
                         font.bold: true
-                        color: "white"
+                        color: settings.isDarkMode ? "white" : Material.foreground
                     }
 
                     Label {
                         text: qsTr("v1.0.0")
                         font.pixelSize: 12
-                        color: "white"
+                        color: settings.isDarkMode ? "white" : Material.foreground
                         opacity: 0.8
                     }
                 }
@@ -228,43 +229,6 @@ ApplicationWindow {
                 font.weight: Font.Medium
                 Layout.fillWidth: true
                 color: currentColors.onSurface
-            }
-
-            // Búsqueda rápida - Material 3
-            TextField {
-                id: searchField
-                placeholderText: qsTr("Buscar producto...")
-                Layout.preferredWidth: 320
-                Layout.preferredHeight: 48
-                
-                // Icono de búsqueda
-                leftPadding: 44
-                
-                Label {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "\uE721"
-                    font.family: "Segoe MDL2 Assets"
-                    font.pixelSize: 16
-                    color: Material.primary
-                    opacity: 0.7
-                }
-                
-                background: Rectangle {
-                    color: currentColors.surfaceVariant
-                    radius: 24
-                    border.width: searchField.activeFocus ? 2 : 0
-                    border.color: Material.primary
-                    
-                    Behavior on border.width { NumberAnimation { duration: 150 } }
-                }
-                
-                rightPadding: 20
-                
-                onAccepted: {
-                    console.log("Buscando:", text)
-                }
             }
             
             // Selector de color
@@ -466,6 +430,54 @@ ApplicationWindow {
             font.bold: true
         }
     }
+    
+    // Conexiones dinámicas a SalesCartViewModel
+    Connections {
+        target: stackView.currentItem?.viewModel
+        ignoreUnknownSignals: true
+        
+        // Señales de SalesCartViewModel
+        function onProductAdded(productName, quantity) {
+            globalNotification.showSuccess("Agregado: " + productName + " (x" + quantity + ")")
+        }
+        
+        function onProductNotFound(code) {
+            globalNotification.showError("Producto no encontrado: " + code)
+        }
+        
+        function onInsufficientStock(productName, available, requested) {
+            globalNotification.showError(
+                "Stock insuficiente de " + productName + 
+                ". Disponible: " + available + ", solicitado: " + requested
+            )
+        }
+        
+        function onSaleCompleted(invoiceNumber, total, voucherType, items, subtotal, discount) {
+            globalNotification.showSuccess("Venta completada - Comprobante: " + invoiceNumber)
+        }
+        
+        function onSaleFailed(errorMessage) {
+            globalNotification.showError("Error en la venta: " + errorMessage)
+        }
+    }
+    
+    // Conexiones dinámicas a PrintViewModel
+    Connections {
+        target: stackView.currentItem?.printViewModel
+        ignoreUnknownSignals: true
+        
+        function onPdfGenerated(filePath) {
+            globalNotification.showSuccess("PDF generado exitosamente")
+        }
+        
+        function onPrintCompleted() {
+            globalNotification.showSuccess("Impresión completada")
+        }
+        
+        function onPrintFailed(error) {
+            globalNotification.showError("Error al imprimir: " + error)
+        }
+    }
 
     // Componente para páginas en construcción
     Component {
@@ -506,6 +518,11 @@ ApplicationWindow {
                 }
             }
         }
+    }
+    
+    // Notificaciones globales - Componente reutilizable
+    NotificationBar {
+        id: globalNotification
     }
 }
 

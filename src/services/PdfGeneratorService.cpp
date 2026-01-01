@@ -6,6 +6,7 @@
 #include <QPageLayout>
 #include <QPrintDialog>
 #include <QFile>
+#include <QDateTime>
 #include <QDebug>
 
 PdfGeneratorService::PdfGeneratorService(QObject *parent)

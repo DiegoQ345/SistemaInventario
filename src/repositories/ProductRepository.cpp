@@ -44,7 +44,7 @@ bool ProductRepository::update(const Product& product)
     
     query.prepare(
         "UPDATE products SET name = :name, sku = :sku, barcode = :barcode, "
-        "category_id = :category_id, minimum_stock = :minimum_stock, "
+        "category_id = :category_id, current_stock = :current_stock, minimum_stock = :minimum_stock, "
         "purchase_price = :purchase_price, sale_price = :sale_price, "
         "description = :description, image_path = :image_path, active = :active, "
         "updated_at = datetime('now') WHERE id = :id"
@@ -55,6 +55,7 @@ bool ProductRepository::update(const Product& product)
     query.bindValue(":sku", product.sku.isEmpty() ? QVariant() : product.sku);
     query.bindValue(":barcode", product.barcode.isEmpty() ? QVariant() : product.barcode);
     query.bindValue(":category_id", product.categoryId > 0 ? product.categoryId : QVariant());
+    query.bindValue(":current_stock", product.currentStock);
     query.bindValue(":minimum_stock", product.minimumStock);
     query.bindValue(":purchase_price", product.purchasePrice);
     query.bindValue(":sale_price", product.salePrice);

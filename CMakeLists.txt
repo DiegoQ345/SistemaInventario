@@ -12,6 +12,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     QuickControls2
     Sql
     PrintSupport
+    Widgets
 )
 
 qt_standard_project_setup(REQUIRES 6.8)
@@ -34,6 +35,28 @@ set(QML_FILES
     qml/pages/ReportsPage.qml
     qml/pages/ImportPage.qml
     qml/pages/SettingsPage.qml
+    
+    # Componentes reutilizables
+    qml/components/CartItemDelegate.qml
+    qml/components/NotificationBar.qml
+    qml/components/PrimaryButton.qml
+    qml/components/SecondaryButton.qml
+    qml/components/OutlinedButton.qml
+    qml/components/SearchField.qml
+    qml/components/QuantitySpinBox.qml
+    qml/components/ConfirmDialog.qml
+    qml/components/ErrorDialog.qml
+    qml/components/SuccessDialog.qml
+    qml/components/StyledGroupBox.qml
+    qml/components/StatCard.qml
+    qml/components/Badge.qml
+    qml/components/LoadingSpinner.qml
+    
+    # Diálogos de ventas
+    qml/components/dialogs/SaleSuccessDialog.qml
+    qml/components/dialogs/SaleErrorDialog.qml
+    qml/components/dialogs/PrintDialog.qml
+    qml/components/dialogs/PrinterSettingsDialog.qml
 )
 
 # ============================================
@@ -55,6 +78,8 @@ set(HEADER_FILES
     src/viewmodels/DashboardViewModel.h
     src/viewmodels/ProductListModel.h
     src/viewmodels/SalesCartViewModel.h
+    src/viewmodels/PrintViewModel.h
+    src/viewmodels/ExcelImportViewModel.h
     src/utils/BarcodeScannerHandler.h
 )
 
@@ -70,6 +95,8 @@ set(SOURCE_FILES
     src/viewmodels/DashboardViewModel.cpp
     src/viewmodels/ProductListModel.cpp
     src/viewmodels/SalesCartViewModel.cpp
+    src/viewmodels/PrintViewModel.cpp
+    src/viewmodels/ExcelImportViewModel.cpp
     src/utils/BarcodeScannerHandler.cpp
 )
 
@@ -127,6 +154,7 @@ target_link_libraries(appSistemaInventario
         Qt6::QuickControls2
         Qt6::Sql
         Qt6::PrintSupport
+        Qt6::Widgets
         QXlsx::QXlsx  # Biblioteca QXlsx compilada como subdirectorio
 )
 

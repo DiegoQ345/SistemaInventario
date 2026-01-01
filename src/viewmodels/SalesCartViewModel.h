@@ -18,6 +18,7 @@ class CartItemModel : public QAbstractListModel
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
     Q_PROPERTY(double subtotal READ subtotal NOTIFY subtotalChanged)
     Q_PROPERTY(double total READ total NOTIFY totalChanged)
+    Q_PROPERTY(QVariantList itemsAsVariantList READ itemsAsVariantList NOTIFY countChanged)
 
 public:
     enum CartItemRoles {
@@ -50,6 +51,13 @@ public slots:
     void removeItem(int index);
     void updateQuantity(int index, double quantity);
     void clear();
+    
+    // Métodos que operan por productId (mejor para QML)
+    Q_INVOKABLE void removeItemByProductId(int productId);
+    Q_INVOKABLE void updateQuantityByProductId(int productId, double quantity);
+    
+    // Obtener items como QVariantList para QML
+    QVariantList itemsAsVariantList() const;
 
 signals:
     void countChanged();
@@ -76,6 +84,9 @@ class SalesCartViewModel : public QObject
     Q_PROPERTY(CartItemModel* cart READ cart CONSTANT)
     Q_PROPERTY(bool isProcessing READ isProcessing NOTIFY isProcessingChanged)
     Q_PROPERTY(QString lastInvoiceNumber READ lastInvoiceNumber NOTIFY lastInvoiceNumberChanged)
+    Q_PROPERTY(double discount READ discount WRITE setDiscount NOTIFY discountChanged)
+    Q_PROPERTY(double totalWithDiscount READ totalWithDiscount NOTIFY totalWithDiscountChanged)
+    Q_PROPERTY(bool canProcessSale READ canProcessSale NOTIFY canProcessSaleChanged)
 
 public:
     explicit SalesCartViewModel(QObject *parent = nullptr);
@@ -84,6 +95,11 @@ public:
     CartItemModel* cart() const { return m_cart; }
     bool isProcessing() const { return m_isProcessing; }
     QString lastInvoiceNumber() const { return m_lastInvoiceNumber; }
+    double discount() const { return m_discount; }
+    double totalWithDiscount() const;
+    bool canProcessSale() const;
+    
+    void setDiscount(double discount);
 
 public slots:
     /**
@@ -103,6 +119,20 @@ public slots:
     bool processSale(int customerId, const QString& customerName,
                      int paymentMethodId, const QString& paymentMethodName,
                      double discount, const QString& notes);
+    
+    /**
+     * @brief Procesar venta con datos de factura completos
+     */
+    Q_INVOKABLE bool processSaleWithInvoiceData(
+        int customerId,
+        const QString& customerName,
+        int paymentMethodId,
+        const QString& paymentMethodName,
+        bool isInvoice,
+        const QString& ruc,
+        const QString& businessName,
+        const QString& address
+    );
 
     /**
      * @brief Cancelar y limpiar el carrito
@@ -117,7 +147,11 @@ public slots:
 signals:
     void isProcessingChanged();
     void lastInvoiceNumberChanged();
-    void saleCompleted(const QString& invoiceNumber, double total);
+    void discountChanged();
+    void totalWithDiscountChanged();
+    void canProcessSaleChanged();
+    void saleCompleted(const QString& invoiceNumber, double total, const QString& voucherType,
+                      const QVariantList& items, double subtotal, double discount);
     void saleFailed(const QString& errorMessage);
     void productAdded(const QString& productName, double quantity);
     void productNotFound(const QString& code);
@@ -129,6 +163,7 @@ private:
     ProductService m_productService;
     bool m_isProcessing = false;
     QString m_lastInvoiceNumber;
+    double m_discount = 0.0;
 
     void setIsProcessing(bool processing);
     bool validateStock(const Product& product, double quantity, QString& errorMsg);

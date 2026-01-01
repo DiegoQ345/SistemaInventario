@@ -12,6 +12,16 @@ Page {
     ProductListModel {
         id: productModel
         Component.onCompleted: loadProducts()
+        
+        onErrorOccurred: function(message) {
+            errorLabel.text = message
+            errorLabel.visible = true
+        }
+        
+        onOperationSucceeded: function(message) {
+            errorLabel.visible = false
+            newProductDialog.close()
+        }
     }
     
     property int count: productModel.rowCount()
@@ -143,14 +153,39 @@ Page {
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 8
+                    anchors.leftMargin: 16
+                    anchors.rightMargin: 16
+                    spacing: 12
 
-                    Label { text: qsTr("Nombre"); Layout.fillWidth: true; font.bold: true }
-                    Label { text: qsTr("SKU"); Layout.preferredWidth: 100; font.bold: true }
-                    Label { text: qsTr("Stock"); Layout.preferredWidth: 80; font.bold: true }
-                    Label { text: qsTr("Precio"); Layout.preferredWidth: 100; font.bold: true }
-                    Label { text: qsTr(""); Layout.preferredWidth: 100; font.bold: true }
+                    Label { 
+                        text: qsTr("Nombre")
+                        Layout.fillWidth: true
+                        font.bold: true
+                        font.pixelSize: 13
+                    }
+                    Label { 
+                        text: qsTr("SKU")
+                        Layout.preferredWidth: 120
+                        font.bold: true
+                        font.pixelSize: 13
+                    }
+                    Label { 
+                        text: qsTr("Stock")
+                        Layout.preferredWidth: 80
+                        font.bold: true
+                        font.pixelSize: 13
+                        horizontalAlignment: Text.AlignRight
+                    }
+                    Label { 
+                        text: qsTr("Precio")
+                        Layout.preferredWidth: 100
+                        font.bold: true
+                        font.pixelSize: 13
+                        horizontalAlignment: Text.AlignRight
+                    }
+                    Item { 
+                        Layout.preferredWidth: 100
+                    }
                 }
             }
 
@@ -165,8 +200,9 @@ Page {
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 8
+                    anchors.leftMargin: 16
+                    anchors.rightMargin: 16
+                    spacing: 12
 
                     ColumnLayout {
                         Layout.fillWidth: true
@@ -176,6 +212,8 @@ Page {
                             text: model.name
                             font.pixelSize: 14
                             font.bold: true
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
                         }
 
                         Label {
@@ -187,34 +225,32 @@ Page {
 
                     Label {
                         text: model.sku || "-"
-                        Layout.preferredWidth: 100
+                        Layout.preferredWidth: 120
+                        font.pixelSize: 13
+                        elide: Text.ElideRight
                     }
 
                     Label {
                         text: model.currentStock.toFixed(0)
                         Layout.preferredWidth: 80
+                        horizontalAlignment: Text.AlignRight
                         color: model.isLowStock ? Material.color(Material.Orange) : Material.foreground
                         font.bold: model.isLowStock
+                        font.pixelSize: 13
                     }
 
                     Label {
                         text: "S/" + model.salePrice.toFixed(2)
                         Layout.preferredWidth: 100
+                        horizontalAlignment: Text.AlignRight
                         font.bold: true
+                        font.pixelSize: 13
                     }
 
                     Row {
                         Layout.preferredWidth: 100
                         spacing: 4
-
-                        ToolButton {
-                            text: "\uE70F"
-                            font.family: "Segoe MDL2 Assets"
-                            font.pixelSize: 16
-                            onClicked: {
-                                newProductDialog.openEdit(model.productId)
-                            }
-                        }
+                        layoutDirection: Qt.RightToLeft
 
                         ToolButton {
                             text: "\uE74D"
@@ -224,6 +260,15 @@ Page {
                                 deleteDialog.productId = model.productId
                                 deleteDialog.productName = model.name
                                 deleteDialog.open()
+                            }
+                        }
+
+                        ToolButton {
+                            text: "\uE70F"
+                            font.family: "Segoe MDL2 Assets"
+                            font.pixelSize: 16
+                            onClicked: {
+                                newProductDialog.openEdit(model.productId)
                             }
                         }
                     }
@@ -285,7 +330,25 @@ Page {
             editMode = true
             editProductId = productId
             errorLabel.visible = false
-            // TODO: Cargar datos del producto
+            
+            // Obtener datos del producto desde el ViewModel
+            var product = productModel.getProductForEdit(productId)
+            if (product && product.id) {
+                // Cargar datos del producto seleccionado
+                nameField.text = product.name || ""
+                skuField.text = product.sku || ""
+                barcodeField.text = product.barcode || ""
+                categoryField.text = product.category || ""
+                stockField.text = product.currentStock ? product.currentStock.toString() : "0"
+                minStockField.text = product.minimumStock ? product.minimumStock.toString() : "0"
+                purchasePriceField.text = product.purchasePrice ? product.purchasePrice.toFixed(2) : "0.00"
+                salePriceField.text = product.salePrice ? product.salePrice.toFixed(2) : "0.00"
+                descriptionField.text = product.description || ""
+            } else {
+                errorLabel.text = "No se pudo cargar el producto"
+                errorLabel.visible = true
+            }
+            
             open()
         }
 
@@ -387,31 +450,27 @@ Page {
         standardButtons: Dialog.Save | Dialog.Cancel
 
         onAccepted: {
-            if (nameField.text.trim() === "" || skuField.text.trim() === "" || salePriceField.text === "") {
-                errorLabel.text = qsTr("Complete los campos obligatorios (*)") 
-                errorLabel.visible = true
-                return
-            }
+            errorLabel.visible = false
             
+            // Preparar datos del producto (el ViewModel validará)
             var product = {
-                name: nameField.text.trim(),
-                sku: skuField.text.trim(),
-                barcode: barcodeField.text.trim(),
-                category: categoryField.text.trim(),
+                name: nameField.text,
+                sku: skuField.text,
+                barcode: barcodeField.text,
+                // categoryId se mantiene del producto original, category es solo para mostrar
                 currentStock: parseFloat(stockField.text || "0"),
                 minimumStock: parseFloat(minStockField.text || "0"),
                 purchasePrice: parseFloat(purchasePriceField.text || "0"),
                 salePrice: parseFloat(salePriceField.text || "0"),
-                description: descriptionField.text.trim()
+                description: descriptionField.text
             }
             
+            // El ViewModel maneja validación y guardado
             if (editMode) {
                 productModel.updateProduct(editProductId, product)
             } else {
                 productModel.addProduct(product)
             }
-            
-            errorLabel.visible = false
         }
     }
 

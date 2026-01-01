@@ -1,16 +1,18 @@
-#include <QGuiApplication>
+#include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
 #include "src/database/DatabaseManager.h"
 #include "src/viewmodels/DashboardViewModel.h"
 #include "src/viewmodels/ProductListModel.h"
 #include "src/viewmodels/SalesCartViewModel.h"
+#include "src/viewmodels/PrintViewModel.h"
+#include "src/viewmodels/ExcelImportViewModel.h"
 #include "src/utils/BarcodeScannerHandler.h"
 
 int main(int argc, char *argv[])
 {
-    // Configuración de aplicación
-    QGuiApplication app(argc, argv);
+    // Configuración de aplicación - Usar QApplication para soporte de impresión
+    QApplication app(argc, argv);
     
     app.setOrganizationName("SistemaInventario");
     app.setOrganizationDomain("sistemainventario.com");
@@ -37,6 +39,8 @@ int main(int argc, char *argv[])
     qmlRegisterType<ProductListModel>("SistemaInventario", 1, 0, "ProductListModel");
     qmlRegisterType<SalesCartViewModel>("SistemaInventario", 1, 0, "SalesCartViewModel");
     qmlRegisterType<CartItemModel>("SistemaInventario", 1, 0, "CartItemModel");
+    qmlRegisterType<PrintViewModel>("SistemaInventario", 1, 0, "PrintViewModel");
+    qmlRegisterType<ExcelImportViewModel>("SistemaInventario", 1, 0, "ExcelImportViewModel");
     qmlRegisterType<BarcodeScannerHandler>("SistemaInventario", 1, 0, "BarcodeScannerHandler");
 
     // Crear motor QML

@@ -19,14 +19,18 @@ bool PrintService::printVoucher(const Sale& sale, VoucherType type, const Invoic
     printer.setPageSize(QPageSize::A4);
     printer.setPageOrientation(QPageLayout::Portrait);
 
+    // Usar impresora predeterminada configurada
     if (!m_defaultPrinter.isEmpty()) {
         printer.setPrinterName(m_defaultPrinter);
     }
-
-    QPrintDialog dialog(&printer);
-    if (dialog.exec() != QDialog::Accepted) {
-        emit printFailed("Impresión cancelada por el usuario");
-        return false;
+    // Si no hay impresora configurada, usar la predeterminada del sistema
+    else {
+        QPrinterInfo defaultPrinter = QPrinterInfo::defaultPrinter();
+        if (defaultPrinter.isNull()) {
+            emit printFailed("No hay impresora configurada");
+            return false;
+        }
+        printer.setPrinterName(defaultPrinter.printerName());
     }
 
     QPainter painter;

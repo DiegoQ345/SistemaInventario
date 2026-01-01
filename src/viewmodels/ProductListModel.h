@@ -86,6 +86,16 @@ public slots:
      */
     Q_INVOKABLE bool deleteProduct(int productId);
 
+    /**
+     * @brief Validar datos del producto antes de guardar
+     */
+    Q_INVOKABLE QString validateProductData(const QVariantMap& productData) const;
+
+    /**
+     * @brief Obtener datos del producto para edición por ID
+     */
+    Q_INVOKABLE QVariantMap getProductForEdit(int productId) const;
+
 signals:
     void countChanged();
     void isLoadingChanged();
@@ -93,6 +103,7 @@ signals:
     void productAdded(int productId);
     void productUpdated(int productId);
     void productDeleted(int productId);
+    void operationSucceeded(const QString& message);
 
 private:
     QList<Product> m_products;

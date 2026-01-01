@@ -10,45 +10,64 @@ SalesService::SalesService(QObject *parent)
 
 bool SalesService::createSale(Sale& sale, QString& errorMessage)
 {
+    qDebug() << "=== SalesService::createSale ===";
+    
     // Validar venta
     if (!validateSale(sale, errorMessage)) {
+        qWarning() << "  Validation failed:" << errorMessage;
         return false;
     }
+    
+    qDebug() << "  Sale validated successfully";
 
     // Generar número de factura si no se proporcionó
     if (sale.invoiceNumber.isEmpty()) {
         sale.invoiceNumber = m_saleRepo.generateNextInvoiceNumber();
+        qDebug() << "  Generated invoice number:" << sale.invoiceNumber;
     }
 
     // Calcular totales
     sale.calculateTotals();
+    qDebug() << "  Totals calculated - Total:" << sale.total;
 
     // Iniciar transacción
     if (!DatabaseManager::instance().beginTransaction()) {
         errorMessage = "Error iniciando transacción";
+        qCritical() << "  " << errorMessage;
         return false;
     }
+    
+    qDebug() << "  Transaction started";
 
     // Actualizar stock de productos
     if (!updateStockForSale(sale, errorMessage)) {
+        qCritical() << "  Stock update failed:" << errorMessage;
         DatabaseManager::instance().rollback();
         return false;
     }
+    
+    qDebug() << "  Stock updated successfully";
 
     // Crear venta
     int saleId = m_saleRepo.create(sale);
     if (saleId == 0) {
         DatabaseManager::instance().rollback();
         errorMessage = "Error guardando la venta";
+        qCritical() << "  " << errorMessage;
         return false;
     }
+    
+    qDebug() << "  Sale saved with ID:" << saleId;
 
     // Confirmar transacción
     if (!DatabaseManager::instance().commit()) {
         DatabaseManager::instance().rollback();
         errorMessage = "Error confirmando la venta";
+        qCritical() << "  " << errorMessage;
         return false;
     }
+    
+    qDebug() << "  Transaction committed successfully";
 
     emit saleCompleted(saleId, sale.invoiceNumber);
     return true;

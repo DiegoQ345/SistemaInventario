@@ -125,10 +125,13 @@ bool ProductService::registerStockMovement(int productId, const QString& movemen
                                           const QString& reference, const QString& notes,
                                           QString& errorMessage)
 {
+    qDebug() << "ProductService::registerStockMovement - Product:" << productId << "Type:" << movementTypeCode << "Quantity:" << quantity;
+    
     // Obtener producto actual
     auto product = m_productRepo.findById(productId);
     if (!product) {
         errorMessage = "Producto no encontrado";
+        qWarning() << "  " << errorMessage;
         return false;
     }
 
@@ -136,6 +139,7 @@ bool ProductService::registerStockMovement(int productId, const QString& movemen
     int movementTypeId = getMovementTypeId(movementTypeCode);
     if (movementTypeId == 0) {
         errorMessage = "Tipo de movimiento inválido";
+        qWarning() << "  " << errorMessage;
         return false;
     }
 
@@ -149,46 +153,47 @@ bool ProductService::registerStockMovement(int productId, const QString& movemen
     
     if (!query.exec() || !query.next()) {
         errorMessage = "Error obteniendo tipo de movimiento";
+        qWarning() << "  " << errorMessage;
         return false;
     }
 
     int affectsStock = query.value(0).toInt();
     newStock += (quantity * affectsStock);
+    
+    qDebug() << "  Previous stock:" << previousStock << "Affects:" << affectsStock << "New stock:" << newStock;
 
     // Validar que el stock no quede negativo
     if (newStock < 0) {
         errorMessage = QString("Stock insuficiente. Stock actual: %1, cantidad solicitada: %2")
                           .arg(previousStock).arg(quantity);
+        qWarning() << "  " << errorMessage;
         return false;
     }
 
-    // Iniciar transacción
-    if (!DatabaseManager::instance().beginTransaction()) {
-        errorMessage = "Error iniciando transacción";
-        return false;
-    }
+    // NO iniciar transacción aquí - debe ser manejada por el servicio que llama (SalesService)
+    // La transacción ya fue iniciada por SalesService::createSale()
 
     // Actualizar stock del producto
     if (!m_productRepo.updateStock(productId, newStock)) {
-        DatabaseManager::instance().rollback();
         errorMessage = "Error actualizando stock";
+        qCritical() << "  " << errorMessage;
         return false;
     }
+    
+    qDebug() << "  Stock updated successfully";
 
     // Registrar movimiento
     if (!logStockMovement(productId, movementTypeId, quantity, previousStock, newStock,
                          unitPrice, reference, notes)) {
-        DatabaseManager::instance().rollback();
         errorMessage = "Error registrando movimiento";
+        qCritical() << "  " << errorMessage;
         return false;
     }
+    
+    qDebug() << "  Movement logged successfully";
 
-    // Confirmar transacción
-    if (!DatabaseManager::instance().commit()) {
-        DatabaseManager::instance().rollback();
-        errorMessage = "Error confirmando transacción";
-        return false;
-    }
+    // NO confirmar transacción aquí - la maneja el servicio superior
+    // SalesService::createSale() hará el commit de toda la transacción
 
     emit stockChanged(productId, previousStock, newStock);
 

@@ -9,12 +9,9 @@ int SaleRepository::create(Sale& sale)
 {
     auto& db = DatabaseManager::instance();
     
-    // Iniciar transacción
-    if (!db.beginTransaction()) {
-        qCritical() << "Error iniciando transacción para venta";
-        return 0;
-    }
-
+    // NO iniciar transacción aquí - la maneja SalesService
+    // El servicio ya inició la transacción antes de llamar a este método
+    
     QSqlQuery query(db.database());
     
     // Insertar venta principal
@@ -38,12 +35,17 @@ int SaleRepository::create(Sale& sale)
 
     if (!query.exec()) {
         qCritical() << "Error creando venta:" << query.lastError().text();
-        db.rollback();
+        qCritical() << "  Invoice:" << sale.invoiceNumber;
+        qCritical() << "  Customer ID:" << sale.customerId;
+        qCritical() << "  Payment Method ID:" << sale.paymentMethodId;
+        qCritical() << "  Total:" << sale.total;
         return 0;
     }
 
     int saleId = query.lastInsertId().toInt();
     sale.id = saleId;
+    
+    qDebug() << "  Sale inserted with ID:" << saleId;
 
     // Insertar items de venta
     query.prepare(
@@ -61,21 +63,18 @@ int SaleRepository::create(Sale& sale)
 
         if (!query.exec()) {
             qCritical() << "Error insertando item de venta:" << query.lastError().text();
-            db.rollback();
+            qCritical() << "  Product:" << item.productName;
+            qCritical() << "  Quantity:" << item.quantity;
             return 0;
         }
 
         item.id = query.lastInsertId().toInt();
         item.saleId = saleId;
     }
+    
+    qDebug() << "  " << sale.items.count() << "items inserted";
 
-    // Confirmar transacción
-    if (!db.commit()) {
-        qCritical() << "Error confirmando transacción de venta";
-        db.rollback();
-        return 0;
-    }
-
+    // NO confirmar transacción aquí - la maneja SalesService
     return saleId;
 }
 
@@ -185,30 +184,52 @@ QString SaleRepository::generateNextInvoiceNumber()
 {
     QSqlQuery query(DatabaseManager::instance().database());
     
-    // Obtener el último número de factura del día
-    query.prepare(
-        "SELECT invoice_number FROM sales "
-        "WHERE DATE(created_at) = DATE('now') "
-        "ORDER BY id DESC LIMIT 1"
-    );
-
-    if (!query.exec()) {
-        qCritical() << "Error generando número de factura:" << query.lastError().text();
-    }
-
     QString prefix = QDate::currentDate().toString("yyyyMMdd");
     int sequence = 1;
+    QString invoiceNumber;
+    
+    // Intentar hasta encontrar un número único (máximo 100 intentos)
+    for (int attempt = 0; attempt < 100; ++attempt) {
+        // Obtener el último número de factura con este prefijo
+        query.prepare(
+            "SELECT invoice_number FROM sales "
+            "WHERE invoice_number LIKE :prefix "
+            "ORDER BY invoice_number DESC LIMIT 1"
+        );
+        query.bindValue(":prefix", prefix + "-%");
 
-    if (query.next()) {
-        QString lastInvoice = query.value(0).toString();
-        // Formato: YYYYMMDD-XXXX
-        QStringList parts = lastInvoice.split('-');
-        if (parts.size() == 2 && parts[0] == prefix) {
-            sequence = parts[1].toInt() + 1;
+        if (!query.exec()) {
+            qCritical() << "Error consultando números de factura:" << query.lastError().text();
+            break;
         }
-    }
 
-    return QString("%1-%2").arg(prefix).arg(sequence, 4, 10, QChar('0'));
+        if (query.next()) {
+            QString lastInvoice = query.value(0).toString();
+            // Formato: YYYYMMDD-XXXX
+            QStringList parts = lastInvoice.split('-');
+            if (parts.size() == 2 && parts[0] == prefix) {
+                sequence = parts[1].toInt() + 1;
+            }
+        }
+
+        invoiceNumber = QString("%1-%2").arg(prefix).arg(sequence, 4, 10, QChar('0'));
+        
+        // Verificar que no exista ya (por si acaso)
+        query.prepare("SELECT COUNT(*) FROM sales WHERE invoice_number = :invoice");
+        query.bindValue(":invoice", invoiceNumber);
+        
+        if (query.exec() && query.next() && query.value(0).toInt() == 0) {
+            // Número único encontrado
+            qDebug() << "Generated unique invoice number:" << invoiceNumber;
+            return invoiceNumber;
+        }
+        
+        // Si ya existe, incrementar y reintentar
+        sequence++;
+    }
+    
+    qCritical() << "Could not generate unique invoice number after 100 attempts";
+    return invoiceNumber;
 }
 
 SaleRepository::SalesStats SaleRepository::getStatsForDate(const QDate& date)
