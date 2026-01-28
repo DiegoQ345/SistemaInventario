@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
+import QtQuick.Effects
 import Qt.labs.settings
 import "qml/components"
 
@@ -62,14 +63,19 @@ ApplicationWindow {
         height: root.height
         modal: true
         
-        // Overlay con efecto de difuminado en el contenido de fondo
+        // Overlay con efecto de desenfoque en el contenido de fondo
         Overlay.modal: Rectangle {
             color: settings.isDarkMode ? 
-                Qt.rgba(0, 0, 0, 0.5) : 
-                Qt.rgba(1, 1, 1, 0.5)
+                Qt.rgba(0, 0, 0, 0.4) : 
+                Qt.rgba(0.2, 0.2, 0.2, 0.3)
             
-            // Efecto de desenfoque deshabilitado (requiere Qt Shader Tools en Qt 6)
-            layer.enabled: true
+            MultiEffect {
+                anchors.fill: parent
+                source: contentArea
+                blur: 1.0
+                blurMax: 48
+                blurMultiplier: 1.0
+            }
         }
         
         ColumnLayout {
@@ -385,11 +391,15 @@ ApplicationWindow {
     }
 
     // Contenido principal
-    StackView {
-        id: stackView
+    Item {
+        id: contentArea
         anchors.fill: parent
-        initialItem: Page {
-            title: qsTr("Dashboard")
+        
+        StackView {
+            id: stackView
+            anchors.fill: parent
+            initialItem: Page {
+                title: qsTr("Dashboard")
             
             ColumnLayout {
                 anchors.centerIn: parent
@@ -524,5 +534,6 @@ ApplicationWindow {
     NotificationBar {
         id: globalNotification
     }
-}
+}  // Fin contentArea
+}  // Fin ApplicationWindow
 

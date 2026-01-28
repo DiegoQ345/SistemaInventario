@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
+import QtQuick.Effects
 import SistemaInventario 1.0
 
 Dialog {
@@ -10,6 +11,21 @@ Dialog {
     modal: true
     anchors.centerIn: parent
     width: 400
+    
+    // Overlay con blur - fondo blanco molesto reemplazado
+    Overlay.modal: Rectangle {
+        color: Material.theme === Material.Dark ? 
+            Qt.rgba(0, 0, 0, 0.5) : 
+            Qt.rgba(0.1, 0.1, 0.1, 0.4)
+        
+        MultiEffect {
+            anchors.fill: parent
+            source: parent.parent
+            blur: 1.0
+            blurMax: 64
+            blurMultiplier: 1.2
+        }
+    }
 
     property string invoiceNumber: "FACT-0001"
     property real total: 0.0

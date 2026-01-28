@@ -32,6 +32,10 @@ Copy-Item "$QtPath\qml\Qt\labs\settings\*" "qml\Qt\labs\settings\" -Recurse -For
 
 Copy-Item "$QtPath\bin\Qt6LabsSettings.dll" . -Force
 
+# QtQuick.Effects para blur/desenfoque
+New-Item -ItemType Directory -Path "qml\QtQuick\Effects" -Force | Out-Null
+Copy-Item "$QtPath\qml\QtQuick\Effects\*" "qml\QtQuick\Effects\" -Recurse -Force
+
 Write-Host ""
 Write-Host "PAQUETE GENERADO EN: $PackageDir"
 Set-Location $ProjectRoot

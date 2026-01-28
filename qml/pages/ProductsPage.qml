@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
+import QtQuick.Effects
 import SistemaInventario
 
 Page {
@@ -343,6 +344,21 @@ Page {
         anchors.centerIn: parent
         width: Math.min(600, root.width * 0.9)
         
+        // Overlay con blur
+        Overlay.modal: Rectangle {
+            color: Material.theme === Material.Dark ? 
+                Qt.rgba(0, 0, 0, 0.4) : 
+                Qt.rgba(0.2, 0.2, 0.2, 0.3)
+            
+            MultiEffect {
+                anchors.fill: parent
+                source: root
+                blur: 1.0
+                blurMax: 48
+                blurMultiplier: 1.0
+            }
+        }
+        
         property bool editMode: false
         property int editProductId: 0
         
@@ -567,6 +583,21 @@ Page {
         title: qsTr("Eliminar Producto")
         modal: true
         anchors.centerIn: parent
+        
+        // Overlay con blur
+        Overlay.modal: Rectangle {
+            color: Material.theme === Material.Dark ? 
+                Qt.rgba(0, 0, 0, 0.4) : 
+                Qt.rgba(0.2, 0.2, 0.2, 0.3)
+            
+            MultiEffect {
+                anchors.fill: parent
+                source: root
+                blur: 1.0
+                blurMax: 48
+                blurMultiplier: 1.0
+            }
+        }
 
         property int productId: 0
         property string productName: ""
