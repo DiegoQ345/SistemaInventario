@@ -8,6 +8,14 @@ import SistemaInventario
 Page {
     id: root
     title: qsTr("Productos")
+    
+    // Configuración del blur cuando se activa
+    layer.enabled: false
+    layer.effect: MultiEffect {
+        blur: 1.0
+        blurMax: 64
+        blurMultiplier: 1.2
+    }
 
     // Modelo real de productos
     ProductListModel {
@@ -200,21 +208,27 @@ Page {
                         font.pixelSize: 13
                     }
                     Label { 
+                        text: qsTr("Categoría")
+                        Layout.preferredWidth: 140
+                        font.bold: true
+                        font.pixelSize: 13
+                    }
+                    Label { 
                         text: qsTr("SKU")
-                        Layout.preferredWidth: 120
+                        Layout.preferredWidth: 100
                         font.bold: true
                         font.pixelSize: 13
                     }
                     Label { 
                         text: qsTr("Stock")
-                        Layout.preferredWidth: 80
+                        Layout.preferredWidth: 70
                         font.bold: true
                         font.pixelSize: 13
                         horizontalAlignment: Text.AlignRight
                     }
                     Label { 
                         text: qsTr("Precio")
-                        Layout.preferredWidth: 100
+                        Layout.preferredWidth: 90
                         font.bold: true
                         font.pixelSize: 13
                         horizontalAlignment: Text.AlignRight
@@ -253,22 +267,35 @@ Page {
                         }
 
                         Label {
-                            text: model.category || qsTr("Sin categoría")
-                            font.pixelSize: 12
-                            opacity: 0.7
+                            text: model.description ? 
+                                model.description.substring(0, Math.min(50, model.description.length)) + 
+                                (model.description.length > 50 ? "..." : "") : 
+                                qsTr("Sin descripción")
+                            font.pixelSize: 11
+                            opacity: 0.6
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
                         }
                     }
 
                     Label {
+                        text: model.category || qsTr("Sin categoría")
+                        Layout.preferredWidth: 140
+                        font.pixelSize: 12
+                        elide: Text.ElideRight
+                        opacity: 0.8
+                    }
+
+                    Label {
                         text: model.sku || "-"
-                        Layout.preferredWidth: 120
+                        Layout.preferredWidth: 100
                         font.pixelSize: 13
                         elide: Text.ElideRight
                     }
 
                     Label {
                         text: model.currentStock.toFixed(0)
-                        Layout.preferredWidth: 80
+                        Layout.preferredWidth: 70
                         horizontalAlignment: Text.AlignRight
                         color: model.isLowStock ? Material.color(Material.Orange) : Material.foreground
                         font.bold: model.isLowStock
@@ -277,7 +304,7 @@ Page {
 
                     Label {
                         text: "S/" + model.salePrice.toFixed(2)
-                        Layout.preferredWidth: 100
+                        Layout.preferredWidth: 90
                         horizontalAlignment: Text.AlignRight
                         font.bold: true
                         font.pixelSize: 13
@@ -344,19 +371,14 @@ Page {
         anchors.centerIn: parent
         width: Math.min(600, root.width * 0.9)
         
-        // Overlay con blur
+        onOpened: root.layer.enabled = true
+        onClosed: root.layer.enabled = false
+        
+        // Overlay con color semitransparente
         Overlay.modal: Rectangle {
             color: Material.theme === Material.Dark ? 
-                Qt.rgba(0, 0, 0, 0.4) : 
-                Qt.rgba(0.2, 0.2, 0.2, 0.3)
-            
-            MultiEffect {
-                anchors.fill: parent
-                source: root
-                blur: 1.0
-                blurMax: 48
-                blurMultiplier: 1.0
-            }
+                Qt.rgba(0, 0, 0, 0.5) : 
+                Qt.rgba(0.1, 0.1, 0.1, 0.4)
         }
         
         property bool editMode: false
@@ -414,124 +436,128 @@ Page {
             open()
         }
 
-        contentItem: ColumnLayout {
-            spacing: 16
+        contentItem: ScrollView {
+            clip: true
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            
+            ColumnLayout {
+                width: newProductDialog.availableWidth
+                spacing: 16
 
-            // Mensaje de error
-            Label {
-                id: errorLabel
-                Layout.fillWidth: true
-                visible: false
-                color: Material.color(Material.Red)
-                font.pixelSize: 13
-                font.weight: Font.Medium
-                wrapMode: Text.WordWrap
-            }
-
-            GridLayout {
-                columns: 2
-                Layout.fillWidth: true
-                columnSpacing: 16
-                rowSpacing: 12
-
-                Label { text: qsTr("Nombre:") + "*"; font.weight: Font.Medium }
-                TextField {
-                    id: nameField
+                // Mensaje de error
+                Label {
+                    id: errorLabel
                     Layout.fillWidth: true
-                    placeholderText: qsTr("Nombre del producto")
+                    visible: false
+                    color: Material.color(Material.Red)
+                    font.pixelSize: 13
+                    font.weight: Font.Medium
+                    wrapMode: Text.WordWrap
                 }
 
-                Label { text: qsTr("SKU:") + "*"; font.weight: Font.Medium }
-                TextField {
-                    id: skuField
+                GridLayout {
+                    columns: 2
                     Layout.fillWidth: true
-                    placeholderText: qsTr("Código SKU")
-                }
+                    columnSpacing: 16
+                    rowSpacing: 12
 
-                Label { text: qsTr("Código de Barras:"); font.weight: Font.Medium }
-                TextField {
-                    id: barcodeField
-                    Layout.fillWidth: true
-                    placeholderText: qsTr("EAN, UPC...")
-                }
+                    Label { text: qsTr("Nombre:") + "*"; font.weight: Font.Medium }
+                    TextField {
+                        id: nameField
+                        Layout.fillWidth: true
+                        placeholderText: qsTr("Nombre del producto")
+                    }
 
-                Label { text: qsTr("Categoría:"); font.weight: Font.Medium }
-                ComboBox {
-                    id: categoryField
-                    Layout.fillWidth: true
-                    editable: true
-                    model: [
-                        "Alimentos y Bebidas",
-                        "Lácteos",
-                        "Carnes y Embutidos",
-                        "Frutas y Verduras",
-                        "Panadería y Pastelería",
-                        "Snacks y Golosinas",
-                        "Bebidas",
-                        "Productos de Limpieza",
-                        "Cuidado Personal",
-                        "Hogar y Decoración",
-                        "Electrónica",
-                        "Papelería y Oficina",
-                        "Juguetes y Entretenimiento",
-                        "Mascotas",
-                        "Ferretería",
-                        "Otros"
-                    ]
-                    
-                    property string text: editable ? editText : currentText
-                    
-                    onAccepted: {
-                        if (find(editText) === -1) {
-                            currentIndex = -1
+                    Label { text: qsTr("SKU:") + "*"; font.weight: Font.Medium }
+                    TextField {
+                        id: skuField
+                        Layout.fillWidth: true
+                        placeholderText: qsTr("Código SKU")
+                    }
+
+                    Label { text: qsTr("Código de Barras:"); font.weight: Font.Medium }
+                    TextField {
+                        id: barcodeField
+                        Layout.fillWidth: true
+                        placeholderText: qsTr("EAN, UPC...")
+                    }
+
+                    Label { text: qsTr("Categoría:"); font.weight: Font.Medium }
+                    ComboBox {
+                        id: categoryField
+                        Layout.fillWidth: true
+                        editable: true
+                        model: [
+                            "Alimentos y Bebidas",
+                            "Lácteos",
+                            "Carnes y Embutidos",
+                            "Frutas y Verduras",
+                            "Panadería y Pastelería",
+                            "Snacks y Golosinas",
+                            "Bebidas",
+                            "Productos de Limpieza",
+                            "Cuidado Personal",
+                            "Hogar y Decoración",
+                            "Electrónica",
+                            "Papelería y Oficina",
+                            "Juguetes y Entretenimiento",
+                            "Mascotas",
+                            "Ferretería",
+                            "Otros"
+                        ]
+                        
+                        property string text: editable ? editText : currentText
+                        
+                        onAccepted: {
+                            if (find(editText) === -1) {
+                                currentIndex = -1
+                            }
                         }
+                    }
+
+                    Label { text: qsTr("Stock Actual:") + "*"; font.weight: Font.Medium }
+                    TextField {
+                        id: stockField
+                        Layout.fillWidth: true
+                        placeholderText: "0"
+                        validator: DoubleValidator { bottom: 0 }
+                    }
+
+                    Label { text: qsTr("Stock Mínimo:"); font.weight: Font.Medium }
+                    TextField {
+                        id: minStockField
+                        Layout.fillWidth: true
+                        placeholderText: "0"
+                        validator: DoubleValidator { bottom: 0 }
+                    }
+
+                    Label { text: qsTr("Precio Compra:"); font.weight: Font.Medium }
+                    TextField {
+                        id: purchasePriceField
+                        Layout.fillWidth: true
+                        placeholderText: "0.00"
+                        validator: DoubleValidator { bottom: 0; decimals: 2 }
+                    }
+
+                    Label { text: qsTr("Precio Venta:") + "*"; font.weight: Font.Medium }
+                    TextField {
+                        id: salePriceField
+                        Layout.fillWidth: true
+                        placeholderText: "0.00"
+                        validator: DoubleValidator { bottom: 0; decimals: 2 }
                     }
                 }
 
-                Label { text: qsTr("Stock Actual:") + "*"; font.weight: Font.Medium }
-                TextField {
-                    id: stockField
-                    Layout.fillWidth: true
-                    placeholderText: "0"
-                    validator: DoubleValidator { bottom: 0 }
+                Label { 
+                    text: qsTr("Descripción:"); 
+                    font.weight: Font.Medium
+                    Layout.topMargin: 8
                 }
-
-                Label { text: qsTr("Stock Mínimo:"); font.weight: Font.Medium }
-                TextField {
-                    id: minStockField
-                    Layout.fillWidth: true
-                    placeholderText: "0"
-                    validator: DoubleValidator { bottom: 0 }
-                }
-
-                Label { text: qsTr("Precio Compra:"); font.weight: Font.Medium }
-                TextField {
-                    id: purchasePriceField
-                    Layout.fillWidth: true
-                    placeholderText: "0.00"
-                    validator: DoubleValidator { bottom: 0; decimals: 2 }
-                }
-
-                Label { text: qsTr("Precio Venta:") + "*"; font.weight: Font.Medium }
-                TextField {
-                    id: salePriceField
-                    Layout.fillWidth: true
-                    placeholderText: "0.00"
-                    validator: DoubleValidator { bottom: 0; decimals: 2 }
-                }
-            }
-
-            Label { text: qsTr("Descripción:"); font.weight: Font.Medium }
-            ScrollView {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 120
-                Layout.minimumHeight: 80
-                clip: true
-                
-                ScrollBar.vertical.policy: ScrollBar.AlwaysOn
                 
                 TextArea {
                     id: descriptionField
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 120
                     placeholderText: qsTr("Descripción del producto (opcional)")
                     wrapMode: TextArea.Wrap
                     selectByMouse: true
@@ -584,19 +610,14 @@ Page {
         modal: true
         anchors.centerIn: parent
         
-        // Overlay con blur
+        onOpened: root.layer.enabled = true
+        onClosed: root.layer.enabled = false
+        
+        // Overlay con color semitransparente
         Overlay.modal: Rectangle {
             color: Material.theme === Material.Dark ? 
-                Qt.rgba(0, 0, 0, 0.4) : 
-                Qt.rgba(0.2, 0.2, 0.2, 0.3)
-            
-            MultiEffect {
-                anchors.fill: parent
-                source: root
-                blur: 1.0
-                blurMax: 48
-                blurMultiplier: 1.0
-            }
+                Qt.rgba(0, 0, 0, 0.5) : 
+                Qt.rgba(0.1, 0.1, 0.1, 0.4)
         }
 
         property int productId: 0
