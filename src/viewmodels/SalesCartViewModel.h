@@ -87,6 +87,7 @@ class SalesCartViewModel : public QObject
     Q_PROPERTY(double discount READ discount WRITE setDiscount NOTIFY discountChanged)
     Q_PROPERTY(double totalWithDiscount READ totalWithDiscount NOTIFY totalWithDiscountChanged)
     Q_PROPERTY(bool canProcessSale READ canProcessSale NOTIFY canProcessSaleChanged)
+    Q_PROPERTY(QString cashierName READ cashierName WRITE setCashierName NOTIFY cashierNameChanged)
 
 public:
     explicit SalesCartViewModel(QObject *parent = nullptr);
@@ -98,8 +99,10 @@ public:
     double discount() const { return m_discount; }
     double totalWithDiscount() const;
     bool canProcessSale() const;
+    QString cashierName() const { return m_cashierName; }
     
     void setDiscount(double discount);
+    void setCashierName(const QString& name);
 
 public slots:
     /**
@@ -150,6 +153,7 @@ signals:
     void discountChanged();
     void totalWithDiscountChanged();
     void canProcessSaleChanged();
+    void cashierNameChanged();
     void saleCompleted(const QString& invoiceNumber, double total, const QString& voucherType,
                       const QVariantList& items, double subtotal, double discount);
     void saleFailed(const QString& errorMessage);
@@ -164,6 +168,7 @@ private:
     bool m_isProcessing = false;
     QString m_lastInvoiceNumber;
     double m_discount = 0.0;
+    QString m_cashierName;
 
     void setIsProcessing(bool processing);
     bool validateStock(const Product& product, double quantity, QString& errorMsg);

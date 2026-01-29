@@ -23,6 +23,12 @@ class DashboardViewModel : public QObject
     Q_PROPERTY(int lowStockProducts READ lowStockProducts NOTIFY lowStockProductsChanged)
     Q_PROPERTY(int totalProducts READ totalProducts NOTIFY totalProductsChanged)
     Q_PROPERTY(bool isLoading READ isLoading NOTIFY isLoadingChanged)
+    
+    // Propiedades de vendedor/cajero
+    Q_PROPERTY(QString currentCashier READ currentCashier WRITE setCurrentCashier NOTIFY currentCashierChanged)
+    Q_PROPERTY(QStringList availableCashiers READ availableCashiers NOTIFY availableCashiersChanged)
+    Q_PROPERTY(int todayTransactionsByCashier READ todayTransactionsByCashier NOTIFY todayTransactionsByCashierChanged)
+    Q_PROPERTY(double todaySalesByCashier READ todaySalesByCashier NOTIFY todaySalesByCashierChanged)
 
 public:
     explicit DashboardViewModel(QObject *parent = nullptr);
@@ -35,12 +41,33 @@ public:
     int lowStockProducts() const { return m_lowStockProducts; }
     int totalProducts() const { return m_totalProducts; }
     bool isLoading() const { return m_isLoading; }
+    
+    // Getters para cajero
+    QString currentCashier() const { return m_currentCashier; }
+    QStringList availableCashiers() const { return m_availableCashiers; }
+    int todayTransactionsByCashier() const { return m_todayTransactionsByCashier; }
+    double todaySalesByCashier() const { return m_todaySalesByCashier; }
+    
+    // Setters
+    void setCurrentCashier(const QString& cashier);
 
 public slots:
     /**
      * @brief Refrescar estadísticas del dashboard
      */
     void refresh();
+    
+    /**
+     * @brief Realizar cierre de día y obtener reporte
+     * @return JSON con reporte de cierre (ventas totales, por cajero, productos más vendidos)
+     */
+    Q_INVOKABLE QString closeDayShift();
+    
+    /**
+     * @brief Obtener reporte del día actual sin cerrar
+     * @return JSON con estadísticas actuales del día
+     */
+    Q_INVOKABLE QString getDailyReport();
 
 signals:
     void todaySalesChanged();
@@ -50,6 +77,13 @@ signals:
     void lowStockProductsChanged();
     void totalProductsChanged();
     void isLoadingChanged();
+    
+    // Signals para cajero
+    void currentCashierChanged();
+    void availableCashiersChanged();
+    void todayTransactionsByCashierChanged();
+    void todaySalesByCashierChanged();
+    void dayClosingCompleted(const QString& report);
 
 private:
     double m_todaySales = 0.0;
@@ -59,8 +93,15 @@ private:
     int m_lowStockProducts = 0;
     int m_totalProducts = 0;
     bool m_isLoading = false;
+    
+    // Cajero/vendedor
+    QString m_currentCashier;
+    QStringList m_availableCashiers;
+    int m_todayTransactionsByCashier = 0;
+    double m_todaySalesByCashier = 0.0;
 
     void setIsLoading(bool loading);
+    void loadCashierStats();
 };
 
 #endif // DASHBOARDVIEWMODEL_H

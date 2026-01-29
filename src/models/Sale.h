@@ -30,6 +30,7 @@ struct Sale
 {
     int id = 0;
     QString invoiceNumber;
+    QString voucherType = "TICKET";  // BOLETA, FACTURA, TICKET
     int customerId = 0;
     QString customerName;  // Para joins
     double subtotal = 0.0;

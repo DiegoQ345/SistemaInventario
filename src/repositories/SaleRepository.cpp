@@ -16,13 +16,14 @@ int SaleRepository::create(Sale& sale)
     
     // Insertar venta principal
     query.prepare(
-        "INSERT INTO sales (invoice_number, customer_id, subtotal, tax, discount, total, "
+        "INSERT INTO sales (invoice_number, voucher_type, customer_id, subtotal, tax, discount, total, "
         "payment_method_id, status, notes, created_by) "
-        "VALUES (:invoice_number, :customer_id, :subtotal, :tax, :discount, :total, "
+        "VALUES (:invoice_number, :voucher_type, :customer_id, :subtotal, :tax, :discount, :total, "
         ":payment_method_id, :status, :notes, :created_by)"
     );
 
     query.bindValue(":invoice_number", sale.invoiceNumber);
+    query.bindValue(":voucher_type", sale.voucherType);
     query.bindValue(":customer_id", sale.customerId > 0 ? sale.customerId : QVariant());
     query.bindValue(":subtotal", sale.subtotal);
     query.bindValue(":tax", sale.tax);
@@ -337,6 +338,7 @@ Sale SaleRepository::mapFromQuery(const QSqlQuery& query)
     Sale sale;
     sale.id = query.value("id").toInt();
     sale.invoiceNumber = query.value("invoice_number").toString();
+    sale.voucherType = query.value("voucher_type").toString();
     sale.customerId = query.value("customer_id").toInt();
     sale.customerName = query.value("customer_name").toString();
     sale.subtotal = query.value("subtotal").toDouble();

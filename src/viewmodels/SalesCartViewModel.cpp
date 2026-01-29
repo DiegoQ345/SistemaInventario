@@ -401,6 +401,14 @@ void SalesCartViewModel::setDiscount(double discount)
     emit canProcessSaleChanged();
 }
 
+void SalesCartViewModel::setCashierName(const QString& name)
+{
+    if (m_cashierName != name) {
+        m_cashierName = name;
+        emit cashierNameChanged();
+    }
+}
+
 double SalesCartViewModel::totalWithDiscount() const
 {
     return qMax(0.0, m_cart->subtotal() - m_discount);

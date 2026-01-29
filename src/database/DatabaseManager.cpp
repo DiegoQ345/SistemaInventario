@@ -285,6 +285,7 @@ bool DatabaseManager::createTables()
         "CREATE TABLE IF NOT EXISTS sales ("
         "id INTEGER PRIMARY KEY AUTOINCREMENT,"
         "invoice_number TEXT UNIQUE NOT NULL,"
+        "voucher_type TEXT DEFAULT 'TICKET',"  // BOLETA, FACTURA, TICKET
         "customer_id INTEGER,"
         "subtotal REAL NOT NULL,"
         "tax REAL DEFAULT 0,"
@@ -300,6 +301,21 @@ bool DatabaseManager::createTables()
         ")")) {
         m_lastError = query.lastError().text();
         return false;
+    }
+    
+    // Migración: Agregar voucher_type si no existe
+    query.exec("PRAGMA table_info(sales)");
+    bool hasVoucherType = false;
+    while (query.next()) {
+        if (query.value(1).toString() == "voucher_type") {
+            hasVoucherType = true;
+            break;
+        }
+    }
+    if (!hasVoucherType) {
+        if (!query.exec("ALTER TABLE sales ADD COLUMN voucher_type TEXT DEFAULT 'TICKET'")) {
+            qWarning() << "No se pudo agregar voucher_type (probablemente ya existe):" << query.lastError().text();
+        }
     }
 
     // Tabla de items de venta
