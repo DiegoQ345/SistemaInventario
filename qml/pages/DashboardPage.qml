@@ -29,12 +29,12 @@ Page {
 
     ScrollView {
         anchors.fill: parent
+        anchors.margins: 20
         contentWidth: availableWidth
 
         ColumnLayout {
             width: parent.width
             spacing: 20
-            padding: 20
 
             // Título
             Label {
@@ -194,6 +194,332 @@ Page {
                         font.weight: Font.Medium
                         onClicked: {
                             // Navegar a reportes
+                        }
+                    }
+                }
+            }
+
+            // Gráfico de ventas - Barras de progreso visual
+            GroupBox {
+                Layout.fillWidth: true
+                title: qsTr("📊 Ventas por Tipo de Comprobante (Hoy)")
+                
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 16
+                    
+                    Label {
+                        text: qsTr("Distribución visual de ventas del día")
+                        opacity: 0.7
+                        font.pixelSize: 12
+                    }
+                    
+                    // Boletas
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+                        
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Label {
+                                text: qsTr("🧾 Boletas")
+                                font.weight: Font.Medium
+                                Layout.fillWidth: true
+                            }
+                            Label {
+                                text: "0 ventas | S/0.00"
+                                opacity: 0.7
+                                font.pixelSize: 12
+                            }
+                        }
+                        
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 12
+                            radius: 6
+                            color: Material.frameColor
+                            
+                            Rectangle {
+                                height: parent.height
+                                width: parent.width * 0.3  // Ejemplo
+                                radius: parent.radius
+                                color: Material.color(Material.Blue)
+                                
+                                Behavior on width {
+                                    NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Facturas
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+                        
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Label {
+                                text: qsTr("📄 Facturas")
+                                font.weight: Font.Medium
+                                Layout.fillWidth: true
+                            }
+                            Label {
+                                text: "0 ventas | S/0.00"
+                                opacity: 0.7
+                                font.pixelSize: 12
+                            }
+                        }
+                        
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 12
+                            radius: 6
+                            color: Material.frameColor
+                            
+                            Rectangle {
+                                height: parent.height
+                                width: parent.width * 0.5  // Ejemplo
+                                radius: parent.radius
+                                color: Material.color(Material.Purple)
+                                
+                                Behavior on width {
+                                    NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Tickets
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+                        
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Label {
+                                text: qsTr("🎫 Tickets")
+                                font.weight: Font.Medium
+                                Layout.fillWidth: true
+                            }
+                            Label {
+                                text: "0 ventas | S/0.00"
+                                opacity: 0.7
+                                font.pixelSize: 12
+                            }
+                        }
+                        
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 12
+                            radius: 6
+                            color: Material.frameColor
+                            
+                            Rectangle {
+                                height: parent.height
+                                width: parent.width * 0.2  // Ejemplo
+                                radius: parent.radius
+                                color: Material.color(Material.Green)
+                                
+                                Behavior on width {
+                                    NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Productos más vendidos y clientes frecuentes
+            GridLayout {
+                Layout.fillWidth: true
+                columns: root.width > 1000 ? 2 : 1
+                rowSpacing: 16
+                columnSpacing: 16
+                
+                // Productos más vendidos
+                GroupBox {
+                    Layout.fillWidth: true
+                    Layout.minimumHeight: 380
+                    title: qsTr("🏆 Top 5 Productos Más Vendidos (Hoy)")
+                    
+                    ColumnLayout {
+                        anchors.fill: parent
+                        spacing: 8
+                        
+                        Repeater {
+                            model: 5
+                            
+                            delegate: Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 56
+                                radius: 8
+                                color: Material.theme === Material.Dark ?
+                                    Qt.lighter(Material.background, 1.1) :
+                                    Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.05)
+                                border.width: 1
+                                border.color: Material.frameColor
+                                
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 12
+                                    spacing: 12
+                                    
+                                    Rectangle {
+                                        Layout.preferredWidth: 36
+                                        Layout.preferredHeight: 36
+                                        radius: 18
+                                        color: index === 0 ? Material.color(Material.Amber) :
+                                               index === 1 ? Material.color(Material.BlueGrey) :
+                                               index === 2 ? Material.color(Material.DeepOrange) :
+                                               Material.primary
+                                        
+                                        Label {
+                                            anchors.centerIn: parent
+                                            text: index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : (index + 1)
+                                            font.weight: Font.Bold
+                                            font.pixelSize: index < 3 ? 18 : 14
+                                            color: "white"
+                                        }
+                                    }
+                                    
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 2
+                                        
+                                        Label {
+                                            text: qsTr("Producto ") + (index + 1)
+                                            font.weight: Font.Medium
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
+                                        }
+                                        
+                                        Label {
+                                            text: qsTr("Sin datos disponibles")
+                                            opacity: 0.6
+                                            font.pixelSize: 11
+                                        }
+                                    }
+                                    
+                                    ColumnLayout {
+                                        spacing: 2
+                                        
+                                        Label {
+                                            text: "0"
+                                            font.weight: Font.Bold
+                                            font.pixelSize: 18
+                                            color: Material.color(Material.Orange)
+                                            Layout.alignment: Qt.AlignRight
+                                        }
+                                        
+                                        Label {
+                                            text: qsTr("unidades")
+                                            opacity: 0.6
+                                            font.pixelSize: 10
+                                            Layout.alignment: Qt.AlignRight
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Label {
+                            text: qsTr("💡 Realiza ventas para ver estadísticas")
+                            opacity: 0.5
+                            font.italic: true
+                            Layout.alignment: Qt.AlignHCenter
+                            Layout.topMargin: 8
+                        }
+                    }
+                }
+                
+                // Clientes frecuentes
+                GroupBox {
+                    Layout.fillWidth: true
+                    Layout.minimumHeight: 380
+                    title: qsTr("👥 Clientes Frecuentes (Este Mes)")
+                    
+                    ColumnLayout {
+                        anchors.fill: parent
+                        spacing: 8
+                        
+                        Repeater {
+                            model: 5
+                            
+                            delegate: Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 56
+                                radius: 8
+                                color: Material.theme === Material.Dark ?
+                                    Qt.lighter(Material.background, 1.1) :
+                                    Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.05)
+                                border.width: 1
+                                border.color: Material.frameColor
+                                
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 12
+                                    spacing: 12
+                                    
+                                    Rectangle {
+                                        Layout.preferredWidth: 36
+                                        Layout.preferredHeight: 36
+                                        radius: 18
+                                        color: Material.color(Material.Teal)
+                                        
+                                        Label {
+                                            anchors.centerIn: parent
+                                            text: "👤"
+                                            font.pixelSize: 18
+                                        }
+                                    }
+                                    
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 2
+                                        
+                                        Label {
+                                            text: qsTr("Cliente ") + (index + 1)
+                                            font.weight: Font.Medium
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
+                                        }
+                                        
+                                        Label {
+                                            text: qsTr("Sin datos disponibles")
+                                            opacity: 0.6
+                                            font.pixelSize: 11
+                                        }
+                                    }
+                                    
+                                    ColumnLayout {
+                                        spacing: 2
+                                        
+                                        Label {
+                                            text: "S/0.00"
+                                            font.weight: Font.Bold
+                                            font.pixelSize: 16
+                                            color: Material.color(Material.Teal)
+                                            Layout.alignment: Qt.AlignRight
+                                        }
+                                        
+                                        Label {
+                                            text: qsTr("0 compras")
+                                            opacity: 0.6
+                                            font.pixelSize: 10
+                                            Layout.alignment: Qt.AlignRight
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Label {
+                            text: qsTr("💡 Registra clientes para ver estadísticas")
+                            opacity: 0.5
+                            font.italic: true
+                            Layout.alignment: Qt.AlignHCenter
+                            Layout.topMargin: 8
                         }
                     }
                 }
