@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import QtQuick.Effects
 import SistemaInventario 1.0
 
 Dialog {
@@ -12,19 +11,21 @@ Dialog {
     anchors.centerIn: parent
     width: 400
     
-    // Overlay con blur - fondo blanco molesto reemplazado
+    // Activar blur en la página de fondo
+    property var parentPage: null
+    
+    onOpened: {
+        if (parentPage) parentPage.layer.enabled = true
+    }
+    onClosed: {
+        if (parentPage) parentPage.layer.enabled = false
+    }
+    
+    // Overlay con color semitransparente oscuro
     Overlay.modal: Rectangle {
         color: Material.theme === Material.Dark ? 
-            Qt.rgba(0, 0, 0, 0.5) : 
-            Qt.rgba(0.1, 0.1, 0.1, 0.4)
-        
-        MultiEffect {
-            anchors.fill: parent
-            source: parent.parent
-            blur: 1.0
-            blurMax: 64
-            blurMultiplier: 1.2
-        }
+            Qt.rgba(0, 0, 0, 0.6) : 
+            Qt.rgba(0.05, 0.05, 0.05, 0.5)
     }
 
     property string invoiceNumber: "FACT-0001"
@@ -122,8 +123,8 @@ Dialog {
                 text: "\uE749  " + qsTr("Imprimir")
                 font.family: "Segoe MDL2 Assets"
                 Layout.fillWidth: true
-                Material.background: Material.primary
-                Material.foreground: "white"
+                Material.background: ApplicationWindow.window?.currentColors?.primary ?? Material.primary
+                Material.foreground: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
 
                 onClicked: {
                     root.printRequested()
@@ -134,24 +135,14 @@ Dialog {
             Button {
                 text: qsTr("Cerrar")
                 Layout.fillWidth: true
-                flat: true
-
-                background: Rectangle {
-                    implicitHeight: 40
-                    radius: 4
-                    color: parent.down ? 
-                        (Material.theme === Material.Dark ?
-                            Qt.darker(Material.background, 1.3) :
-                            Material.color(Material.Grey, Material.Shade300)) :
-                        parent.hovered ? 
-                        (Material.theme === Material.Dark ?
-                            Qt.lighter(Material.background, 1.2) :
-                            Material.color(Material.Grey, Material.Shade200)) :
-                        Qt.transparent
-                    border.width: 1
-                    border.color: Material.frameColor
-
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                Material.background: Material.color(Material.Red)
+                
+                contentItem: Label {
+                    text: parent.text
+                    font: parent.font
+                    color: "white"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                 }
 
                 onClicked: root.close()

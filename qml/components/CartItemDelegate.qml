@@ -122,7 +122,7 @@ Item {
                     text: "\uE7BF"  // Shopping bag icon
                     font.family: "Segoe MDL2 Assets"
                     font.pixelSize: 26
-                    color: "white"
+                    color: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
                 }
             }
 
@@ -226,7 +226,7 @@ Item {
                     Layout.preferredWidth: 44
                     Layout.preferredHeight: 44
                     
-                    Material.foreground: "white"
+                    Material.foreground: Material.theme === Material.Dark ? "#FFFFFF" : "#FFFFFF"
                     
                     background: Rectangle {
                         radius: 8
@@ -234,8 +234,9 @@ Item {
                                (parent.down ? Material.color(Material.Red, Material.Shade700) :
                                 parent.hovered ? Material.color(Material.Red, Material.Shade600) :
                                 Material.color(Material.Red, Material.Shade500)) :
-                               (parent.down ? "#1a1a1a" :
-                                parent.hovered ? "#333333" : "#000000")
+                               (parent.down ? Material.color(Material.Red, Material.Shade900) :
+                                parent.hovered ? Material.color(Material.Red, Material.Shade800) :
+                                Material.color(Material.Red, Material.Shade700))
                         border.width: 0
                         
                         Behavior on color { ColorAnimation { duration: 150 } }

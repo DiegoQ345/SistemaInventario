@@ -1,4 +1,6 @@
-#include "PrintService.h"
+﻿#include "PrintService.h"
+#include "../printing/TicketLayout.h"
+#include "../printing/TicketRenderer.h"
 #include <QApplication>
 #include <QFont>
 #include <QFontMetrics>
@@ -35,7 +37,7 @@ bool PrintService::printVoucher(const Sale& sale, VoucherType type, const Invoic
 
     QPainter painter;
     if (!painter.begin(&printer)) {
-        emit printFailed("Error iniciando impresión");
+        emit printFailed("Error iniciando impresion");
         return false;
     }
 
@@ -58,7 +60,7 @@ bool PrintService::printTicket(const Sale& sale, VoucherType type, const Invoice
 
     QPrinter printer(QPrinter::HighResolution);
     
-    // Configurar para impresora térmica (80mm)
+    // Configurar para impresora termica (80mm)
     printer.setPageSize(QPageSize(QSizeF(80, 200), QPageSize::Millimeter));
     printer.setPageOrientation(QPageLayout::Portrait);
     printer.setPageMargins(QMarginsF(5, 5, 5, 5), QPageLayout::Millimeter);
@@ -69,7 +71,7 @@ bool PrintService::printTicket(const Sale& sale, VoucherType type, const Invoice
 
     QPainter painter;
     if (!painter.begin(&printer)) {
-        emit printFailed("Error iniciando impresión de ticket");
+        emit printFailed("Error iniciando impresion de ticket");
         return false;
     }
 
@@ -121,20 +123,20 @@ void PrintService::drawVoucherA4(QPainter& painter, const Sale& sale, VoucherTyp
                     Qt::AlignCenter, "RUC: " + m_companyRuc);
     y += 40;
 
-    // Línea separadora
+    // Linea separadora
     painter.drawLine(margin, y, pageWidth - margin, y);
     y += 30;
 
     // Tipo de comprobante
     painter.setFont(titleFont);
-    QString voucherTypeStr = (type == FACTURA) ? "FACTURA ELECTRÓNICA" : "BOLETA DE VENTA";
+    QString voucherTypeStr = (type == FACTURA) ? "FACTURA ELECTRONICA" : "BOLETA DE VENTA";
     painter.drawText(QRect(margin, y, pageWidth - 2*margin, 30), 
                     Qt::AlignCenter, voucherTypeStr);
     y += 35;
 
     painter.setFont(normalFont);
     painter.drawText(QRect(margin, y, pageWidth - 2*margin, 20), 
-                    Qt::AlignCenter, "Nº " + sale.invoiceNumber);
+                    Qt::AlignCenter, "NÂº " + sale.invoiceNumber);
     y += 40;
 
     // Datos del cliente
@@ -151,13 +153,13 @@ void PrintService::drawVoucherA4(QPainter& painter, const Sale& sale, VoucherTyp
         y += 20;
         painter.drawText(margin, y, invoiceData.businessName);
         y += 20;
-        painter.drawText(margin, y, "Dirección: " + invoiceData.address);
+        painter.drawText(margin, y, "Direccion: " + invoiceData.address);
         y += 20;
     }
 
     painter.drawText(margin, y, "Fecha: " + sale.createdAt.toString("dd/MM/yyyy hh:mm"));
     y += 20;
-    painter.drawText(margin, y, "Método de pago: " + sale.paymentMethodName);
+    painter.drawText(margin, y, "Metodo de pago: " + sale.paymentMethodName);
     y += 40;
 
     // Tabla de items
@@ -165,7 +167,7 @@ void PrintService::drawVoucherA4(QPainter& painter, const Sale& sale, VoucherTyp
     y += 10;
 
     painter.setFont(boldFont);
-    painter.drawText(margin, y, "DESCRIPCIÓN");
+    painter.drawText(margin, y, "DESCRIPCION");
     painter.drawText(pageWidth - margin - 300, y, "CANTIDAD");
     painter.drawText(pageWidth - margin - 200, y, "P. UNIT");
     painter.drawText(pageWidth - margin - 100, y, "SUBTOTAL");
@@ -216,7 +218,7 @@ void PrintService::drawVoucherA4(QPainter& painter, const Sale& sale, VoucherTyp
 
     painter.setFont(smallFont);
     painter.drawText(QRect(margin, y, pageWidth - 2*margin, 20), 
-                    Qt::AlignCenter, "¡Gracias por su compra!");
+                    Qt::AlignCenter, "Gracias por su compra!");
 }
 
 void PrintService::drawTicket(QPainter& painter, const Sale& sale, VoucherType type, 
@@ -315,5 +317,296 @@ void PrintService::drawTicket(QPainter& painter, const Sale& sale, VoucherType t
 
     painter.setFont(smallFont);
     painter.drawText(QRect(margin, y, pageWidth - 2*margin, 15), 
-                    Qt::AlignCenter, "¡Gracias por su compra!");
+                    Qt::AlignCenter, "Gracias por su compra!");
+}
+
+bool PrintService::printCustomTicket(const Sale& sale, VoucherType type,
+                                     const InvoiceData& invoiceData,
+                                     const QString& layoutJson)
+{
+    emit printStarted();
+    
+    QJsonDocument doc = QJsonDocument::fromJson(layoutJson.toUtf8());
+    double ticketWidth = 80;
+    double ticketHeight = 200;
+    
+    if (doc.isObject()) {
+        QJsonObject layoutObj = doc.object();
+        if (layoutObj.contains("size")) {
+            QJsonObject sizeObj = layoutObj["size"].toObject();
+            ticketWidth = sizeObj["width"].toDouble(80);
+            ticketHeight = sizeObj["height"].toDouble(200);
+        }
+    }
+    
+    QPrinter printer(QPrinter::HighResolution);
+    
+    // Configurar tamano de pagina personalizado
+    printer.setPageSize(QPageSize(QSizeF(ticketWidth, ticketHeight), QPageSize::Millimeter));
+    printer.setPageOrientation(QPageLayout::Portrait);
+    
+    // CONFIGURACION CRITICA: Usar pagina completa sin margenes
+    printer.setFullPage(true);
+    
+    // Configurar layout con margenes en 0 y modo FullPage
+    QPageLayout layout = printer.pageLayout();
+    layout.setMargins(QMarginsF(0, 0, 0, 0));
+    layout.setMode(QPageLayout::FullPageMode);
+    printer.setPageLayout(layout);
+    
+    qDebug() << "=== CONFIGURACION DE IMPRESORA ===";
+    qDebug() << "Tamano ticket:" << ticketWidth << "x" << ticketHeight << "mm";
+    qDebug() << "Full page mode:" << printer.fullPage();
+    qDebug() << "Page layout mode:" << layout.mode();
+    qDebug() << "Margenes:" << layout.margins();
+    
+    if (!m_defaultPrinter.isEmpty()) {
+        printer.setPrinterName(m_defaultPrinter);
+        qDebug() << "Usando impresora:" << m_defaultPrinter;
+    } else {
+        qDebug() << "Usando impresora predeterminada del sistema";
+    }
+    
+    QPainter painter;
+    if (!painter.begin(&printer)) {
+        emit printFailed("Error iniciando impresion de ticket personalizado");
+        return false;
+    }
+    
+    drawCustomTicket(painter, sale, type, invoiceData, layoutJson);
+    
+    painter.end();
+    emit printCompleted();
+    return true;
+}
+
+void PrintService::drawCustomTicket(QPainter& painter, const Sale& sale, VoucherType type,
+                                    const InvoiceData& invoiceData, const QString& layoutJson)
+{
+    qDebug() << "=== RENDERIZANDO TICKET CON ARQUITECTURA MODULAR ===";
+    
+    // 1. Crear TicketLayout y parsear JSON
+    TicketLayout layout;
+    if (!layout.loadFromJson(layoutJson)) {
+        qDebug() << "ERROR:" << layout.getError();
+        return;
+    }
+    
+    qDebug() << "Layout cargado exitosamente";
+    qDebug() << "Dimensiones:" << layout.getWidthMM() << "x" << layout.getInitialHeightMM() << "mm";
+    qDebug() << "Elementos:" << layout.getElements().size();
+    
+    // 2. Configurar hints de renderizado
+    painter.setRenderHint(QPainter::Antialiasing, false);
+    painter.setRenderHint(QPainter::TextAntialiasing, true);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+    
+    // 3. Crear mapa de variables
+    QMap<QString, QString> variables = createVariablesMap(sale, type, invoiceData);
+    
+    // 4. Convertir tipos de PrintService a tipos de TicketRenderer
+    ::VoucherType rendererType = (type == FACTURA) ? ::VoucherType::FACTURA : ::VoucherType::BOLETA;
+    
+    ::InvoiceData rendererInvoiceData;
+    rendererInvoiceData.ruc = invoiceData.ruc;
+    rendererInvoiceData.businessName = invoiceData.businessName;
+    rendererInvoiceData.address = invoiceData.address;
+    
+    // 5. Crear renderer y renderizar
+    TicketRenderer renderer;
+    renderer.render(painter, layout, sale, rendererType, rendererInvoiceData, variables);
+    
+    qDebug() << "=== RENDERIZADO COMPLETADO ===";
+}
+
+QString PrintService::replaceVariables(const QString& text, const Sale& sale,
+                                       VoucherType type, const InvoiceData& invoiceData)
+{
+    QString result = text;
+    
+    result.replace("{{businessName}}", m_companyName);
+    result.replace("{{companyName}}", m_companyName);
+    result.replace("{{ruc}}", m_companyRuc);
+    result.replace("{{companyRuc}}", m_companyRuc);
+    result.replace("{{address}}", m_companyAddress);
+    result.replace("{{companyAddress}}", m_companyAddress);
+    
+    QString voucherTypeStr = (type == FACTURA) ? "FACTURA" : "BOLETA";
+    result.replace("{{voucherType}}", voucherTypeStr);
+    result.replace("{{invoiceNumber}}", sale.invoiceNumber);
+    
+    result.replace("{{date}}", sale.createdAt.toString("dd/MM/yyyy"));
+    result.replace("{{datetime}}", sale.createdAt.toString("dd/MM/yyyy hh:mm"));
+    result.replace("{{time}}", sale.createdAt.toString("hh:mm"));
+    
+    result.replace("{{customerName}}", sale.customerName);
+    result.replace("{{customerRuc}}", invoiceData.ruc);
+    
+    result.replace("{{subtotal}}", QString::number(sale.subtotal, 'f', 2));
+    result.replace("{{discount}}", QString::number(sale.discount, 'f', 2));
+    result.replace("{{tax}}", QString::number(sale.tax, 'f', 2));
+    result.replace("{{total}}", QString::number(sale.total, 'f', 2));
+    
+    return result;
+}
+
+QMap<QString, QString> PrintService::createVariablesMap(const Sale& sale, 
+                                                         VoucherType type, 
+                                                         const InvoiceData& invoiceData)
+{
+    QMap<QString, QString> vars;
+    
+    // Datos de la empresa
+    vars["{{businessName}}"] = m_companyName;
+    vars["{{companyName}}"] = m_companyName;
+    vars["{{ruc}}"] = m_companyRuc;
+    vars["{{companyRuc}}"] = m_companyRuc;
+    vars["{{address}}"] = m_companyAddress;
+    vars["{{companyAddress}}"] = m_companyAddress;
+    
+    // Tipo de comprobante
+    QString voucherTypeStr = (type == FACTURA) ? "FACTURA" : "BOLETA";
+    vars["{{voucherType}}"] = voucherTypeStr;
+    vars["{{invoiceNumber}}"] = sale.invoiceNumber;
+    
+    // Fechas
+    vars["{{date}}"] = sale.createdAt.toString("dd/MM/yyyy");
+    vars["{{datetime}}"] = sale.createdAt.toString("dd/MM/yyyy hh:mm");
+    vars["{{time}}"] = sale.createdAt.toString("hh:mm");
+    
+    // Cliente
+    vars["{{customerName}}"] = sale.customerName;
+    vars["{{customerRuc}}"] = invoiceData.ruc;
+    
+    // Totales
+    vars["{{subtotal}}"] = QString::number(sale.subtotal, 'f', 2);
+    vars["{{discount}}"] = QString::number(sale.discount, 'f', 2);
+    vars["{{tax}}"] = QString::number(sale.tax, 'f', 2);
+    vars["{{total}}"] = QString::number(sale.total, 'f', 2);
+    
+    return vars;
+}
+
+bool PrintService::generateCustomTicketPdf(const Sale& sale, VoucherType type,
+                                            const InvoiceData& invoiceData,
+                                            const QString& layoutJson,
+                                            const QString& outputPath)
+{
+    QJsonDocument doc = QJsonDocument::fromJson(layoutJson.toUtf8());
+    double ticketWidth = 80;
+    double ticketHeight = 200;
+    
+    if (doc.isObject()) {
+        QJsonObject layoutObj = doc.object();
+        if (layoutObj.contains("size")) {
+            QJsonObject sizeObj = layoutObj["size"].toObject();
+            ticketWidth = sizeObj["width"].toDouble(80);
+            ticketHeight = sizeObj["height"].toDouble(200);
+        }
+    }
+    
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(outputPath);
+    
+    // Configurar tamano de pagina personalizado
+    printer.setPageSize(QPageSize(QSizeF(ticketWidth, ticketHeight), QPageSize::Millimeter));
+    printer.setPageOrientation(QPageLayout::Portrait);
+    
+    // CONFIGURACION CRITICA: Usar pagina completa sin margenes
+    printer.setFullPage(true);
+    
+    // Configurar layout con margenes en 0 y modo FullPage
+    QPageLayout layout = printer.pageLayout();
+    layout.setMargins(QMarginsF(0, 0, 0, 0));
+    layout.setMode(QPageLayout::FullPageMode);
+    printer.setPageLayout(layout);
+    
+    QPainter painter;
+    if (!painter.begin(&printer)) {
+        qDebug() << "Error iniciando generacion de PDF";
+        return false;
+    }
+    
+    drawCustomTicket(painter, sale, type, invoiceData, layoutJson);
+    
+    painter.end();
+    
+    qDebug() << "PDF generado exitosamente:" << outputPath;
+    return true;
+}
+
+
+bool PrintService::generateCustomTicketPdf(const QVariantMap& saleData,
+                                            int voucherType,
+                                            const QVariantMap& invoiceData,
+                                            const QString& layoutJson,
+                                            const QString& outputPath)
+{
+    Sale sale;
+    sale.id = saleData["id"].toInt();
+    sale.invoiceNumber = saleData["invoiceNumber"].toString();
+    sale.customerName = saleData["customerName"].toString();
+    sale.subtotal = saleData["subtotal"].toDouble();
+    sale.discount = saleData["discount"].toDouble();
+    sale.tax = saleData["tax"].toDouble();
+    sale.total = saleData["total"].toDouble();
+    sale.paymentMethodId = saleData["paymentMethodId"].toInt();
+    sale.createdAt = saleData["createdAt"].toDateTime();
+    
+    QVariantList itemsList = saleData["items"].toList();
+    for (const QVariant& itemVar : itemsList) {
+        QVariantMap itemMap = itemVar.toMap();
+        SaleItem item;
+        item.productName = itemMap["productName"].toString();
+        item.quantity = itemMap["quantity"].toDouble();
+        item.unitPrice = itemMap["unitPrice"].toDouble();
+        item.subtotal = itemMap["subtotal"].toDouble();
+        sale.items.append(item);
+    }
+    
+    InvoiceData invoice;
+    invoice.ruc = invoiceData["ruc"].toString();
+    invoice.businessName = invoiceData["businessName"].toString();
+    invoice.address = invoiceData["address"].toString();
+    
+    VoucherType type = (voucherType == 0) ? BOLETA : FACTURA;
+    
+    return generateCustomTicketPdf(sale, type, invoice, layoutJson, outputPath);
+}
+
+bool PrintService::generatePreviewPdf(const QString& layoutJson,
+                                       const QString& outputPath)
+{
+    Sale sampleSale;
+    sampleSale.id = 1;
+    sampleSale.invoiceNumber = "B001-00000001";
+    sampleSale.customerName = "Cliente de Ejemplo";
+    sampleSale.subtotal = 100.00;
+    sampleSale.discount = 0.00;
+    sampleSale.tax = 18.00;
+    sampleSale.total = 118.00;
+    sampleSale.paymentMethodId = 1;
+    sampleSale.createdAt = QDateTime::currentDateTime();
+    
+    SaleItem item1;
+    item1.productName = "Producto de ejemplo 1";
+    item1.quantity = 2.0;
+    item1.unitPrice = 25.00;
+    item1.subtotal = 50.00;
+    sampleSale.items.append(item1);
+    
+    SaleItem item2;
+    item2.productName = "Producto de ejemplo 2";
+    item2.quantity = 1.0;
+    item2.unitPrice = 50.00;
+    item2.subtotal = 50.00;
+    sampleSale.items.append(item2);
+    
+    InvoiceData sampleInvoice;
+    sampleInvoice.ruc = "20123456789";
+    sampleInvoice.businessName = "Empresa de Ejemplo S.A.C.";
+    sampleInvoice.address = "Av. Ejemplo 123, Lima";
+    
+    return generateCustomTicketPdf(sampleSale, BOLETA, sampleInvoice, layoutJson, outputPath);
 }

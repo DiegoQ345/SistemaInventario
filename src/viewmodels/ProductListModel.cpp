@@ -1,10 +1,14 @@
 #include "ProductListModel.h"
 #include "../services/ProductService.h"
+#include "../database/DatabaseManager.h"
 #include <QDebug>
+#include <QSqlQuery>
+#include <QSqlError>
 
 ProductListModel::ProductListModel(QObject *parent)
     : QAbstractListModel(parent)
 {
+    loadAvailableCategories();
 }
 
 int ProductListModel::rowCount(const QModelIndex &parent) const
@@ -81,6 +85,9 @@ void ProductListModel::loadProducts()
 
     emit countChanged();
     setIsLoading(false);
+    
+    // Recargar categorías también
+    loadAvailableCategories();
 }
 
 void ProductListModel::searchProducts(const QString& searchTerm)
@@ -140,6 +147,38 @@ void ProductListModel::filterByCategoryName(const QString& categoryName)
 
     emit countChanged();
     setIsLoading(false);
+}
+
+QStringList ProductListModel::getAvailableCategories()
+{
+    return m_availableCategories;
+}
+
+void ProductListModel::loadAvailableCategories()
+{
+    QStringList categories;
+    categories.append("Todas"); // Agregar opción "Todas" al inicio
+    
+    QSqlQuery query(DatabaseManager::instance().database());
+    query.prepare("SELECT name FROM categories ORDER BY name ASC");
+    
+    if (query.exec()) {
+        while (query.next()) {
+            QString categoryName = query.value(0).toString();
+            if (!categoryName.isEmpty()) {
+                categories.append(categoryName);
+            }
+        }
+    } else {
+        qWarning() << "Error obteniendo categorías:" << query.lastError().text();
+    }
+    
+    qDebug() << "Categorías cargadas:" << categories;
+    
+    if (m_availableCategories != categories) {
+        m_availableCategories = categories;
+        emit availableCategoriesChanged();
+    }
 }
 
 void ProductListModel::filterLowStock()
@@ -275,6 +314,48 @@ bool ProductListModel::deleteProduct(int productId)
     }
 }
 
+bool ProductListModel::deleteAllProducts()
+{
+    ProductRepository repository;
+    
+    // Obtener todos los productos
+    auto allProducts = repository.findAll();
+    
+    if (allProducts.isEmpty()) {
+        emit errorOccurred("No hay productos para eliminar");
+        return false;
+    }
+    
+    qDebug() << "Eliminando" << allProducts.size() << "productos...";
+    
+    int deletedCount = 0;
+    int failedCount = 0;
+    
+    for (const auto& product : allProducts) {
+        QString errorMessage;
+        ProductService service;
+        if (service.deleteProduct(product.id, errorMessage)) {
+            deletedCount++;
+        } else {
+            failedCount++;
+            qWarning() << "Error eliminando producto ID" << product.id << ":" << errorMessage;
+        }
+    }
+    
+    qDebug() << "Eliminados:" << deletedCount << "| Fallidos:" << failedCount;
+    
+    // Recargar lista
+    loadProducts();
+    
+    if (failedCount == 0) {
+        emit operationSucceeded(QString("Se eliminaron %1 productos exitosamente").arg(deletedCount));
+        return true;
+    } else {
+        emit errorOccurred(QString("Se eliminaron %1 productos. %2 fallaron").arg(deletedCount).arg(failedCount));
+        return false;
+    }
+}
+
 QString ProductListModel::validateProductData(const QVariantMap& productData) const
 {
     // Validar campos obligatorios
@@ -324,6 +405,25 @@ QVariantMap ProductListModel::getProductForEdit(int productId) const
 
     qWarning() << "Producto no encontrado con ID:" << productId;
     return QVariantMap();
+}
+
+bool ProductListModel::hasProductWithBarcode(const QString& barcode) const
+{
+    if (barcode.trimmed().isEmpty()) {
+        return false;
+    }
+
+    // Buscar en la lista actual de productos
+    for (const auto& product : m_products) {
+        if (product.barcode == barcode || product.sku == barcode) {
+            return true;
+        }
+    }
+
+    // Si no está en caché, consultar en la base de datos
+    ProductService service;
+    auto product = service.getProductByBarcode(barcode);
+    return product.has_value();
 }
 
 void ProductListModel::setIsLoading(bool loading)

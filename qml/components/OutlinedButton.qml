@@ -6,7 +6,7 @@ Button {
     id: control
     
     // Propiedades públicas
-    property string icon: ""
+    property string iconText: ""
     property bool isIconFont: true
     property color accentColor: Material.primary
     
@@ -16,15 +16,14 @@ Button {
     font.weight: Font.Medium
     
     Material.background: "transparent"
-    Material.foreground: accentColor
     
     // Texto con icono si está definido
     contentItem: Label {
-        text: icon !== "" ? icon + "  " + control.text : control.text
-        font.family: isIconFont && icon !== "" ? "Segoe MDL2 Assets" : control.font.family
+        text: iconText !== "" ? iconText + "  " + control.text : control.text
+        font.family: isIconFont && iconText !== "" ? "Segoe MDL2 Assets" : control.font.family
         font.pixelSize: control.font.pixelSize
         font.weight: control.font.weight
-        color: control.Material.foreground
+        color: Material.theme === Material.Dark ? "#FFFFFF" : "#000000"
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
     }
@@ -42,7 +41,7 @@ Button {
                 Material.color(Material.Grey, Material.Shade200)) :
             "transparent"
         border.width: 1
-        border.color: control.accentColor
+        border.color: Material.theme === Material.Dark ? "#FFFFFF" : "#000000"
         
         Behavior on color { ColorAnimation { duration: 150 } }
     }

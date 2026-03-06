@@ -1,16 +1,20 @@
 #include "DashboardViewModel.h"
 #include "../services/SalesService.h"
+#include "../services/AuthenticationService.h"
+#include "../database/DatabaseManager.h"
 #include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QDateTime>
+#include <QSqlQuery>
+#include <QSqlError>
 
 DashboardViewModel::DashboardViewModel(QObject *parent)
     : QObject(parent)
 {
-    // Lista de cajeros disponibles (hardcoded por ahora)
-    m_availableCashiers << "Cajero Principal" << "Cajero 2" << "Cajero 3" << "Administrador";
+    // Cargar usuarios según el rol del usuario actual
+    loadAvailableCashiers();
     
     // Refrescar al iniciar
     refresh();
@@ -173,4 +177,43 @@ QString DashboardViewModel::getDailyReport()
 {
     // Similar a closeDayShift pero sin marcar como cerrado
     return closeDayShift();
+}
+
+void DashboardViewModel::loadAvailableCashiers()
+{
+    m_availableCashiers.clear();
+    
+    // Obtener usuario actual
+    auto& authService = AuthenticationService::instance();
+    QString currentUserRole = authService.currentUserRole();
+    QString currentUsername = authService.currentUsername();
+    
+    if (currentUserRole == "Admin" || currentUserRole == "Programador") {
+        // Si es administrador o programador, cargar todos los usuarios
+        DatabaseManager& db = DatabaseManager::instance();
+        QSqlQuery query(db.database());
+        
+        query.prepare("SELECT username FROM users WHERE active = 1 ORDER BY username");
+        
+        if (query.exec()) {
+            while (query.next()) {
+                m_availableCashiers << query.value(0).toString();
+            }
+        } else {
+            qWarning() << "Error loading users:" << query.lastError().text();
+            // Fallback: solo usuario actual
+            m_availableCashiers << currentUsername;
+        }
+    } else {
+        // Si es vendedor, solo mostrar su nombre
+        m_availableCashiers << currentUsername;
+    }
+    
+    // Establecer el usuario actual como cajero seleccionado
+    if (!m_availableCashiers.isEmpty()) {
+        m_currentCashier = currentUsername;
+    }
+    
+    emit availableCashiersChanged();
+    emit currentCashierChanged();
 }

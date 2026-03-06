@@ -112,6 +112,20 @@ public slots:
     bool searchAndAddProduct(const QString& code, double quantity = 1.0);
 
     /**
+     * @brief Verificar si un producto existe sin agregarlo al carrito
+     * @param code Código de barras o SKU
+     * @return QVariantMap con datos del producto si existe, vacío si no
+     */
+    Q_INVOKABLE QVariantMap findProductByCode(const QString& code);
+    
+    /**
+     * @brief Verificar si un producto ya está en el carrito
+     * @param code Código de barras o SKU
+     * @return true si está en el carrito
+     */
+    Q_INVOKABLE bool isProductInCart(const QString& code);
+
+    /**
      * @brief Buscar producto por ID y agregarlo al carrito
      */
     bool addProductById(int productId, double quantity = 1.0);

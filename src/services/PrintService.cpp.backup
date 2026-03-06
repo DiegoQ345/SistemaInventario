@@ -1,0 +1,507 @@
+#include "PrintService.h"
+#include <QApplication>
+#include <QFont>
+#include <QFontMetrics>
+#include <QDateTime>
+#include <QPrinterInfo>
+#include <QDebug>
+
+PrintService::PrintService(QObject *parent)
+    : QObject(parent)
+{
+}
+
+bool PrintService::printVoucher(const Sale& sale, VoucherType type, const InvoiceData& invoiceData)
+{
+    emit printStarted();
+
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setPageSize(QPageSize::A4);
+    printer.setPageOrientation(QPageLayout::Portrait);
+
+    // Usar impresora predeterminada configurada
+    if (!m_defaultPrinter.isEmpty()) {
+        printer.setPrinterName(m_defaultPrinter);
+    }
+    // Si no hay impresora configurada, usar la predeterminada del sistema
+    else {
+        QPrinterInfo defaultPrinter = QPrinterInfo::defaultPrinter();
+        if (defaultPrinter.isNull()) {
+            emit printFailed("No hay impresora configurada");
+            return false;
+        }
+        printer.setPrinterName(defaultPrinter.printerName());
+    }
+
+    QPainter painter;
+    if (!painter.begin(&printer)) {
+        emit printFailed("Error iniciando impresion");
+        return false;
+    }
+
+    drawVoucherA4(painter, sale, type, invoiceData);
+
+    painter.end();
+    emit printCompleted();
+    return true;
+}
+
+bool PrintService::showPrintPreview(const Sale& sale, VoucherType type, const InvoiceData& invoiceData)
+{
+    // TODO: Implementar vista previa con QPrintPreviewDialog
+    return printVoucher(sale, type, invoiceData);
+}
+
+bool PrintService::printTicket(const Sale& sale, VoucherType type, const InvoiceData& invoiceData)
+{
+    emit printStarted();
+
+    QPrinter printer(QPrinter::HighResolution);
+    
+    // Configurar para impresora termica (80mm)
+    printer.setPageSize(QPageSize(QSizeF(80, 200), QPageSize::Millimeter));
+    printer.setPageOrientation(QPageLayout::Portrait);
+    printer.setPageMargins(QMarginsF(5, 5, 5, 5), QPageLayout::Millimeter);
+
+    if (!m_defaultPrinter.isEmpty()) {
+        printer.setPrinterName(m_defaultPrinter);
+    }
+
+    QPainter painter;
+    if (!painter.begin(&printer)) {
+        emit printFailed("Error iniciando impresion de ticket");
+        return false;
+    }
+
+    drawTicket(painter, sale, type, invoiceData);
+
+    painter.end();
+    emit printCompleted();
+    return true;
+}
+
+void PrintService::setDefaultPrinter(const QString& printerName)
+{
+    m_defaultPrinter = printerName;
+}
+
+QStringList PrintService::getAvailablePrinters()
+{
+    QStringList printers;
+    for (const QPrinterInfo& info : QPrinterInfo::availablePrinters()) {
+        printers.append(info.printerName());
+    }
+    return printers;
+}
+
+void PrintService::drawVoucherA4(QPainter& painter, const Sale& sale, VoucherType type, 
+                                 const InvoiceData& invoiceData)
+{
+    int y = 50;
+    int pageWidth = painter.device()->width();
+    int margin = 100;
+
+    // Configurar fuentes
+    QFont titleFont("Arial", 16, QFont::Bold);
+    QFont normalFont("Arial", 10);
+    QFont boldFont("Arial", 10, QFont::Bold);
+    QFont smallFont("Arial", 8);
+
+    // Encabezado
+    painter.setFont(titleFont);
+    painter.drawText(QRect(margin, y, pageWidth - 2*margin, 30), 
+                    Qt::AlignCenter, m_companyName);
+    y += 35;
+
+    painter.setFont(smallFont);
+    painter.drawText(QRect(margin, y, pageWidth - 2*margin, 20), 
+                    Qt::AlignCenter, m_companyAddress);
+    y += 20;
+    painter.drawText(QRect(margin, y, pageWidth - 2*margin, 20), 
+                    Qt::AlignCenter, "RUC: " + m_companyRuc);
+    y += 40;
+
+    // Linea separadora
+    painter.drawLine(margin, y, pageWidth - margin, y);
+    y += 30;
+
+    // Tipo de comprobante
+    painter.setFont(titleFont);
+    QString voucherTypeStr = (type == FACTURA) ? "FACTURA ELECTRONICA" : "BOLETA DE VENTA";
+    painter.drawText(QRect(margin, y, pageWidth - 2*margin, 30), 
+                    Qt::AlignCenter, voucherTypeStr);
+    y += 35;
+
+    painter.setFont(normalFont);
+    painter.drawText(QRect(margin, y, pageWidth - 2*margin, 20), 
+                    Qt::AlignCenter, "Nº " + sale.invoiceNumber);
+    y += 40;
+
+    // Datos del cliente
+    painter.setFont(boldFont);
+    painter.drawText(margin, y, "CLIENTE:");
+    y += 20;
+
+    painter.setFont(normalFont);
+    painter.drawText(margin, y, sale.customerName);
+    y += 20;
+
+    if (type == FACTURA && !invoiceData.ruc.isEmpty()) {
+        painter.drawText(margin, y, "RUC: " + invoiceData.ruc);
+        y += 20;
+        painter.drawText(margin, y, invoiceData.businessName);
+        y += 20;
+        painter.drawText(margin, y, "Direccion: " + invoiceData.address);
+        y += 20;
+    }
+
+    painter.drawText(margin, y, "Fecha: " + sale.createdAt.toString("dd/MM/yyyy hh:mm"));
+    y += 20;
+    painter.drawText(margin, y, "Metodo de pago: " + sale.paymentMethodName);
+    y += 40;
+
+    // Tabla de items
+    painter.drawLine(margin, y, pageWidth - margin, y);
+    y += 10;
+
+    painter.setFont(boldFont);
+    painter.drawText(margin, y, "DESCRIPCION");
+    painter.drawText(pageWidth - margin - 300, y, "CANTIDAD");
+    painter.drawText(pageWidth - margin - 200, y, "P. UNIT");
+    painter.drawText(pageWidth - margin - 100, y, "SUBTOTAL");
+    y += 20;
+
+    painter.drawLine(margin, y, pageWidth - margin, y);
+    y += 20;
+
+    painter.setFont(normalFont);
+    for (const auto& item : sale.items) {
+        painter.drawText(margin, y, item.productName);
+        painter.drawText(pageWidth - margin - 300, y, QString::number(item.quantity, 'f', 2));
+        painter.drawText(pageWidth - margin - 200, y, "$" + QString::number(item.unitPrice, 'f', 2));
+        painter.drawText(pageWidth - margin - 100, y, "$" + QString::number(item.subtotal, 'f', 2));
+        y += 25;
+    }
+
+    y += 20;
+    painter.drawLine(margin, y, pageWidth - margin, y);
+    y += 30;
+
+    // Totales
+    painter.setFont(boldFont);
+    painter.drawText(pageWidth - margin - 300, y, "SUBTOTAL:");
+    painter.drawText(pageWidth - margin - 100, y, "$" + QString::number(sale.subtotal, 'f', 2));
+    y += 25;
+
+    if (sale.discount > 0) {
+        painter.drawText(pageWidth - margin - 300, y, "DESCUENTO:");
+        painter.drawText(pageWidth - margin - 100, y, "-$" + QString::number(sale.discount, 'f', 2));
+        y += 25;
+    }
+
+    if (sale.tax > 0) {
+        painter.drawText(pageWidth - margin - 300, y, "IGV (18%):");
+        painter.drawText(pageWidth - margin - 100, y, "$" + QString::number(sale.tax, 'f', 2));
+        y += 25;
+    }
+
+    painter.setFont(titleFont);
+    painter.drawText(pageWidth - margin - 300, y, "TOTAL:");
+    painter.drawText(pageWidth - margin - 100, y, "$" + QString::number(sale.total, 'f', 2));
+    y += 60;
+
+    // Footer
+    painter.drawLine(margin, y, pageWidth - margin, y);
+    y += 30;
+
+    painter.setFont(smallFont);
+    painter.drawText(QRect(margin, y, pageWidth - 2*margin, 20), 
+                    Qt::AlignCenter, "Gracias por su compra!");
+}
+
+void PrintService::drawTicket(QPainter& painter, const Sale& sale, VoucherType type, 
+                              const InvoiceData& invoiceData)
+{
+    int y = 10;
+    int pageWidth = painter.device()->width();
+    int margin = 20;
+
+    QFont titleFont("Arial", 12, QFont::Bold);
+    QFont normalFont("Arial", 8);
+    QFont smallFont("Arial", 7);
+
+    // Encabezado
+    painter.setFont(titleFont);
+    painter.drawText(QRect(margin, y, pageWidth - 2*margin, 20), 
+                    Qt::AlignCenter, m_companyName);
+    y += 25;
+
+    painter.setFont(smallFont);
+    painter.drawText(QRect(margin, y, pageWidth - 2*margin, 15), 
+                    Qt::AlignCenter, "RUC: " + m_companyRuc);
+    y += 15;
+
+    painter.drawText(QRect(margin, y, pageWidth - 2*margin, 15), 
+                    Qt::AlignCenter, m_companyAddress);
+    y += 25;
+
+    // Tipo de comprobante
+    QString voucherTypeStr = (type == FACTURA) ? "FACTURA" : "BOLETA";
+    painter.setFont(titleFont);
+    painter.drawText(QRect(margin, y, pageWidth - 2*margin, 20), 
+                    Qt::AlignCenter, voucherTypeStr);
+    y += 20;
+
+    painter.setFont(normalFont);
+    painter.drawText(QRect(margin, y, pageWidth - 2*margin, 15), 
+                    Qt::AlignCenter, sale.invoiceNumber);
+    y += 25;
+
+    painter.drawLine(margin, y, pageWidth - margin, y);
+    y += 15;
+
+    // Cliente
+    painter.setFont(smallFont);
+    painter.drawText(margin, y, "CLIENTE: " + sale.customerName);
+    y += 12;
+
+    if (type == FACTURA && !invoiceData.ruc.isEmpty()) {
+        painter.drawText(margin, y, "RUC: " + invoiceData.ruc);
+        y += 12;
+    }
+
+    painter.drawText(margin, y, "FECHA: " + sale.createdAt.toString("dd/MM/yyyy hh:mm"));
+    y += 20;
+
+    painter.drawLine(margin, y, pageWidth - margin, y);
+    y += 15;
+
+    // Items
+    for (const auto& item : sale.items) {
+        painter.drawText(margin, y, item.productName);
+        y += 12;
+        
+        QString itemDetail = QString("%1 x $%2 = $%3")
+            .arg(item.quantity, 0, 'f', 2)
+            .arg(item.unitPrice, 0, 'f', 2)
+            .arg(item.subtotal, 0, 'f', 2);
+        
+        painter.drawText(margin + 10, y, itemDetail);
+        y += 15;
+    }
+
+    painter.drawLine(margin, y, pageWidth - margin, y);
+    y += 15;
+
+    // Totales
+    painter.setFont(normalFont);
+    painter.drawText(margin, y, "SUBTOTAL:");
+    painter.drawText(pageWidth - margin - 80, y, "$" + QString::number(sale.subtotal, 'f', 2));
+    y += 15;
+
+    if (sale.discount > 0) {
+        painter.drawText(margin, y, "DESCUENTO:");
+        painter.drawText(pageWidth - margin - 80, y, "-$" + QString::number(sale.discount, 'f', 2));
+        y += 15;
+    }
+
+    painter.setFont(titleFont);
+    painter.drawText(margin, y, "TOTAL:");
+    painter.drawText(pageWidth - margin - 80, y, "$" + QString::number(sale.total, 'f', 2));
+    y += 25;
+
+    painter.drawLine(margin, y, pageWidth - margin, y);
+    y += 20;
+
+    painter.setFont(smallFont);
+    painter.drawText(QRect(margin, y, pageWidth - 2*margin, 15), 
+                    Qt::AlignCenter, "Gracias por su compra!");
+}
+
+bool PrintService::printCustomTicket(const Sale& sale, VoucherType type,
+                                     const InvoiceData& invoiceData,
+                                     const QString& layoutJson)
+{
+    emit printStarted();
+    
+    QJsonDocument doc = QJsonDocument::fromJson(layoutJson.toUtf8());
+    QJsonArray elements;
+    double ticketWidth = 80;
+    double ticketHeight = 200;
+    
+    if (doc.isObject()) {
+        QJsonObject layoutObj = doc.object();
+        if (layoutObj.contains("size")) {
+            QJsonObject sizeObj = layoutObj["size"].toObject();
+            ticketWidth = sizeObj["width"].toDouble(80);
+            ticketHeight = sizeObj["height"].toDouble(200);
+        }
+        if (layoutObj.contains("elements")) {
+            elements = layoutObj["elements"].toArray();
+        } else {
+            emit printFailed("Error: Diseno sin elementos");
+            return false;
+        }
+    } else if (doc.isArray()) {
+        elements = doc.array();
+    } else {
+        emit printFailed("Error: Diseno de ticket invalido");
+        return false;
+    }
+    
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setPageSize(QPageSize(QSizeF(ticketWidth, ticketHeight), QPageSize::Millimeter));
+    printer.setPageOrientation(QPageLayout::Portrait);
+    printer.setPageMargins(QMarginsF(0, 0, 0, 0), QPageLayout::Millimeter);
+    
+    if (!m_defaultPrinter.isEmpty()) {
+        printer.setPrinterName(m_defaultPrinter);
+    }
+    
+    QPainter painter;
+    if (!painter.begin(&printer)) {
+        emit printFailed("Error iniciando impresion de ticket personalizado");
+        return false;
+    }
+    
+    drawCustomTicket(painter, sale, type, invoiceData, elements);
+    
+    painter.end();
+    emit printCompleted();
+    return true;
+}
+
+void PrintService::drawCustomTicket(QPainter& painter, const Sale& sale, VoucherType type,
+                                    const InvoiceData& invoiceData, const QJsonArray& elements)
+{
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setRenderHint(QPainter::TextAntialiasing, true);
+    
+    const double pixelsPerMM = 3.78;
+    double itemsStartY = 0;
+    double itemsStartX = 0;
+    double itemsWidth = 60 * pixelsPerMM;
+    bool itemsFound = false;
+    
+    double itemsHeight = 0;
+    if (!sale.items.isEmpty()) {
+        for (const auto& item : sale.items) {
+            itemsHeight += 25;
+            itemsHeight += 25;
+        }
+    }
+    
+    for (const QJsonValue& value : elements) {
+        QJsonObject element = value.toObject();
+        
+        QString elementId = element["id"].toString();
+        QString elementType = element["type"].toString();
+        double x = element["x"].toDouble() * pixelsPerMM;
+        double y = element["y"].toDouble() * pixelsPerMM;
+        double width = element["width"].toDouble() * pixelsPerMM;
+        double height = element["height"].toDouble() * pixelsPerMM;
+        QString content = element["content"].toString();
+        
+        if (elementId == "itemsHeader") {
+            itemsStartY = y + height + 5;
+            itemsStartX = x;
+            itemsWidth = width;
+            itemsFound = true;
+            continue;
+        }
+        
+        double adjustedY = y;
+        if (itemsFound && y > itemsStartY) {
+            adjustedY = y + itemsHeight;
+        }
+        
+        if (elementType == "text") {
+            content = replaceVariables(content, sale, type, invoiceData);
+            
+            int fontSize = element["fontSize"].toInt(10);
+            bool bold = element["bold"].toBool(false);
+            QString align = element["align"].toString("left");
+            
+            QFont font("Arial", fontSize);
+            font.setBold(bold);
+            painter.setFont(font);
+            
+            Qt::Alignment alignment = Qt::AlignLeft | Qt::AlignVCenter;
+            if (align == "center") {
+                alignment = Qt::AlignHCenter | Qt::AlignVCenter;
+            } else if (align == "right") {
+                alignment = Qt::AlignRight | Qt::AlignVCenter;
+            }
+            
+            painter.drawText(QRectF(x, adjustedY, width, height), alignment, content);
+            
+        } else if (elementType == "line") {
+            painter.setPen(QPen(Qt::black, 1));
+            painter.drawLine(QPointF(x, adjustedY), QPointF(x + width, adjustedY));
+        }
+    }
+    
+    if (itemsFound && !sale.items.isEmpty()) {
+        QFont itemFont("Arial", 10);
+        painter.setFont(itemFont);
+        
+        double currentY = itemsStartY;
+        
+        for (const auto& item : sale.items) {
+            QFontMetrics fm(itemFont);
+            QString productName = item.productName;
+            
+            if (fm.horizontalAdvance(productName) > itemsWidth) {
+                productName = fm.elidedText(productName, Qt::ElideRight, static_cast<int>(itemsWidth));
+            }
+            
+            painter.drawText(QRectF(itemsStartX, currentY, itemsWidth, 24), 
+                           Qt::AlignLeft | Qt::AlignVCenter, productName);
+            currentY += 25;
+            
+            QString itemDetail = QString("%1 x S/ %2 = S/ %3")
+                .arg(item.quantity, 0, 'f', 2)
+                .arg(item.unitPrice, 0, 'f', 2)
+                .arg(item.subtotal, 0, 'f', 2);
+            
+            QFont detailFont("Arial", 9);
+            painter.setFont(detailFont);
+            painter.drawText(QRectF(itemsStartX + 10, currentY, itemsWidth - 10, 24), 
+                           Qt::AlignLeft | Qt::AlignVCenter, itemDetail);
+            currentY += 25;
+            
+            painter.setFont(itemFont);
+        }
+    }
+}
+
+QString PrintService::replaceVariables(const QString& text, const Sale& sale,
+                                       VoucherType type, const InvoiceData& invoiceData)
+{
+    QString result = text;
+    
+    result.replace("{{businessName}}", m_companyName);
+    result.replace("{{companyName}}", m_companyName);
+    result.replace("{{ruc}}", m_companyRuc);
+    result.replace("{{companyRuc}}", m_companyRuc);
+    result.replace("{{address}}", m_companyAddress);
+    result.replace("{{companyAddress}}", m_companyAddress);
+    
+    QString voucherTypeStr = (type == FACTURA) ? "FACTURA" : "BOLETA";
+    result.replace("{{voucherType}}", voucherTypeStr);
+    result.replace("{{invoiceNumber}}", sale.invoiceNumber);
+    
+    result.replace("{{date}}", sale.createdAt.toString("dd/MM/yyyy"));
+    result.replace("{{datetime}}", sale.createdAt.toString("dd/MM/yyyy hh:mm"));
+    result.replace("{{time}}", sale.createdAt.toString("hh:mm"));
+    
+    result.replace("{{customerName}}", sale.customerName);
+    result.replace("{{customerRuc}}", invoiceData.ruc);
+    
+    result.replace("{{subtotal}}", QString::number(sale.subtotal, 'f', 2));
+    result.replace("{{discount}}", QString::number(sale.discount, 'f', 2));
+    result.replace("{{tax}}", QString::number(sale.tax, 'f', 2));
+    result.replace("{{total}}", QString::number(sale.total, 'f', 2));
+    
+    return result;
+}

@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import QtQuick.Effects
 import SistemaInventario 1.0
 
 Dialog {
@@ -13,19 +12,21 @@ Dialog {
     width: 450
     height: 600
     
-    // Overlay con blur
+    // Activar blur en la página de fondo
+    property var parentPage: null
+    
+    onOpened: {
+        if (parentPage) parentPage.layer.enabled = true
+    }
+    onClosed: {
+        if (parentPage) parentPage.layer.enabled = false
+    }
+    
+    // Overlay con color semitransparente
     Overlay.modal: Rectangle {
         color: Material.theme === Material.Dark ? 
-            Qt.rgba(0, 0, 0, 0.5) : 
-            Qt.rgba(0.1, 0.1, 0.1, 0.4)
-        
-        MultiEffect {
-            anchors.fill: parent
-            source: parent.parent
-            blur: 1.0
-            blurMax: 64
-            blurMultiplier: 1.2
-        }
+            Qt.rgba(0, 0, 0, 0.6) : 
+            Qt.rgba(0.05, 0.05, 0.05, 0.5)
     }
 
     required property PrintViewModel printViewModel
@@ -55,17 +56,34 @@ Dialog {
                 anchors.fill: parent
                 spacing: 8
 
-                ComboBox {
+                RowLayout {
                     Layout.fillWidth: true
-                    model: root.printViewModel.availablePrinters
+                    spacing: 8
 
-                    Component.onCompleted: {
-                        currentIndex = root.printViewModel.defaultPrinterIndex
+                    ComboBox {
+                        id: printerComboBox
+                        Layout.fillWidth: true
+                        model: root.printViewModel.availablePrinters
+
+                        Component.onCompleted: {
+                            currentIndex = root.printViewModel.defaultPrinterIndex
+                        }
+
+                        onCurrentTextChanged: {
+                            if (currentText !== "")
+                                root.printViewModel.defaultPrinter = currentText
+                        }
                     }
 
-                    onCurrentTextChanged: {
-                        if (currentText !== "")
-                            root.printViewModel.defaultPrinter = currentText
+                    Button {
+                        text: "\uE72C"
+                        font.family: "Segoe MDL2 Assets"
+                        font.pixelSize: 16
+                        implicitWidth: 40
+                        implicitHeight: 40
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Actualizar lista de impresoras")
+                        onClicked: root.printViewModel.refreshPrinters()
                     }
                 }
             }
@@ -148,7 +166,7 @@ Dialog {
                 text: qsTr("Guardar")
                 Layout.fillWidth: true
                 Material.background: Material.primary
-                Material.foreground: "white"
+                Material.foreground: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
 
                 onClicked: {
                     root.printViewModel.setBusinessInfo(

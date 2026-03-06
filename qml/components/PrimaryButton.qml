@@ -13,8 +13,10 @@ Button {
     font.pixelSize: 14
     font.weight: Font.Medium
     
-    Material.background: Material.primary
-    Material.foreground: "white"
+    // Usa el color primario actual del tema
+    Material.background: ApplicationWindow.window?.currentColors?.primary ?? Material.primary
+    // Texto que contrasta con el fondo del botón
+    Material.foreground: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
     
     // Texto del botón
     text: iconText !== "" ? iconText + "  " + control.text : control.text

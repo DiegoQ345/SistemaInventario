@@ -10,6 +10,41 @@ Page {
     id: root
     title: qsTr("Importar Excel")
 
+    // Función para obtener los campos ya mapeados
+    function getMappedFields() {
+        var mapped = []
+        for (var i = 0; i < repeaterMapeo.count; i++) {
+            var item = repeaterMapeo.itemAt(i)
+            if (item && item.children[1]) { // children[1] es el ComboBox
+                var combo = item.children[1]
+                if (combo.currentValue && combo.currentValue !== "ninguno") {
+                    mapped.push(combo.currentValue)
+                }
+            }
+        }
+        return mapped
+    }
+
+    // Función para verificar si un campo ya está mapeado (excluyendo el combo actual)
+    // "description" puede mapearse múltiples veces para concatenar información
+    function isFieldMapped(fieldValue, currentCombo) {
+        // Permitir múltiples mapeos para descripción
+        if (fieldValue === "description") {
+            return false
+        }
+        
+        for (var i = 0; i < repeaterMapeo.count; i++) {
+            var item = repeaterMapeo.itemAt(i)
+            if (item && item.children[1]) {
+                var combo = item.children[1]
+                if (combo !== currentCombo && combo.currentValue === fieldValue && fieldValue !== "ninguno") {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
     ExcelImportViewModel {
         id: importViewModel
 
@@ -495,11 +530,12 @@ Page {
                                             "name": "Nombre del producto (obligatorio)",
                                             "sku": "Código único del producto (obligatorio)",
                                             "barcode": "Código de barras para escaneo",
+                                            "category": "Categoría del producto (se crea automáticamente si no existe)",
                                             "currentStock": "Cantidad disponible en inventario",
                                             "minimumStock": "Alerta de stock bajo",
                                             "purchasePrice": "Precio de compra al proveedor",
                                             "salePrice": "Precio de venta al cliente",
-                                            "description": "Descripción detallada del producto"
+                                            "description": "Descripción del producto (puedes mapear múltiples columnas: Modelo | Clase | Características)"
                                         })
 
                                         model: ListModel {
@@ -507,11 +543,36 @@ Page {
                                             ListElement { text: "📝 Nombre *"; value: "name" }
                                             ListElement { text: "🏷️ SKU *"; value: "sku" }
                                             ListElement { text: "📊 Código de Barras"; value: "barcode" }
+                                            ListElement { text: "📁 Categoría"; value: "category" }
                                             ListElement { text: "📦 Stock Actual"; value: "currentStock" }
                                             ListElement { text: "⚠️ Stock Mínimo"; value: "minimumStock" }
                                             ListElement { text: "💵 Precio Compra"; value: "purchasePrice" }
                                             ListElement { text: "💰 Precio Venta"; value: "salePrice" }
-                                            ListElement { text: "📄 Descripción"; value: "description" }
+                                            ListElement { text: "📄 Descripción (+)"; value: "description" }
+                                        }
+
+                                        // Delegate personalizado para deshabilitar opciones ya mapeadas
+                                        delegate: ItemDelegate {
+                                            width: mappingCombo.width
+                                            contentItem: Text {
+                                                text: model.text
+                                                color: {
+                                                    if (model.value === "ninguno") {
+                                                        return Material.foreground
+                                                    }
+                                                    var isMapped = root.isFieldMapped(model.value, mappingCombo)
+                                                    return isMapped ? Material.color(Material.Grey) : Material.foreground
+                                                }
+                                                font: mappingCombo.font
+                                                elide: Text.ElideRight
+                                                verticalAlignment: Text.AlignVCenter
+                                                opacity: {
+                                                    if (model.value === "ninguno") return 1.0
+                                                    return root.isFieldMapped(model.value, mappingCombo) ? 0.4 : 1.0
+                                                }
+                                            }
+                                            highlighted: mappingCombo.highlightedIndex === index
+                                            enabled: model.value === "ninguno" || !root.isFieldMapped(model.value, mappingCombo)
                                         }
 
                                         ToolTip.visible: hovered
@@ -523,6 +584,17 @@ Page {
 
                                         onActivated: {
                                             importViewModel.setColumnMapping(modelData, currentValue)
+                                            // Actualizar otros combos para reflejar el cambio
+                                            for (var i = 0; i < repeaterMapeo.count; i++) {
+                                                var item = repeaterMapeo.itemAt(i)
+                                                if (item && item.children[1]) {
+                                                    var otherCombo = item.children[1]
+                                                    if (otherCombo !== mappingCombo) {
+                                                        // Forzar actualización visual
+                                                        otherCombo.popup.close()
+                                                    }
+                                                }
+                                            }
                                         }
 
                                         Component.onCompleted: {
@@ -866,6 +938,16 @@ Page {
                                         }
 
                                         Label {
+                                            text: "Categoría"
+                                            Layout.preferredWidth: 120
+                                            font.weight: Font.Bold
+                                            font.pixelSize: 12
+                                            color: Material.theme === Material.Dark ?
+                                                   Material.color(Material.Blue, Material.Shade200) :
+                                                   Material.color(Material.Blue, Material.Shade900)
+                                        }
+
+                                        Label {
                                             text: "Stock"
                                             Layout.preferredWidth: 70
                                             font.weight: Font.Bold
@@ -985,6 +1067,17 @@ Page {
                                             }
 
                                             Label {
+                                                text: modelData.category || "-"
+                                                Layout.preferredWidth: 120
+                                                elide: Text.ElideRight
+                                                font.pixelSize: 13
+                                                opacity: 0.8
+                                                color: Material.theme === Material.Dark ?
+                                                       Material.color(Material.Purple, Material.Shade300) :
+                                                       Material.color(Material.Purple, Material.Shade700)
+                                            }
+
+                                            Label {
                                                 text: modelData.currentStock !== undefined ? modelData.currentStock.toString() : "-"
                                                 Layout.preferredWidth: 70
                                                 horizontalAlignment: Text.AlignRight
@@ -1055,9 +1148,88 @@ Page {
 
                                     Label {
                                         text: qsTr("Importando productos... %1%").arg(Math.round(importViewModel.importProgress))
-                                        color: "white"
+                                        color: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
                                         font.pixelSize: 14
                                         font.weight: Font.Medium
+                                    }
+                                }
+                            }
+
+                            // Barra de progreso visual
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 80
+                                radius: 8
+                                visible: importViewModel.isLoading
+                                color: Material.theme === Material.Dark ? 
+                                    Qt.lighter(Material.background, 1.15) : 
+                                    Material.color(Material.Grey, Material.Shade100)
+                                border.width: 1
+                                border.color: Material.theme === Material.Dark ?
+                                    Qt.lighter(Material.background, 1.3) :
+                                    Material.frameColor
+
+                                ColumnLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 16
+                                    spacing: 8
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 12
+
+                                        Label {
+                                            text: "⏳"
+                                            font.pixelSize: 20
+                                        }
+
+                                        Label {
+                                            text: importViewModel.importProgressMessage || "Preparando importación..."
+                                            font.pixelSize: 13
+                                            font.weight: Font.Medium
+                                            Layout.fillWidth: true
+                                        }
+
+                                        Label {
+                                            text: Math.round(importViewModel.importProgress) + "%"
+                                            font.pixelSize: 16
+                                            font.weight: Font.Bold
+                                            color: Material.primary
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 12
+                                        radius: 6
+                                        color: Material.theme === Material.Dark ?
+                                            Qt.darker(Material.background, 1.2) :
+                                            Material.color(Material.Grey, Material.Shade200)
+
+                                        Rectangle {
+                                            width: parent.width * (importViewModel.importProgress / 100)
+                                            height: parent.height
+                                            radius: 6
+                                            color: Material.primary
+
+                                            Behavior on width {
+                                                NumberAnimation {
+                                                    duration: 200
+                                                    easing.type: Easing.OutCubic
+                                                }
+                                            }
+
+                                            // Efecto de brillo animado
+                                            Rectangle {
+                                                anchors.fill: parent
+                                                radius: 6
+                                                gradient: Gradient {
+                                                    GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.2) }
+                                                    GradientStop { position: 0.5; color: "transparent" }
+                                                    GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.1) }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }

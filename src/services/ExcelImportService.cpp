@@ -9,6 +9,9 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QDebug>
+#include <QRegularExpression>
+#include <QCoreApplication>
+#include <QThread>
 
 ExcelImportService::ExcelImportService(QObject *parent)
     : QObject(parent)
@@ -114,6 +117,14 @@ ExcelImportService::ImportResult ExcelImportService::importProducts(
         int progress = ((rowIndex - startRow + 1) * 100) / result.totalRows;
         emit importProgress(progress, QString("Procesando fila %1 de %2...")
                           .arg(rowIndex - startRow + 1).arg(result.totalRows));
+        
+        // Procesar eventos de la UI para actualizar la barra de progreso
+        QCoreApplication::processEvents();
+        
+        // Pequeño delay para permitir actualización visual (solo cada 10 filas para no ralentizar demasiado)
+        if ((rowIndex - startRow) % 10 == 0) {
+            QThread::msleep(10);
+        }
 
         qDebug() << "\n=== FILA" << rowIndex << "===";
         
@@ -181,6 +192,11 @@ ExcelImportService::ImportResult ExcelImportService::importProducts(
 
     result.success = (result.importedRows > 0);
     emit importProgress(100, "Importación completada");
+    
+    // Permitir que la UI muestre el progreso al 100%
+    QCoreApplication::processEvents();
+    QThread::msleep(500);  // Medio segundo para que el usuario vea la barra completa
+    
     emit importCompleted(result.importedRows, result.failedRows);
 
     return result;
@@ -315,33 +331,81 @@ Product ExcelImportService::mapRowToProduct(const QMap<QString, QVariant>& row,
     product.active = true;
 
     qDebug() << "[ExcelImportService] Mapeando fila a Product:";
+    qDebug() << "  Datos del row:" << row;
     
-    for (const auto& mapping : mappings) {
-        if (!mapping.isMapped) continue;
-
-        QVariant value = row.value(mapping.fieldName);
-        qDebug() << "  " << mapping.fieldName << ":" << value;
-
-        if (mapping.fieldName == "name") {
-            product.name = value.toString().trimmed();
-        } else if (mapping.fieldName == "sku") {
-            product.sku = value.toString().trimmed();
-        } else if (mapping.fieldName == "barcode") {
-            product.barcode = value.toString().trimmed();
-        } else if (mapping.fieldName == "currentStock") {
-            product.currentStock = value.toDouble();
-        } else if (mapping.fieldName == "minimumStock") {
-            product.minimumStock = value.toDouble();
-        } else if (mapping.fieldName == "purchasePrice") {
-            product.purchasePrice = value.toDouble();
-        } else if (mapping.fieldName == "salePrice") {
-            product.salePrice = value.toDouble();
-        } else if (mapping.fieldName == "description") {
-            product.description = value.toString();
+    // Procesar campos desde el row directamente
+    if (row.contains("name")) {
+        product.name = cleanTextField(row.value("name").toString());
+        qDebug() << "  Nombre limpiado:" << product.name;
+    }
+    
+    if (row.contains("sku")) {
+        product.sku = cleanTextField(row.value("sku").toString());
+        qDebug() << "  SKU:" << product.sku;
+    }
+    
+    if (row.contains("barcode")) {
+        product.barcode = cleanTextField(row.value("barcode").toString());
+        qDebug() << "  Barcode:" << product.barcode;
+    }
+    
+    if (row.contains("category")) {
+        QString categoryName = cleanTextField(row.value("category").toString());
+        qDebug() << "  ========================================";
+        qDebug() << "  [CATEGORY DEBUG] Valor original del row:" << row.value("category");
+        qDebug() << "  [CATEGORY DEBUG] Categoría limpiada:" << categoryName;
+        qDebug() << "  [CATEGORY DEBUG] ¿Está vacía?" << categoryName.isEmpty();
+        
+        if (!categoryName.isEmpty()) {
+            // IMPORTANTE: Asignar el nombre de la categoría para que ProductService lo procese
+            product.categoryName = categoryName;
+            
+            // También podemos pre-crear la categoría aquí para asegurar que existe
+            int categoryId = ensureCategoryExists(categoryName);
+            qDebug() << "  [CATEGORY DEBUG] ID de categoría obtenido:" << categoryId;
+            qDebug() << "  [CATEGORY DEBUG] product.categoryName asignado:" << product.categoryName;
+            
+            if (categoryId > 0) {
+                product.categoryId = categoryId;
+                qDebug() << "  [CATEGORY DEBUG] product.categoryId asignado:" << product.categoryId;
+            } else {
+                qDebug() << "  [CATEGORY DEBUG] ERROR: categoryId es 0 o negativo!";
+            }
+        } else {
+            qDebug() << "  [CATEGORY DEBUG] Categoría está vacía después de limpiar";
         }
+        qDebug() << "  ========================================";
+    } else {
+        qDebug() << "  [CATEGORY DEBUG] row NO contiene 'category' - Keys disponibles:" << row.keys();
+    }
+    
+    if (row.contains("currentStock") || row.contains("stock")) {
+        product.currentStock = row.value("currentStock", row.value("stock")).toDouble();
+        qDebug() << "  Stock:" << product.currentStock;
+    }
+    
+    if (row.contains("minimumStock") || row.contains("minimum_stock")) {
+        product.minimumStock = row.value("minimumStock", row.value("minimum_stock")).toDouble();
+        qDebug() << "  Stock mínimo:" << product.minimumStock;
+    }
+    
+    if (row.contains("purchasePrice") || row.contains("purchase_price")) {
+        product.purchasePrice = row.value("purchasePrice", row.value("purchase_price")).toDouble();
+        qDebug() << "  Precio compra:" << product.purchasePrice;
+    }
+    
+    if (row.contains("salePrice") || row.contains("sale_price")) {
+        product.salePrice = row.value("salePrice", row.value("sale_price")).toDouble();
+        qDebug() << "  Precio venta:" << product.salePrice;
+    }
+    
+    if (row.contains("description")) {
+        product.description = cleanTextField(row.value("description").toString());
+        qDebug() << "  Descripción:" << product.description;
     }
 
-    qDebug() << "  Product creado:" << product.name << "|" << product.sku << "|" << product.salePrice;
+    qDebug() << "  Product creado: Nombre=" << product.name << "| SKU=" << product.sku 
+             << "| CategoryID=" << product.categoryId << "| Precio=" << product.salePrice;
     return product;
 }
 
@@ -394,7 +458,19 @@ QMap<QString, QVariant> ExcelImportService::readRow(const QXlsx::Document& xlsx,
                  << mapping.fieldName << ":" << cellValue;
         
         QVariant convertedValue = convertValue(mapping.fieldName, cellValue);
-        row[mapping.fieldName] = convertedValue;
+        
+        // Para el campo "description", concatenar múltiples valores
+        if (mapping.fieldName == "description" && row.contains("description")) {
+            QString existing = row["description"].toString();
+            QString newValue = convertedValue.toString();
+            if (!existing.isEmpty() && !newValue.isEmpty()) {
+                row["description"] = existing + " | " + newValue;
+            } else if (!newValue.isEmpty()) {
+                row["description"] = newValue;
+            }
+        } else {
+            row[mapping.fieldName] = convertedValue;
+        }
     }
 
     qDebug() << "  Datos leídos:" << row;
@@ -409,7 +485,9 @@ QVariant ExcelImportService::convertValue(const QString& fieldName, const QVaria
 
     // Campos numéricos
     if (fieldName == "currentStock" || fieldName == "minimumStock" ||
-        fieldName == "purchasePrice" || fieldName == "salePrice") {
+        fieldName == "purchasePrice" || fieldName == "salePrice" ||
+        fieldName == "stock" || fieldName == "minimum_stock" ||
+        fieldName == "purchase_price" || fieldName == "sale_price") {
         bool ok;
         double numValue = value.toDouble(&ok);
         if (!ok) {
@@ -419,6 +497,69 @@ QVariant ExcelImportService::convertValue(const QString& fieldName, const QVaria
         return numValue;
     }
 
-    // Campos de texto
-    return value.toString().trimmed();
+    // Campos de texto: aplicar limpieza
+    return cleanTextField(value.toString());
+}
+
+QString ExcelImportService::cleanTextField(const QString& text)
+{
+    if (text.isEmpty()) return QString();
+    
+    QString cleaned = text;
+    
+    // 1. Eliminar caracteres extraños de Excel (_x000D_, _x000A_, etc.)
+    cleaned.remove(QRegularExpression("_x[0-9A-Fa-f]{4}_"));
+    
+    // 2. Eliminar caracteres de control (retornos de carro, saltos de línea, tabulaciones)
+    cleaned.remove(QRegularExpression("[\\r\\n\\t]"));
+    
+    // 3. Reemplazar espacios múltiples (2 o más) por un solo espacio
+    cleaned.replace(QRegularExpression("\\s{2,}"), " ");
+    
+    // 4. Eliminar espacios al inicio y al final
+    cleaned = cleaned.trimmed();
+    
+    return cleaned;
+}
+
+int ExcelImportService::ensureCategoryExists(const QString& categoryName)
+{
+    qDebug() << "[ensureCategoryExists] ENTRADA - categoryName:" << categoryName << "isEmpty:" << categoryName.isEmpty();
+    
+    if (categoryName.isEmpty()) {
+        qDebug() << "[ensureCategoryExists] Categoría vacía, retornando 0";
+        return 0;
+    }
+    
+    QSqlQuery query(DatabaseManager::instance().database());
+    
+    // Verificar si la categoría ya existe
+    query.prepare("SELECT id FROM categories WHERE name = :name");
+    query.bindValue(":name", categoryName);
+    
+    qDebug() << "[ensureCategoryExists] Ejecutando SELECT para:" << categoryName;
+    
+    if (query.exec() && query.next()) {
+        // La categoría ya existe
+        int existingId = query.value(0).toInt();
+        qDebug() << "[ensureCategoryExists] ✓ Categoría existente:" << categoryName << "(ID:" << existingId << ")";
+        return existingId;
+    }
+    
+    qDebug() << "[ensureCategoryExists] Categoría NO existe, creando...";
+    
+    // Crear nueva categoría
+    query.prepare("INSERT INTO categories (name, description, created_at, updated_at) "
+                 "VALUES (:name, :description, datetime('now'), datetime('now'))");
+    query.bindValue(":name", categoryName);
+    query.bindValue(":description", QString("Categoría importada automáticamente desde Excel"));
+    
+    if (query.exec()) {
+        int newId = query.lastInsertId().toInt();
+        qDebug() << "[ensureCategoryExists] ✓✓ Categoría CREADA:" << categoryName << "(ID:" << newId << ")";
+        return newId;
+    } else {
+        qWarning() << "[ensureCategoryExists] ✗✗ ERROR creando categoría:" << categoryName << "-" << query.lastError().text();
+        return 0;
+    }
 }

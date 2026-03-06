@@ -19,6 +19,7 @@ class ProductListModel : public QAbstractListModel
 
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
     Q_PROPERTY(bool isLoading READ isLoading NOTIFY isLoadingChanged)
+    Q_PROPERTY(QStringList availableCategories READ availableCategories NOTIFY availableCategoriesChanged)
 
 public:
     enum ProductRoles {
@@ -44,6 +45,7 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     bool isLoading() const { return m_isLoading; }
+    QStringList availableCategories() const { return m_availableCategories; }
 
 public slots:
     /**
@@ -65,6 +67,16 @@ public slots:
      * @brief Filtrar por nombre de categoría
      */
     Q_INVOKABLE void filterByCategoryName(const QString& categoryName);
+
+    /**
+     * @brief Obtener todas las categorías disponibles desde la BD
+     */
+    Q_INVOKABLE QStringList getAvailableCategories();
+    
+    /**
+     * @brief Recargar las categorías desde la BD
+     */
+    Q_INVOKABLE void loadAvailableCategories();
 
     /**
      * @brief Filtrar productos con stock bajo
@@ -90,6 +102,11 @@ public slots:
      * @brief Eliminar producto
      */
     Q_INVOKABLE bool deleteProduct(int productId);
+    
+    /**
+     * @brief Eliminar TODOS los productos
+     */
+    Q_INVOKABLE bool deleteAllProducts();
 
     /**
      * @brief Validar datos del producto antes de guardar
@@ -101,9 +118,15 @@ public slots:
      */
     Q_INVOKABLE QVariantMap getProductForEdit(int productId) const;
 
+    /**
+     * @brief Verificar si existe un producto con el código de barras dado
+     */
+    Q_INVOKABLE bool hasProductWithBarcode(const QString& barcode) const;
+
 signals:
     void countChanged();
     void isLoadingChanged();
+    void availableCategoriesChanged();
     void errorOccurred(const QString& message);
     void productAdded(int productId);
     void productUpdated(int productId);
@@ -113,6 +136,7 @@ signals:
 private:
     QList<Product> m_products;
     bool m_isLoading = false;
+    QStringList m_availableCategories;
 
     void setIsLoading(bool loading);
     QVariantMap productToVariantMap(const Product& product) const;

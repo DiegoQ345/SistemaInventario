@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
 import SistemaInventario
+import "../components"
 
 Page {
     id: root
@@ -67,14 +68,25 @@ Page {
                             font.pixelSize: 20
                         }
                         
+                        // Mostrar ComboBox solo si hay múltiples cajeros (Admin/Programador)
                         ComboBox {
                             id: cashierComboBox
                             Layout.fillWidth: true
                             model: viewModel.availableCashiers
                             currentIndex: viewModel.availableCashiers.indexOf(viewModel.currentCashier)
+                            visible: viewModel.availableCashiers.length > 1
                             onActivated: {
                                 viewModel.currentCashier = currentText
                             }
+                        }
+                        
+                        // Mostrar Label si solo hay un cajero (Vendedor)
+                        Label {
+                            Layout.fillWidth: true
+                            text: viewModel.currentCashier
+                            font.pixelSize: 14
+                            font.weight: Font.Medium
+                            visible: viewModel.availableCashiers.length === 1
                         }
                         
                         Label {
@@ -143,59 +155,101 @@ Page {
                     rowSpacing: 12
                     columnSpacing: 12
 
-                    Button {
-                        Layout.fillWidth: true
-                        text: "\uE8C8  " + qsTr("Nueva Venta")
-                        font.family: "Segoe MDL2 Assets"
-                        Material.background: Material.primary
-                        Material.foreground: "white"
-                        font.weight: Font.Medium
-                        onClicked: {
-                            // Navegar a nueva venta
+                PrimaryButton {
+                    Layout.fillWidth: true
+                    text: qsTr("Nueva Venta")
+                    iconText: "\uE8C8"
+                    Material.background: Material.theme === Material.Dark ?
+                        Qt.darker(ApplicationWindow.window?.currentColors?.primary ?? Material.primary, 1.2) :
+                        Qt.lighter(ApplicationWindow.window?.currentColors?.primary ?? Material.primary, 1.2)
+                    contentItem: Label {
+                        text: parent.iconText !== "" ? parent.iconText + "  " + parent.text : parent.text
+                        font.family: parent.iconText !== "" ? "Segoe MDL2 Assets" : parent.font.family
+                        font.pixelSize: parent.font.pixelSize
+                        font.weight: parent.font.weight
+                        color: "#FFFFFF"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    onClicked: {
+                        // Navegar a la página de ventas
+                        if (ApplicationWindow.window && ApplicationWindow.window.stackView) {
+                            ApplicationWindow.window.stackView.replace("SalesPage.qml")
                         }
                     }
+                }
 
-                    Button {
-                        Layout.fillWidth: true
-                        text: "\uE710  " + qsTr("Nuevo Producto")
-                        font.family: "Segoe MDL2 Assets"
-                        Material.background: Material.theme === Material.Dark ?
-                            Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.3) :
-                            Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.1)
-                        Material.foreground: Material.primary
-                        font.weight: Font.Medium
-                        onClicked: {
-                            // Navegar a nuevo producto
+                PrimaryButton {
+                    Layout.fillWidth: true
+                    text: qsTr("Nuevo Producto")
+                    iconText: "\uE710"
+                    Material.background: Material.theme === Material.Dark ?
+                        Qt.darker(ApplicationWindow.window?.currentColors?.primary ?? Material.primary, 1.2) :
+                        Qt.lighter(ApplicationWindow.window?.currentColors?.primary ?? Material.primary, 1.2)
+                    contentItem: Label {
+                        text: parent.iconText !== "" ? parent.iconText + "  " + parent.text : parent.text
+                        font.family: parent.iconText !== "" ? "Segoe MDL2 Assets" : parent.font.family
+                        font.pixelSize: parent.font.pixelSize
+                        font.weight: parent.font.weight
+                        color: "#FFFFFF"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    onClicked: {
+                        // Navegar a la página de productos
+                        if (ApplicationWindow.window && ApplicationWindow.window.stackView) {
+                            ApplicationWindow.window.stackView.replace("ProductsPage.qml")
                         }
                     }
+                }
 
-                    Button {
-                        Layout.fillWidth: true
-                        text: "\uE898  " + qsTr("Importar Excel")
-                        font.family: "Segoe MDL2 Assets"
-                        Material.background: Material.theme === Material.Dark ?
-                            Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.3) :
-                            Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.1)
-                        Material.foreground: Material.primary
-                        font.weight: Font.Medium
-                        onClicked: {
-                            // Navegar a importación
+                PrimaryButton {
+                    Layout.fillWidth: true
+                    text: qsTr("Importar Excel")
+                    iconText: "\uE898"
+                    Material.background: Material.theme === Material.Dark ?
+                        Qt.darker(ApplicationWindow.window?.currentColors?.primary ?? Material.primary, 1.2) :
+                        Qt.lighter(ApplicationWindow.window?.currentColors?.primary ?? Material.primary, 1.2)
+                    contentItem: Label {
+                        text: parent.iconText !== "" ? parent.iconText + "  " + parent.text : parent.text
+                        font.family: parent.iconText !== "" ? "Segoe MDL2 Assets" : parent.font.family
+                        font.pixelSize: parent.font.pixelSize
+                        font.weight: parent.font.weight
+                        color: "#FFFFFF"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    onClicked: {
+                        // Navegar a la página de importación
+                        if (ApplicationWindow.window && ApplicationWindow.window.stackView) {
+                            ApplicationWindow.window.stackView.replace("ImportPage.qml")
                         }
                     }
+                }
 
-                    Button {
-                        Layout.fillWidth: true
-                        text: "\uE9D9  " + qsTr("Ver Reportes")
-                        font.family: "Segoe MDL2 Assets"
-                        Material.background: Material.theme === Material.Dark ?
-                            Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.3) :
-                            Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.1)
-                        Material.foreground: Material.primary
-                        font.weight: Font.Medium
-                        onClicked: {
-                            // Navegar a reportes
+                PrimaryButton {
+                    Layout.fillWidth: true
+                    text: qsTr("Ver Reportes")
+                    iconText: "\uE9D9"
+                    Material.background: Material.theme === Material.Dark ?
+                        Qt.darker(ApplicationWindow.window?.currentColors?.primary ?? Material.primary, 1.2) :
+                        Qt.lighter(ApplicationWindow.window?.currentColors?.primary ?? Material.primary, 1.2)
+                    contentItem: Label {
+                        text: parent.iconText !== "" ? parent.iconText + "  " + parent.text : parent.text
+                        font.family: parent.iconText !== "" ? "Segoe MDL2 Assets" : parent.font.family
+                        font.pixelSize: parent.font.pixelSize
+                        font.weight: parent.font.weight
+                        color: "#FFFFFF"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    onClicked: {
+                        // Navegar a la página de reportes
+                        if (ApplicationWindow.window && ApplicationWindow.window.stackView) {
+                            ApplicationWindow.window.stackView.replace("ReportsPage.qml")
                         }
                     }
+                }
                 }
             }
 
@@ -379,7 +433,7 @@ Page {
                                             text: index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : (index + 1)
                                             font.weight: Font.Bold
                                             font.pixelSize: index < 3 ? 18 : 14
-                                            color: "white"
+                                            color: index < 3 ? "#FFFFFF" : (Material.theme === Material.Dark ? "#000000" : "#FFFFFF")
                                         }
                                     }
                                     
@@ -556,12 +610,10 @@ Page {
                     RowLayout {
                         spacing: 12
                         
-                        Button {
-                            text: qsTr("📋 Ver Reporte del Día")
-                            Material.background: Material.theme === Material.Dark ?
-                                Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.3) :
-                                Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.1)
-                            Material.foreground: Material.primary
+OutlinedButton {
+                        text: qsTr("Ver Reporte del Día")
+                        iconText: "📋"
+                        isIconFont: false
                             onClicked: {
                                 var report = viewModel.getDailyReport()
                                 closingReportDialog.reportData = JSON.parse(report)
@@ -572,8 +624,14 @@ Page {
                         Button {
                             text: qsTr("🔒 Cerrar Día")
                             Material.background: Material.color(Material.Green)
-                            Material.foreground: "white"
                             font.weight: Font.Medium
+                            contentItem: Label {
+                                text: parent.text
+                                font: parent.font
+                                color: "white"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
                             onClicked: {
                                 closeDayConfirmDialog.open()
                             }
@@ -673,14 +731,14 @@ Page {
                             text: qsTr("REPORTE DE CIERRE")
                             font.pixelSize: 20
                             font.weight: Font.Bold
-                            color: "white"
+                            color: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
                             Layout.alignment: Qt.AlignHCenter
                         }
                         
                         Label {
                             text: closingReportDialog.reportData.date || ""
                             font.pixelSize: 14
-                            color: "white"
+                            color: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
                             opacity: 0.9
                             Layout.alignment: Qt.AlignHCenter
                         }
@@ -688,7 +746,7 @@ Page {
                         Label {
                             text: qsTr("Cajero: ") + (closingReportDialog.reportData.cashier || "")
                             font.pixelSize: 12
-                            color: "white"
+                            color: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
                             opacity: 0.8
                             Layout.alignment: Qt.AlignHCenter
                         }
@@ -913,8 +971,14 @@ Page {
         icon.name: "refresh"
         text: "↻"
         font.pixelSize: 24
-        Material.background: Material.primary
-        Material.foreground: "white"
+        Material.background: ApplicationWindow.window?.currentColors?.primary ?? Material.primary
+        contentItem: Label {
+            text: parent.text
+            font: parent.font
+            color: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+        }
         
         onClicked: viewModel.refresh()
     }

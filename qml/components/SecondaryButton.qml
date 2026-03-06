@@ -14,7 +14,14 @@ Button {
     font.weight: Font.Medium
     flat: true
 
-    // Texto del botón
-    text: iconText !== "" ? iconText + "  " + control.text : control.text
-    font.family: iconText !== "" ? "Segoe MDL2 Assets" : "Segoe UI"
+    // Texto del botón con icono
+    contentItem: Label {
+        text: control.iconText !== "" ? control.iconText + "  " + control.text : control.text
+        font.family: control.iconText !== "" ? "Segoe MDL2 Assets" : "Segoe UI"
+        font.pixelSize: control.font.pixelSize
+        font.weight: control.font.weight
+        color: Material.theme === Material.Dark ? "white" : "black"
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+    }
 }

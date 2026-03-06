@@ -172,6 +172,47 @@ bool PrintViewModel::printVoucher(const QString& invoiceNumber,
     return success;
 }
 
+bool PrintViewModel::printCustomTicket(const QString& invoiceNumber,
+                                      const QString& customerName,
+                                      const QVariantList& items,
+                                      double subtotal,
+                                      double discount,
+                                      double total,
+                                      VoucherType voucherType,
+                                      const QString& layoutJson,
+                                      const QString& ruc,
+                                      const QString& businessName,
+                                      const QString& address)
+{
+    qDebug() << "Imprimiendo ticket personalizado:" << invoiceNumber;
+
+    setIsPrinting(true);
+
+    // Crear objeto Sale
+    Sale sale = createSaleFromData(invoiceNumber, customerName, items, 
+                                   subtotal, discount, total);
+
+    // Configurar datos de factura
+    PrintService::InvoiceData invoiceData;
+    if (voucherType == Factura) {
+        invoiceData.ruc = ruc;
+        invoiceData.businessName = businessName;
+        invoiceData.address = address;
+    }
+
+    PrintService::VoucherType type = (voucherType == Factura) 
+                                     ? PrintService::FACTURA 
+                                     : PrintService::BOLETA;
+
+    bool success = m_printService.printCustomTicket(sale, type, invoiceData, layoutJson);
+
+    if (!success) {
+        setIsPrinting(false);
+    }
+
+    return success;
+}
+
 bool PrintViewModel::showPrinterSettings()
 {
     // TODO: Mostrar diálogo personalizado de configuración
@@ -220,6 +261,13 @@ void PrintViewModel::setBusinessInfo(const QString& name,
                                      const QString& phone,
                                      const QString& email)
 {
+    // Guardar localmente para acceso desde QML
+    m_businessName = name;
+    m_businessRuc = taxId;
+    m_businessAddress = address;
+    m_businessPhone = phone;
+    m_businessEmail = email;
+    
     PdfGeneratorService::BusinessInfo info;
     info.name = name;
     info.taxId = taxId;
@@ -228,6 +276,8 @@ void PrintViewModel::setBusinessInfo(const QString& name,
     info.email = email;
     
     m_pdfService.setBusinessInfo(info);
+    
+    emit businessInfoChanged();
 }
 
 Sale PrintViewModel::createSaleFromData(const QString& invoiceNumber,

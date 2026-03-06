@@ -4,10 +4,45 @@ import QtQuick.Controls.Material
 import QtQuick.Layouts
 import QtQuick.Effects
 import SistemaInventario
+import "../components"
 
 Page {
     id: root
     title: qsTr("Productos")
+    
+    // Señal para notificar que se escaneó un código y debe agregarse al carrito
+    signal barcodeScannedForCart(string barcode)
+    
+    // Habilitar captura de teclas para escáner de código de barras
+    focus: true
+    
+    Component.onCompleted: {
+        console.log("*** ProductsPage: Página cargada, forzando foco ***")
+        root.forceActiveFocus()
+    }
+    
+    onActiveFocusChanged: {
+        console.log("*** ProductsPage: Foco activo =", activeFocus, "***")
+    }
+    
+    Keys.onPressed: function(event) {
+        console.log("*** ProductsPage: Keys.onPressed disparado - Tecla:", event.key, "Texto:", event.text, "***")
+        // Solo procesar si no hay diálogos abiertos
+        if (!newProductDialog.opened && !deleteDialog.opened && !deleteAllConfirmDialog.opened && !deleteAllFinalDialog.opened) {
+            // Capturar caracteres alfanuméricos del escáner
+            if (event.text.length > 0) {
+                console.log("ProductsPage: Tecla presionada:", event.text)
+                barcodeScanner.processCharacter(event.text)
+                event.accepted = true
+            }
+            // Enter finaliza el escaneo - IMPORTANTE: enviar al handler
+            else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                console.log("ProductsPage: Enter detectado, finalizando escaneo")
+                barcodeScanner.processCharacter("\n")
+                event.accepted = true
+            }
+        }
+    }
     
     // Configuración del blur cuando se activa
     layer.enabled: false
@@ -33,7 +68,42 @@ Page {
         }
     }
     
+    // Handler para escáner de código de barras láser
+    BarcodeScannerHandler {
+        id: barcodeScanner
+        enabled: true
+        timeout: 100  // 100ms entre caracteres del escáner
+        
+        onBarcodeScanned: function(barcode) {
+            console.log("Código de barras escaneado en productos:", barcode)
+            
+            // Verificar si el producto existe en el inventario
+            if (productModel.hasProductWithBarcode(barcode)) {
+                // Producto existe: buscar y mostrar en la lista
+                console.log("Producto encontrado, buscando en lista")
+                searchField.text = barcode
+                productModel.searchProducts(barcode)
+            } else {
+                // Producto NO existe: abrir diálogo para agregarlo
+                console.log("Producto no encontrado, abriendo diálogo para agregarlo")
+                newProductDialog.openNewWithBarcode(barcode)
+            }
+        }
+    }
+    
     property int count: productModel.rowCount()
+
+    // MouseArea para capturar clics y mantener el foco
+    MouseArea {
+        anchors.fill: parent
+        propagateComposedEvents: true
+        z: -1
+        onClicked: function(mouse) {
+            console.log("*** ProductsPage: Clic detectado, restaurando foco ***")
+            root.forceActiveFocus()
+            mouse.accepted = false
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -62,7 +132,7 @@ Page {
                     id: searchField
                     Layout.fillWidth: true
                     Layout.preferredHeight: 48
-                    placeholderText: qsTr("Buscar productos...")
+                    placeholderText: qsTr("Buscar por nombre, SKU o código de barras...")
                     
                     // Icono de búsqueda
                     leftPadding: 44
@@ -102,25 +172,7 @@ Page {
                     id: categoryFilterCombo
                     Layout.preferredWidth: 200
                     Layout.preferredHeight: 48
-                    model: [
-                        "Todas",
-                        "Alimentos y Bebidas",
-                        "Lácteos",
-                        "Carnes y Embutidos",
-                        "Frutas y Verduras",
-                        "Panadería y Pastelería",
-                        "Snacks y Golosinas",
-                        "Bebidas",
-                        "Productos de Limpieza",
-                        "Cuidado Personal",
-                        "Hogar y Decoración",
-                        "Electrónica",
-                        "Papelería y Oficina",
-                        "Juguetes y Entretenimiento",
-                        "Mascotas",
-                        "Ferretería",
-                        "Otros"
-                    ]
+                    model: productModel.availableCategories
                     
                     displayText: "\uE71C  " + currentText
                     font.family: "Segoe MDL2 Assets"
@@ -130,51 +182,65 @@ Page {
                     }
                 }
 
-                Button {
-                    text: "\uE9D2  " + qsTr("Stock Bajo")
-                    font.family: "Segoe MDL2 Assets"
-                    font.weight: Font.Medium
-                    flat: true
-                    Material.foreground: Material.primary
+                OutlinedButton {
+                    id: stockBajoBtn
+                    text: qsTr("Stock Bajo")
+                    iconText: "\uE9D2"
+                    onClicked: productModel.filterLowStock()
+                    
+                    // Excepción: fondo rojo y texto blanco
+                    contentItem: Label {
+                        text: stockBajoBtn.iconText !== "" ? stockBajoBtn.iconText + "  " + stockBajoBtn.text : stockBajoBtn.text
+                        font.family: stockBajoBtn.iconText !== "" ? "Segoe MDL2 Assets" : stockBajoBtn.font.family
+                        font.pixelSize: stockBajoBtn.font.pixelSize
+                        font.weight: stockBajoBtn.font.weight
+                        color: "white"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
                     
                     background: Rectangle {
-                        implicitWidth: 120
                         implicitHeight: 40
-                        radius: 20
-                        color: parent.down ? Qt.darker(Material.primary, 1.3) :
-                               parent.hovered ? Material.color(Material.Primary, Material.theme === Material.Dark ? Material.Shade800 : Material.Shade100) :
-                               "transparent"
-                        border.width: 1
-                        border.color: Material.theme === Material.Dark ? 
-                                     Material.color(Material.Primary, Material.Shade700) :
-                                     Material.color(Material.Primary, Material.Shade300)
+                        radius: 4
+                        color: stockBajoBtn.down ? 
+                            Qt.darker(Material.color(Material.Red), 1.3) :
+                            stockBajoBtn.hovered ? 
+                            Qt.darker(Material.color(Material.Red), 1.1) :
+                            Material.color(Material.Red)
+                        border.width: 0
                         
                         Behavior on color { ColorAnimation { duration: 150 } }
                     }
-                    
-                    onClicked: productModel.filterLowStock()
                 }
 
-                Button {
-                    text: "\uE73E  " + qsTr("Todos")
-                    font.family: "Segoe MDL2 Assets"
-                    font.weight: Font.Medium
-                    Material.background: Material.primary
-                    Material.foreground: "white"
-                    
+                PrimaryButton {
+                    text: qsTr("Todos")
+                    iconText: "\uE73E"
                     onClicked: {
                         categoryFilterCombo.currentIndex = 0
                         productModel.loadProducts()
                     }
                 }
 
+                PrimaryButton {
+                    text: qsTr("Nuevo Producto")
+                    iconText: "\uE710"
+                    onClicked: newProductDialog.openNew()
+                }
+                
                 Button {
-                    text: "\uE710  " + qsTr("Nuevo Producto")
+                    text: "\uE74D  " + qsTr("Borrar Todos")
                     font.family: "Segoe MDL2 Assets"
                     font.weight: Font.Medium
-                    Material.background: Material.primary
-                    Material.foreground: "white"
-                    onClicked: newProductDialog.openNew()
+                    Material.background: Material.color(Material.Red)
+                    contentItem: Label {
+                        text: parent.text
+                        font: parent.font
+                        color: "white"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    onClicked: deleteAllConfirmDialog.open()
                 }
             }
         }
@@ -355,10 +421,15 @@ Page {
         // Footer con contador
         ToolBar {
             Layout.fillWidth: true
+            Material.background: Material.theme === Material.Dark ? 
+                Qt.darker(ApplicationWindow.window?.currentColors?.primary ?? Material.primary, 1.5) :
+                Qt.darker(ApplicationWindow.window?.currentColors?.primary ?? Material.primary, 1.3)
 
             Label {
                 anchors.centerIn: parent
                 text: qsTr("%1 productos").arg(productModel.count)
+                color: Material.theme === Material.Dark ? "#FFFFFF" : "#FFFFFF"
+                font.weight: Font.Medium
             }
         }
     }
@@ -390,8 +461,22 @@ Page {
             nameField.text = ""
             skuField.text = ""
             barcodeField.text = ""
-            categoryField.currentIndex = -1
-            categoryField.editText = ""
+            categoryField.text = ""
+            stockField.text = "0"
+            minStockField.text = "0"
+            purchasePriceField.text = "0.00"
+            salePriceField.text = "0.00"
+            descriptionField.text = ""
+            open()
+        }
+        
+        function openNewWithBarcode(barcode) {
+            editMode = false
+            errorLabel.visible = false
+            nameField.text = ""
+            skuField.text = ""
+            barcodeField.text = barcode  // Precargar código de barras
+            categoryField.text = ""
             stockField.text = "0"
             minStockField.text = "0"
             purchasePriceField.text = "0.00"
@@ -412,17 +497,7 @@ Page {
                 nameField.text = product.name || ""
                 skuField.text = product.sku || ""
                 barcodeField.text = product.barcode || ""
-                
-                // Configurar categoría en el ComboBox
-                var category = product.category || ""
-                var index = categoryField.find(category)
-                if (index !== -1) {
-                    categoryField.currentIndex = index
-                } else {
-                    categoryField.currentIndex = -1
-                    categoryField.editText = category
-                }
-                
+                categoryField.text = product.category || ""
                 stockField.text = product.currentStock ? product.currentStock.toString() : "0"
                 minStockField.text = product.minimumStock ? product.minimumStock.toString() : "0"
                 purchasePriceField.text = product.purchasePrice ? product.purchasePrice.toFixed(2) : "0.00"
@@ -483,34 +558,131 @@ Page {
                     }
 
                     Label { text: qsTr("Categoría:"); font.weight: Font.Medium }
-                    ComboBox {
-                        id: categoryField
+                    
+                    // Campo de categoría con autocompletado
+                    Item {
                         Layout.fillWidth: true
-                        editable: true
-                        model: [
-                            "Alimentos y Bebidas",
-                            "Lácteos",
-                            "Carnes y Embutidos",
-                            "Frutas y Verduras",
-                            "Panadería y Pastelería",
-                            "Snacks y Golosinas",
-                            "Bebidas",
-                            "Productos de Limpieza",
-                            "Cuidado Personal",
-                            "Hogar y Decoración",
-                            "Electrónica",
-                            "Papelería y Oficina",
-                            "Juguetes y Entretenimiento",
-                            "Mascotas",
-                            "Ferretería",
-                            "Otros"
-                        ]
+                        Layout.preferredHeight: categoryField.height
                         
-                        property string text: editable ? editText : currentText
+                        TextField {
+                            id: categoryField
+                            width: parent.width
+                            placeholderText: qsTr("Escribe para buscar categoría...")
+                            
+                            property var allCategories: productModel.availableCategories.filter(function(cat) { return cat !== "Todas" })
+                            property var filteredCategories: []
+                            
+                            onTextChanged: {
+                                // Filtrar categorías según el texto
+                                var search = text.toLowerCase().trim()
+                                if (search === "") {
+                                    filteredCategories = allCategories
+                                } else {
+                                    filteredCategories = allCategories.filter(function(cat) {
+                                        return cat.toLowerCase().includes(search)
+                                    })
+                                }
+                                
+                                // Mostrar popup si hay resultados
+                                if (filteredCategories.length > 0 && activeFocus) {
+                                    categoryPopup.open()
+                                } else {
+                                    categoryPopup.close()
+                                }
+                            }
+                            
+                            onActiveFocusChanged: {
+                                if (activeFocus && filteredCategories.length > 0) {
+                                    categoryPopup.open()
+                                } else if (!activeFocus) {
+                                    categoryPopup.close()
+                                }
+                            }
+                            
+                            // Navegación con teclado
+                            Keys.onDownPressed: {
+                                if (categoryPopup.visible && categoryListView.count > 0) {
+                                    categoryListView.forceActiveFocus()
+                                    categoryListView.currentIndex = 0
+                                }
+                            }
+                            
+                            Keys.onUpPressed: {
+                                if (categoryPopup.visible) {
+                                    categoryPopup.close()
+                                }
+                            }
+                        }
                         
-                        onAccepted: {
-                            if (find(editText) === -1) {
-                                currentIndex = -1
+                        // Popup con lista de categorías
+                        Popup {
+                            id: categoryPopup
+                            y: categoryField.height + 2
+                            width: categoryField.width
+                            height: Math.min(categoryListView.contentHeight + 10, 250)
+                            
+                            padding: 5
+                            
+                            background: Rectangle {
+                                color: Material.background
+                                border.color: Material.frameColor
+                                border.width: 1
+                                radius: 4
+                                
+                                layer.enabled: true
+                                layer.effect: MultiEffect {
+                                    shadowEnabled: true
+                                    shadowColor: "#40000000"
+                                    shadowVerticalOffset: 2
+                                    shadowBlur: 0.4
+                                }
+                            }
+                            
+                            contentItem: ListView {
+                                id: categoryListView
+                                clip: true
+                                
+                                model: categoryField.filteredCategories
+                                
+                                delegate: ItemDelegate {
+                                    width: categoryListView.width
+                                    height: 40
+                                    
+                                    contentItem: Label {
+                                        text: modelData
+                                        verticalAlignment: Text.AlignVCenter
+                                        leftPadding: 12
+                                    }
+                                    
+                                    background: Rectangle {
+                                        color: parent.hovered || categoryListView.currentIndex === index ? 
+                                               Material.listHighlightColor : "transparent"
+                                    }
+                                    
+                                    onClicked: {
+                                        categoryField.text = modelData
+                                        categoryPopup.close()
+                                        categoryField.forceActiveFocus()
+                                    }
+                                }
+                                
+                                // Navegación con teclado
+                                Keys.onReturnPressed: {
+                                    if (currentIndex >= 0 && currentIndex < count) {
+                                        categoryField.text = categoryField.filteredCategories[currentIndex]
+                                        categoryPopup.close()
+                                        categoryField.forceActiveFocus()
+                                    }
+                                }
+                                
+                                Keys.onEscapePressed: {
+                                    categoryPopup.close()
+                                    categoryField.forceActiveFocus()
+                                }
+                                
+                                ScrollBar.vertical: ScrollBar {
+                                    policy: ScrollBar.AsNeeded
+                                }
                             }
                         }
                     }
@@ -567,7 +739,7 @@ Page {
                             Qt.lighter(Material.background, 1.2) : 
                             "white"
                         border.color: descriptionField.activeFocus ? 
-                            Material.primary : 
+                            (ApplicationWindow.window?.currentColors?.primary ?? Material.primary) : 
                             Material.color(Material.Grey, Material.Shade400)
                         border.width: descriptionField.activeFocus ? 2 : 1
                         radius: 4
@@ -633,4 +805,126 @@ Page {
             productModel.deleteProduct(productId)
         }
     }
-}
+    
+    // Diálogo de confirmación para borrar todos los productos (PASO 1)
+    Dialog {
+        id: deleteAllConfirmDialog
+        title: qsTr("⚠️ ADVERTENCIA: Borrar Todos los Productos")
+        modal: true
+        anchors.centerIn: parent
+        
+        onOpened: root.layer.enabled = true
+        onClosed: root.layer.enabled = false
+        
+        Overlay.modal: Rectangle {
+            color: Material.theme === Material.Dark ? 
+                Qt.rgba(0, 0, 0, 0.7) : 
+                Qt.rgba(0.1, 0.1, 0.1, 0.6)
+        }
+        
+        ColumnLayout {
+            spacing: 16
+            
+            Label {
+                text: qsTr("Esta acción eliminará TODOS los productos de la base de datos.")
+                font.pixelSize: 14
+                font.weight: Font.Medium
+                color: Material.color(Material.Red)
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+            }
+            
+            Label {
+                text: qsTr("Total de productos: %1").arg(productModel.count)
+                font.pixelSize: 13
+                Layout.fillWidth: true
+            }
+            
+            Label {
+                text: qsTr("⚠️ Esta operación NO se puede deshacer.")
+                font.pixelSize: 13
+                font.weight: Font.Bold
+                color: Material.color(Material.Red)
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+            }
+            
+            Label {
+                text: qsTr("¿Está seguro de que desea continuar?")
+                font.pixelSize: 13
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+            }
+        }
+        
+        standardButtons: Dialog.Yes | Dialog.No
+        
+        onAccepted: {
+            deleteAllFinalDialog.open()
+        }
+    }
+    
+    // Diálogo de confirmación final (PASO 2)
+    Dialog {
+        id: deleteAllFinalDialog
+        title: qsTr("🛑 CONFIRMACIÓN FINAL")
+        modal: true
+        anchors.centerIn: parent
+        
+        onOpened: root.layer.enabled = true
+        onClosed: root.layer.enabled = false
+        
+        Overlay.modal: Rectangle {
+            color: Material.theme === Material.Dark ? 
+                Qt.rgba(0, 0, 0, 0.8) : 
+                Qt.rgba(0.1, 0.1, 0.1, 0.7)
+        }
+        
+        ColumnLayout {
+            spacing: 16
+            
+            Label {
+                text: qsTr("ÚLTIMA ADVERTENCIA")
+                font.pixelSize: 16
+                font.weight: Font.Bold
+                color: Material.color(Material.Red)
+                Layout.fillWidth: true
+            }
+            
+            Label {
+                text: qsTr("Se eliminarán %1 productos permanentemente.").arg(productModel.count)
+                font.pixelSize: 14
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+            }
+            
+            Label {
+                text: qsTr("Para confirmar, escriba 'BORRAR' en el campo de abajo:")
+                font.pixelSize: 13
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+            }
+            
+            TextField {
+                id: confirmTextField
+                Layout.fillWidth: true
+                placeholderText: qsTr("Escriba BORRAR para confirmar")
+            }
+        }
+        
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        
+        onAccepted: {
+            if (confirmTextField.text.toUpperCase() === "BORRAR") {
+                productModel.deleteAllProducts()
+                confirmTextField.text = ""
+            } else {
+                errorLabel.text = qsTr("Debe escribir 'BORRAR' para confirmar")
+                errorLabel.visible = true
+            }
+        }
+        
+        onRejected: {
+            confirmTextField.text = ""
+        }
+    }}

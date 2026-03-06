@@ -1,0 +1,22 @@
+﻿[1/141] Copying appSistemaInventario qml resources into build dir
+[2/141] Copying appSistemaInventario qml sources into build dir
+[3/141] Automatic MOC and UIC for target QXlsx
+FAILED: external/QXlsx/QXlsx/QXlsx_autogen/timestamp external/QXlsx/QXlsx/QXlsx_autogen/mocs_compilation.cpp D:/Repositorios/SistemaInventario/build/Desktop_Qt_6_10_1_MinGW_64_bit-Debug/external/QXlsx/QXlsx/QXlsx_autogen/timestamp D:/Repositorios/SistemaInventario/build/Desktop_Qt_6_10_1_MinGW_64_bit-Debug/external/QXlsx/QXlsx/QXlsx_autogen/mocs_compilation.cpp 
+C:\Windows\system32\cmd.exe /C "cd /D D:\Repositorios\SistemaInventario\build\Desktop_Qt_6_10_1_MinGW_64_bit-Debug\external\QXlsx\QXlsx && C:\Qt\Tools\CMake_64\bin\cmake.exe -E cmake_autogen D:/Repositorios/SistemaInventario/build/Desktop_Qt_6_10_1_MinGW_64_bit-Debug/external/QXlsx/QXlsx/CMakeFiles/QXlsx_autogen.dir/AutogenInfo.json Debug && C:\Qt\Tools\CMake_64\bin\cmake.exe -E touch D:/Repositorios/SistemaInventario/build/Desktop_Qt_6_10_1_MinGW_64_bit-Debug/external/QXlsx/QXlsx/QXlsx_autogen/timestamp && C:\Qt\Tools\CMake_64\bin\cmake.exe -E cmake_transform_depfile Ninja gccdepfile D:/Repositorios/SistemaInventario D:/Repositorios/SistemaInventario/external/QXlsx/QXlsx D:/Repositorios/SistemaInventario/build/Desktop_Qt_6_10_1_MinGW_64_bit-Debug D:/Repositorios/SistemaInventario/build/Desktop_Qt_6_10_1_MinGW_64_bit-Debug/external/QXlsx/QXlsx D:/Repositorios/SistemaInventario/build/Desktop_Qt_6_10_1_MinGW_64_bit-Debug/external/QXlsx/QXlsx/QXlsx_autogen/deps D:/Repositorios/SistemaInventario/build/Desktop_Qt_6_10_1_MinGW_64_bit-Debug/CMakeFiles/d/daeba6d5867028f52d0a2e8aedd62950b9b997190d4a135606ac840439ace9ce.d"
+
+AutoMoc subprocess error
+------------------------
+The content generation command for "SRC:/build/Desktop_Qt_6_10_1_MinGW_64_bit-Debug/external/QXlsx/QXlsx/QXlsx_autogen/moc_predefs.h" failed.
+Process failed with return value 1
+
+Command
+-------
+C:/Qt/Tools/mingw1310_64/bin/g++.exe -std=gnu++17 -dM -E -c C:/Qt/Tools/CMake_64/share/cmake-3.30/Modules/CMakeCXXCompilerABI.cpp -DMINGW_HAS_SECURE_API=1 -DQT_CORE_LIB -DQT_DISABLE_DEPRECATED_BEFORE=0x060600 -DQT_GUI_LIB -DQT_NO_CAST_FROM_ASCII -DQT_NO_CAST_FROM_BYTEARRAY -DQT_NO_CAST_TO_ASCII -DQT_NO_KEYWORDS -DQT_NO_SIGNALS_SLOTS_KEYWORDS -DQT_NO_URL_CAST_FROM_STRING -DQT_USE_FAST_OPERATOR_PLUS -DQT_USE_QSTRINGBUILDER -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64 -ID:/Repositorios/SistemaInventario/build/Desktop_Qt_6_10_1_MinGW_64_bit-Debug/external/QXlsx/QXlsx -ID:/Repositorios/SistemaInventario/external/QXlsx/QXlsx -ID:/Repositorios/SistemaInventario/external/QXlsx/QXlsx/header -ID:/Repositorios/SistemaInventario/external/QXlsx/QXlsx/header -IC:/Qt/6.10.1/mingw_64/include/QtCore -IC:/Qt/6.10.1/mingw_64/include -IC:/Qt/6.10.1/mingw_64/mkspecs/win32-g++ -IC:/Qt/6.10.1/mingw_64/include/QtGui/6.10.1 -IC:/Qt/6.10.1/mingw_64/include/QtGui/6.10.1/QtGui -IC:/Qt/6.10.1/mingw_64/include/QtCore/6.10.1 -IC:/Qt/6.10.1/mingw_64/include/QtCore/6.10.1/QtCore -IC:/Qt/6.10.1/mingw_64/include/QtGui -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++ -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/x86_64-w64-mingw32 -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/backward -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include-fixed -IC:/Qt/Tools/mingw1310_64/x86_64-w64-mingw32/include
+
+Output
+------
+
+
+[4/141] Populating .qmlls.ini file at D:/Repositorios/SistemaInventario/build/Desktop_Qt_6_10_1_MinGW_64_bit-Debug/.qt/.qmlls.build.ini
+[5/141] Running qmlimportscanner for appSistemaInventario
+ninja: build stopped: subcommand failed.

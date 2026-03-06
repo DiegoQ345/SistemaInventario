@@ -8,6 +8,10 @@
 #include <QPrintDialog>
 #include <QPainter>
 #include <QPageSize>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QVariantMap>
+#include <QVariantList>
 
 /**
  * @brief Servicio para impresión de comprobantes
@@ -63,6 +67,56 @@ public slots:
                      const InvoiceData& invoiceData = InvoiceData{});
 
     /**
+     * @brief Imprimir ticket con diseño personalizado
+     * @param sale Datos de la venta
+     * @param type Tipo de comprobante
+     * @param invoiceData Datos adicionales
+     * @param layoutJson JSON con diseño personalizado
+     * @return true si se imprimió correctamente
+     */
+    bool printCustomTicket(const Sale& sale, VoucherType type,
+                          const InvoiceData& invoiceData,
+                          const QString& layoutJson);
+
+    /**
+     * @brief Generar vista previa PDF del ticket personalizado
+     * @param sale Datos de la venta
+     * @param type Tipo de comprobante
+     * @param invoiceData Datos adicionales
+     * @param layoutJson JSON con diseño personalizado
+     * @param outputPath Ruta donde guardar el PDF
+     * @return true si se generó correctamente
+     */
+    Q_INVOKABLE bool generateCustomTicketPdf(const Sale& sale, VoucherType type,
+                                              const InvoiceData& invoiceData,
+                                              const QString& layoutJson,
+                                              const QString& outputPath);
+
+    /**
+     * @brief Generar PDF de ticket personalizado (versión para QML)
+     * @param saleData Mapa con datos de la venta (compatible con QML)
+     * @param voucherType Tipo de comprobante (0=BOLETA, 1=FACTURA)
+     * @param invoiceData Mapa con datos de facturación
+     * @param layoutJson JSON con diseño personalizado
+     * @param outputPath Ruta donde guardar el PDF
+     * @return true si se generó correctamente
+     */
+    Q_INVOKABLE bool generateCustomTicketPdf(const QVariantMap& saleData,
+                                              int voucherType,
+                                              const QVariantMap& invoiceData,
+                                              const QString& layoutJson,
+                                              const QString& outputPath);
+
+    /**
+     * @brief Generar vista previa PDF con datos de ejemplo
+     * @param layoutJson JSON con diseño personalizado
+     * @param outputPath Ruta donde guardar el PDF
+     * @return true si se generó correctamente
+     */
+    Q_INVOKABLE bool generatePreviewPdf(const QString& layoutJson,
+                                         const QString& outputPath);
+
+    /**
      * @brief Configurar impresora predeterminada
      */
     void setDefaultPrinter(const QString& printerName);
@@ -78,6 +132,10 @@ signals:
     void printFailed(const QString& error);
 
 private:
+    // Constantes para DPI estandarizado (300 DPI para consistencia)
+    static constexpr double STANDARD_DPI = 300.0;
+    static constexpr double STANDARD_PIXELS_PER_MM = STANDARD_DPI / 25.4;  // 11.811024
+    
     QString m_defaultPrinter;
     QString m_companyName = "SISTEMA DE INVENTARIO";
     QString m_companyRuc = "20123456789";
@@ -94,6 +152,25 @@ private:
      */
     void drawTicket(QPainter& painter, const Sale& sale, VoucherType type,
                     const InvoiceData& invoiceData);
+
+    /**
+     * @brief Dibujar ticket con diseño personalizado
+     */
+    void drawCustomTicket(QPainter& painter, const Sale& sale, VoucherType type,
+                         const InvoiceData& invoiceData, const QString& layoutJson);
+
+    /**
+     * @brief Reemplazar variables en texto
+     */
+    QString replaceVariables(const QString& text, const Sale& sale, 
+                            VoucherType type, const InvoiceData& invoiceData);
+
+    /**
+     * @brief Crear mapa de variables para reemplazo en renderizado
+     */
+    QMap<QString, QString> createVariablesMap(const Sale& sale, 
+                                               VoucherType type, 
+                                               const InvoiceData& invoiceData);
 
     /**
      * @brief Dibujar encabezado
@@ -121,6 +198,26 @@ private:
      * @brief Dibujar pie de página
      */
     void drawFooter(QPainter& painter, int y);
+    
+    /**
+     * @brief Validar consistencia de DPI entre diseñador e impresión
+     */
+    void validateDpiConsistency(QPainter& painter, double expectedWidthMM, 
+                               double expectedHeightMM) const;
+    
+    /**
+     * @brief Convertir milímetros a píxeles usando DPI estándar
+     */
+    inline double mmToPixels(double mm) const {
+        return mm * STANDARD_PIXELS_PER_MM;
+    }
+    
+    /**
+     * @brief Convertir píxeles a milímetros usando DPI estándar
+     */
+    inline double pixelsToMM(double pixels) const {
+        return pixels / STANDARD_PIXELS_PER_MM;
+    }
 };
 
 #endif // PRINTSERVICE_H

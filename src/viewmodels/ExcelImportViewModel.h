@@ -23,6 +23,7 @@ class ExcelImportViewModel : public QObject
     Q_PROPERTY(bool isLoading READ isLoading NOTIFY isLoadingChanged)
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorMessageChanged)
     Q_PROPERTY(int importProgress READ importProgress NOTIFY importProgressChanged)
+    Q_PROPERTY(QString importProgressMessage READ importProgressMessage NOTIFY importProgressMessageChanged)
     Q_PROPERTY(QVariantList previewRows READ previewRows NOTIFY previewRowsChanged)
     Q_PROPERTY(bool hasFile READ hasFile NOTIFY hasFileChanged)
 
@@ -35,6 +36,7 @@ public:
     bool isLoading() const { return m_isLoading; }
     QString errorMessage() const { return m_errorMessage; }
     int importProgress() const { return m_importProgress; }
+    QString importProgressMessage() const { return m_importProgressMessage; }
     QVariantList previewRows() const { return m_previewRows; }
     bool hasFile() const { return !m_currentFilePath.isEmpty(); }
 
@@ -91,6 +93,7 @@ signals:
     void isLoadingChanged();
     void errorMessageChanged();
     void importProgressChanged();
+    void importProgressMessageChanged();
     void importCompleted(int imported, int failed);
     void previewRowsChanged();
     void hasFileChanged();
@@ -113,6 +116,7 @@ private:
     bool m_isLoading = false;
     QString m_errorMessage;
     int m_importProgress = 0;
+    QString m_importProgressMessage;
 };
 
 #endif // EXCELIMPORTVIEWMODEL_H

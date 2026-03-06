@@ -471,7 +471,7 @@ Page {
                     text: "\uE72C  " + qsTr("Actualizar")
                     font.family: "Segoe MDL2 Assets"
                     Material.background: Material.primary
-                    Material.foreground: "white"
+                    Material.foreground: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
                     onClicked: viewModel.loadReport()
                 }
 

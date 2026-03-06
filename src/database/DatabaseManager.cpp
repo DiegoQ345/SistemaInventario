@@ -4,6 +4,8 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <QDebug>
+#include <QFile>
+#include <QDateTime>
 
 DatabaseManager::DatabaseManager(QObject *parent)
     : QObject(parent)
@@ -28,7 +30,10 @@ bool DatabaseManager::initialize(const QString& dbPath)
 {
     QMutexLocker locker(&m_mutex);
 
+    qDebug() << "=== DatabaseManager::initialize() INICIADO ===";
+
     if (m_initialized) {
+        qDebug() << "Base de datos ya inicializada";
         return true;
     }
 
@@ -38,6 +43,7 @@ bool DatabaseManager::initialize(const QString& dbPath)
         QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
         QDir dir(dataDir);
         if (!dir.exists()) {
+            qDebug() << "Creando directorio de datos:" << dataDir;
             dir.mkpath(".");
         }
         databasePath = dataDir + "/inventory.db";
@@ -55,12 +61,19 @@ bool DatabaseManager::initialize(const QString& dbPath)
         emit databaseError(m_lastError);
         return false;
     }
+    
+    qDebug() << "Base de datos abierta correctamente";
 
     // Habilitar foreign keys en SQLite
     QSqlQuery query(m_database);
-    query.exec("PRAGMA foreign_keys = ON");
+    if (!query.exec("PRAGMA foreign_keys = ON")) {
+        qWarning() << "Error habilitando foreign keys:" << query.lastError().text();
+    } else {
+        qDebug() << "Foreign keys habilitadas";
+    }
 
     // Ejecutar migraciones
+    qDebug() << "Llamando a runMigrations()...";
     if (!runMigrations()) {
         m_lastError = "Error ejecutando migraciones";
         qCritical() << m_lastError;
@@ -70,7 +83,7 @@ bool DatabaseManager::initialize(const QString& dbPath)
 
     m_initialized = true;
     emit databaseReady();
-    qDebug() << "Base de datos inicializada correctamente";
+    qDebug() << "=== Base de datos inicializada correctamente ===";
 
     return true;
 }
@@ -129,12 +142,15 @@ bool DatabaseManager::setSchemaVersion(int version)
 
 bool DatabaseManager::runMigrations()
 {
+    qDebug() << "=== INICIANDO MIGRACIONES ===";
+    
     // Crear tabla de versiones si no existe
     QSqlQuery query(m_database);
     if (!query.exec("CREATE TABLE IF NOT EXISTS schema_version ("
                    "version INTEGER PRIMARY KEY,"
                    "applied_at TEXT NOT NULL)")) {
         m_lastError = query.lastError().text();
+        qCritical() << "Error creando tabla schema_version:" << m_lastError;
         return false;
     }
 
@@ -145,23 +161,193 @@ bool DatabaseManager::runMigrations()
     if (currentVersion < 1) {
         qDebug() << "Aplicando migración 1: Tablas iniciales";
         if (!createTables()) {
+            qCritical() << "Error en createTables()";
             return false;
         }
         if (!insertSampleData()) {
             qWarning() << "Error insertando datos de ejemplo (no crítico)";
         }
-        setSchemaVersion(1);
+        if (!setSchemaVersion(1)) {
+            qCritical() << "Error estableciendo versión de esquema";
+            return false;
+        }
+        qDebug() << "Migración 1 completada exitosamente";
+    }
+    
+    // Migración 2: Agregar tabla de usuarios (si no existe)
+    if (currentVersion < 3) {
+        qDebug() << "Aplicando migración 2/3: Verificar y crear tabla users";
+        
+        // Verificar si la tabla users existe
+        bool usersTableExists = query.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='users'") && query.next();
+        
+        if (!usersTableExists) {
+            qDebug() << "Tabla users no existe, creándola...";
+            
+            if (!query.exec(
+                "CREATE TABLE IF NOT EXISTS users ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                "username TEXT NOT NULL UNIQUE,"
+                "password TEXT NOT NULL,"
+                "full_name TEXT NOT NULL,"
+                "role TEXT NOT NULL,"
+                "is_active INTEGER DEFAULT 1,"
+                "created_at TEXT DEFAULT (datetime('now')),"
+                "last_login TEXT"
+                ")")) {
+                m_lastError = query.lastError().text();
+                qCritical() << "Error creando tabla users:" << m_lastError;
+                return false;
+            }
+            qDebug() << "Tabla users creada exitosamente";
+            
+            // Insertar usuarios por defecto
+            qDebug() << "Insertando usuarios por defecto...";
+            if (!query.exec(
+                "INSERT OR IGNORE INTO users (username, password, full_name, role, is_active) VALUES "
+                "('admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Administrador del Sistema', 'Admin', 1), "
+                "('vendedor', '56976bf24998ca63e35fe4f1e2469b5751d1856003e8d16fef0aafef496ed044', 'Vendedor Principal', 'Vendedor', 1), "
+                "('dev', '87274af01876341455b32d805946f272871bb42effa6604dccf28bb027afa82b', 'Desarrollador', 'Programador', 1)"
+            )) {
+                qWarning() << "Error insertando usuarios por defecto:" << query.lastError().text();
+            } else {
+                qDebug() << "Usuarios insertados. Filas afectadas:" << query.numRowsAffected();
+            }
+        } else {
+            qDebug() << "Tabla users ya existe";
+        }
+        
+        if (!setSchemaVersion(3)) {
+            qCritical() << "Error estableciendo versión de esquema";
+            return false;
+        }
+        qDebug() << "Migración 2/3 completada exitosamente";
+    } else {
+        qDebug() << "Base de datos ya está actualizada (versión" << currentVersion << ")";
+    }
+    
+    // Migración 4: Crear tabla de categorías y agregar category_name a products
+    if (currentVersion < 4) {
+        qDebug() << "Aplicando migración 4: Tabla de categorías";
+        
+        // Crear tabla de categorías
+        if (!query.exec(
+            "CREATE TABLE IF NOT EXISTS categories ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "name TEXT NOT NULL UNIQUE,"
+            "description TEXT,"
+            "created_at TEXT DEFAULT (datetime('now')),"
+            "updated_at TEXT DEFAULT (datetime('now'))"
+            ")")) {
+            m_lastError = query.lastError().text();
+            qCritical() << "Error creando tabla categories:" << m_lastError;
+            return false;
+        }
+        qDebug() << "Tabla categories creada";
+        
+        // Insertar categorías predefinidas
+        query.exec(
+            "INSERT OR IGNORE INTO categories (name, description) VALUES "
+            "('Alimentos y Bebidas', 'Productos alimenticios y bebidas'), "
+            "('Lácteos', 'Productos lácteos'), "
+            "('Carnes y Embutidos', 'Carnes, embutidos y derivados'), "
+            "('Frutas y Verduras', 'Productos frescos'), "
+            "('Panadería y Pastelería', 'Pan, pasteles y productos de panadería'), "
+            "('Snacks y Golosinas', 'Snacks, dulces y golosinas'), "
+            "('Bebidas', 'Bebidas de todo tipo'), "
+            "('Productos de Limpieza', 'Artículos de limpieza y hogar'), "
+            "('Cuidado Personal', 'Productos de higiene personal'), "
+            "('Hogar y Decoración', 'Artículos para el hogar'), "
+            "('Electrónica', 'Dispositivos electrónicos'), "
+            "('Papelería y Oficina', 'Artículos de oficina y papelería'), "
+            "('Juguetes y Entretenimiento', 'Juguetes y entretenimiento'), "
+            "('Mascotas', 'Productos para mascotas'), "
+            "('Ferretería', 'Herramientas y ferretería'), "
+            "('Otros', 'Otros productos')"
+        );
+        
+        if (!setSchemaVersion(4)) {
+            qCritical() << "Error estableciendo versión de esquema 4";
+            return false;
+        }
+        qDebug() << "Migración 4 completada";
     }
 
-    // Aquí se pueden agregar más migraciones en el futuro
-    // if (currentVersion < 2) { ... }
+    // Migración 5: Crear tabla de diseños de tickets
+    if (currentVersion < 5) {
+        qDebug() << "Aplicando migración 5: Tabla de diseños de tickets";
+        
+        if (!query.exec(
+            "CREATE TABLE IF NOT EXISTS ticket_templates ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "name TEXT NOT NULL UNIQUE,"
+            "layout_json TEXT NOT NULL,"
+            "is_active INTEGER DEFAULT 0,"
+            "created_at TEXT DEFAULT (datetime('now')),"
+            "updated_at TEXT DEFAULT (datetime('now'))"
+            ")")) {
+            m_lastError = query.lastError().text();
+            qCritical() << "Error creando tabla ticket_templates:" << m_lastError;
+            return false;
+        }
+        qDebug() << "Tabla ticket_templates creada";
+        
+        if (!setSchemaVersion(5)) {
+            qCritical() << "Error estableciendo versión de esquema 5";
+            return false;
+        }
+        qDebug() << "Migración 5 completada";
+    }
 
+    qDebug() << "=== MIGRACIONES COMPLETADAS ===";
     return true;
 }
 
 bool DatabaseManager::createTables()
 {
     QSqlQuery query(m_database);
+
+    qDebug() << "=== CREANDO TABLAS ===";
+    
+    // Tabla de usuarios (NUEVA - debe ser la primera)
+    qDebug() << "Creando tabla users...";
+    if (!query.exec(
+        "CREATE TABLE IF NOT EXISTS users ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "username TEXT NOT NULL UNIQUE,"
+        "password TEXT NOT NULL,"  // Almacenado con hash SHA-256
+        "full_name TEXT NOT NULL,"
+        "role TEXT NOT NULL,"  // 'Admin', 'Vendedor', 'Programador'
+        "is_active INTEGER DEFAULT 1,"
+        "created_at TEXT DEFAULT (datetime('now')),"
+        "last_login TEXT"
+        ")")) {
+        m_lastError = query.lastError().text();
+        qCritical() << "Error creando tabla users:" << m_lastError;
+        return false;
+    }
+    qDebug() << "Tabla users creada exitosamente";
+
+    // Insertar usuarios por defecto (solo si no existen)
+    // Contraseñas: admin123, vendedor123, dev123
+    qDebug() << "Insertando usuarios por defecto...";
+    if (!query.exec(
+        "INSERT OR IGNORE INTO users (username, password, full_name, role, is_active) VALUES "
+        "('admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Administrador del Sistema', 'Admin', 1), "
+        "('vendedor', '56976bf24998ca63e35fe4f1e2469b5751d1856003e8d16fef0aafef496ed044', 'Vendedor Principal', 'Vendedor', 1), "
+        "('dev', '87274af01876341455b32d805946f272871bb42effa6604dccf28bb027afa82b', 'Desarrollador', 'Programador', 1)"
+    )) {
+        qWarning() << "Error insertando usuarios por defecto:" << query.lastError().text();
+    } else {
+        qDebug() << "Usuarios insertados. Filas afectadas:" << query.numRowsAffected();
+    }
+    
+    // Verificar usuarios insertados
+    if (query.exec("SELECT COUNT(*) FROM users")) {
+        if (query.next()) {
+            qDebug() << "Total usuarios en BD después de insertar:" << query.value(0).toInt();
+        }
+    }
 
     // Tabla de categorías
     if (!query.exec(
@@ -359,6 +545,20 @@ bool DatabaseManager::createTables()
         return false;
     }
 
+    // Tabla de diseños de tickets
+    if (!query.exec(
+        "CREATE TABLE IF NOT EXISTS ticket_templates ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "name TEXT NOT NULL UNIQUE,"
+        "layout_json TEXT NOT NULL,"  // JSON con diseño del ticket
+        "is_active INTEGER DEFAULT 0,"  // 1 = activo, 0 = inactivo
+        "created_at TEXT DEFAULT (datetime('now')),"
+        "updated_at TEXT DEFAULT (datetime('now'))"
+        ")")) {
+        m_lastError = query.lastError().text();
+        return false;
+    }
+
     // Índices para mejorar rendimiento
     query.exec("CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku)");
     query.exec("CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode)");
@@ -446,4 +646,52 @@ bool DatabaseManager::insertSampleData()
     
     qDebug() << "Datos de ejemplo insertados correctamente";
     return true;
+}
+
+bool DatabaseManager::exportDatabase(const QString& destinationPath)
+{
+    QMutexLocker locker(&m_mutex);
+    
+    if (!m_database.isOpen()) {
+        m_lastError = "Base de datos no está abierta";
+        qWarning() << m_lastError;
+        return false;
+    }
+    
+    QString sourcePath = m_database.databaseName();
+    
+    // Crear directorio si no existe
+    QFileInfo destInfo(destinationPath);
+    QDir destDir = destInfo.absoluteDir();
+    if (!destDir.exists()) {
+        if (!destDir.mkpath(".")) {
+            m_lastError = "No se pudo crear el directorio de destino";
+            qWarning() << m_lastError;
+            return false;
+        }
+    }
+    
+    // Si el archivo de destino existe, eliminarlo
+    if (QFile::exists(destinationPath)) {
+        if (!QFile::remove(destinationPath)) {
+            m_lastError = "No se pudo eliminar el archivo de destino existente";
+            qWarning() << m_lastError;
+            return false;
+        }
+    }
+    
+    // Copiar archivo de base de datos
+    if (!QFile::copy(sourcePath, destinationPath)) {
+        m_lastError = "Error al copiar la base de datos";
+        qWarning() << m_lastError;
+        return false;
+    }
+    
+    qDebug() << "Base de datos exportada exitosamente a:" << destinationPath;
+    return true;
+}
+
+QString DatabaseManager::getDatabasePath() const
+{
+    return m_database.databaseName();
 }

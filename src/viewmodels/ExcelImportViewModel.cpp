@@ -16,6 +16,7 @@ QStringList ExcelImportViewModel::availableFields() const
         "name",           // Nombre
         "sku",            // SKU
         "barcode",        // Código de barras
+        "category",       // Categoría
         "currentStock",   // Stock actual
         "minimumStock",   // Stock mínimo
         "purchasePrice",  // Precio de compra
@@ -263,7 +264,9 @@ QVariantMap ExcelImportViewModel::getCurrentMapping() const
 void ExcelImportViewModel::onImportProgress(int progress, const QString& message)
 {
     m_importProgress = progress;
+    m_importProgressMessage = message;
     emit importProgressChanged();
+    emit importProgressMessageChanged();
     qDebug() << "[ExcelImportViewModel]" << progress << "%" << message;
 }
 

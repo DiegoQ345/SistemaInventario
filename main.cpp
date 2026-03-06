@@ -1,14 +1,21 @@
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
+#include <QQmlContext>
 #include "src/database/DatabaseManager.h"
+#include "src/services/AuthenticationService.h"
+#include "src/services/NotificationService.h"
+#include "src/services/PrintService.h"
 #include "src/viewmodels/DashboardViewModel.h"
 #include "src/viewmodels/ProductListModel.h"
 #include "src/viewmodels/SalesCartViewModel.h"
+#include "src/viewmodels/CustomerListModel.h"
+#include "src/viewmodels/CustomerFormViewModel.h"
 #include "src/viewmodels/PrintViewModel.h"
 #include "src/viewmodels/ExcelImportViewModel.h"
 #include "src/viewmodels/ReportsViewModel.h"
 #include "src/utils/BarcodeScannerHandler.h"
+#include "src/repositories/TicketTemplateRepository.h"
 
 int main(int argc, char *argv[])
 {
@@ -40,13 +47,22 @@ int main(int argc, char *argv[])
     qmlRegisterType<ProductListModel>("SistemaInventario", 1, 0, "ProductListModel");
     qmlRegisterType<SalesCartViewModel>("SistemaInventario", 1, 0, "SalesCartViewModel");
     qmlRegisterType<CartItemModel>("SistemaInventario", 1, 0, "CartItemModel");
+    qmlRegisterType<CustomerListModel>("SistemaInventario", 1, 0, "CustomerListModel");
+    qmlRegisterType<CustomerFormViewModel>("SistemaInventario", 1, 0, "CustomerFormViewModel");
     qmlRegisterType<PrintViewModel>("SistemaInventario", 1, 0, "PrintViewModel");
+    qmlRegisterType<PrintService>("SistemaInventario", 1, 0, "PrintService");
     qmlRegisterType<ExcelImportViewModel>("SistemaInventario", 1, 0, "ExcelImportViewModel");
     qmlRegisterType<ReportsViewModel>("SistemaInventario", 1, 0, "ReportsViewModel");
     qmlRegisterType<BarcodeScannerHandler>("SistemaInventario", 1, 0, "BarcodeScannerHandler");
+    qmlRegisterType<TicketTemplateRepository>("SistemaInventario", 1, 0, "TicketTemplateRepository");
 
     // Crear motor QML
     QQmlApplicationEngine engine;
+
+    // Exponer servicios como singleton a QML
+    engine.rootContext()->setContextProperty("authService", &AuthenticationService::instance());
+    engine.rootContext()->setContextProperty("notificationService", &NotificationService::instance());
+    engine.rootContext()->setContextProperty("databaseManager", &DatabaseManager::instance());
 
     // Manejar errores de carga de QML
     QObject::connect(

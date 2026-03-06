@@ -65,6 +65,18 @@ public:
      * @brief Obtener último error SQL
      */
     QString lastError() const;
+    
+    /**
+     * @brief Exportar base de datos a una ubicación específica
+     * @param destinationPath Ruta donde se guardará la copia
+     * @return true si la exportación fue exitosa
+     */
+    Q_INVOKABLE bool exportDatabase(const QString& destinationPath);
+    
+    /**
+     * @brief Obtener la ruta actual de la base de datos
+     */
+    Q_INVOKABLE QString getDatabasePath() const;
 
 signals:
     /**

@@ -21,6 +21,11 @@ class PrintViewModel : public QObject
     Q_PROPERTY(QString defaultPrinter READ defaultPrinter WRITE setDefaultPrinter NOTIFY defaultPrinterChanged)
     Q_PROPERTY(int defaultPrinterIndex READ defaultPrinterIndex NOTIFY defaultPrinterIndexChanged)
     Q_PROPERTY(PaperSize paperSize READ paperSize WRITE setPaperSize NOTIFY paperSizeChanged)
+    Q_PROPERTY(QString businessName READ businessName NOTIFY businessInfoChanged)
+    Q_PROPERTY(QString businessPhone READ businessPhone NOTIFY businessInfoChanged)
+    Q_PROPERTY(QString businessEmail READ businessEmail NOTIFY businessInfoChanged)
+    Q_PROPERTY(QString businessRuc READ businessRuc NOTIFY businessInfoChanged)
+    Q_PROPERTY(QString businessAddress READ businessAddress NOTIFY businessInfoChanged)
 
 public:
     explicit PrintViewModel(QObject *parent = nullptr);
@@ -53,6 +58,11 @@ public:
     QString defaultPrinter() const { return m_defaultPrinter; }
     int defaultPrinterIndex() const;
     PaperSize paperSize() const { return m_paperSize; }
+    QString businessName() const { return m_businessName; }
+    QString businessPhone() const { return m_businessPhone; }
+    QString businessEmail() const { return m_businessEmail; }
+    QString businessRuc() const { return m_businessRuc; }
+    QString businessAddress() const { return m_businessAddress; }
 
     // Setters
     void setDefaultPrinter(const QString& printer);
@@ -99,6 +109,21 @@ public slots:
                      const QString& address = "");
 
     /**
+     * @brief Imprimir comprobante con diseño personalizado
+     */
+    bool printCustomTicket(const QString& invoiceNumber,
+                          const QString& customerName,
+                          const QVariantList& items,
+                          double subtotal,
+                          double discount,
+                          double total,
+                          VoucherType voucherType,
+                          const QString& layoutJson,
+                          const QString& ruc = "",
+                          const QString& businessName = "",
+                          const QString& address = "");
+
+    /**
      * @brief Mostrar diálogo de configuración de impresora
      */
     bool showPrinterSettings();
@@ -138,6 +163,7 @@ signals:
     void defaultPrinterChanged();
     void defaultPrinterIndexChanged();
     void paperSizeChanged();
+    void businessInfoChanged();
     void pdfGenerated(const QString& filePath);
     void printCompleted();
     void printFailed(const QString& error);
@@ -150,6 +176,11 @@ private:
     QStringList m_availablePrinters;
     QString m_defaultPrinter;
     PaperSize m_paperSize = A4;
+    QString m_businessName;
+    QString m_businessPhone;
+    QString m_businessEmail;
+    QString m_businessRuc;
+    QString m_businessAddress;
 
     /**
      * @brief Convertir datos QML a modelo Sale

@@ -192,7 +192,7 @@ QList<Product> ProductRepository::searchByName(const QString& name)
         "SELECT p.*, c.name as category_name "
         "FROM products p "
         "LEFT JOIN categories c ON p.category_id = c.id "
-        "WHERE p.active = 1 AND p.name LIKE :name "
+        "WHERE p.active = 1 AND (p.name LIKE :name OR p.barcode LIKE :name OR p.sku LIKE :name) "
         "ORDER BY p.name"
     );
     query.bindValue(":name", "%" + name + "%");

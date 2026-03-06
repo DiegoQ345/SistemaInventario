@@ -73,6 +73,9 @@ CMakeLists.txt.user*
 *.dll
 *.exe
 
+# VS Code extensions
+*.vsix
+
 # Directories with generated files
 .moc/
 .obj/

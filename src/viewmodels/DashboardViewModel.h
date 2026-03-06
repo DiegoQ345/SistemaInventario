@@ -102,6 +102,7 @@ private:
 
     void setIsLoading(bool loading);
     void loadCashierStats();
+    void loadAvailableCashiers();
 };
 
 #endif // DASHBOARDVIEWMODEL_H

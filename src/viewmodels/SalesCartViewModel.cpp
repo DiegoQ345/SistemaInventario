@@ -256,6 +256,62 @@ bool SalesCartViewModel::searchAndAddProduct(const QString& code, double quantit
     return addProductById(product->id, quantity);
 }
 
+QVariantMap SalesCartViewModel::findProductByCode(const QString& code)
+{
+    QVariantMap result;
+    
+    if (code.isEmpty()) {
+        return result;
+    }
+
+    // Buscar por código de barras primero
+    auto product = m_productService.getProductByBarcode(code);
+    
+    // Si no se encuentra, buscar por SKU
+    if (!product.has_value()) {
+        product = m_productService.getProductBySku(code);
+    }
+
+    if (!product.has_value()) {
+        return result;  // Vacío = no encontrado
+    }
+
+    // Crear QVariantMap con los datos del producto
+    result["id"] = product->id;
+    result["name"] = product->name;
+    result["sku"] = product->sku;
+    result["barcode"] = product->barcode;
+    result["salePrice"] = product->salePrice;
+    result["currentStock"] = product->currentStock;
+    result["exists"] = true;
+
+    return result;
+}
+
+bool SalesCartViewModel::isProductInCart(const QString& code)
+{
+    if (code.isEmpty()) {
+        return false;
+    }
+
+    // Buscar el producto primero
+    auto productData = findProductByCode(code);
+    if (productData.isEmpty()) {
+        return false;
+    }
+
+    int productId = productData["id"].toInt();
+
+    // Verificar si está en el carrito
+    for (const auto& item : m_cart->items()) {
+        if (item.productId == productId) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool SalesCartViewModel::addProductById(int productId, double quantity)
 {
     auto product = m_productService.getProduct(productId);

@@ -164,6 +164,19 @@ private:
      * @brief Convertir valor de Excel al tipo correcto
      */
     QVariant convertValue(const QString& fieldName, const QVariant& value);
+    
+    /**
+     * @brief Limpiar campo de texto: elimina espacios múltiples y caracteres extraños
+     * @param text Texto a limpiar
+     * @return Texto limpio sin espacios múltiples ni caracteres extraños
+     */
+    QString cleanTextField(const QString& text);
+    
+    /**
+     * @brief Asegurar que una categoría existe, crearla si no existe
+     * @return ID de la categoría (existente o recién creada), 0 si hubo error
+     */
+    int ensureCategoryExists(const QString& categoryName);
 };
 
 #endif // EXCELIMPORTSERVICE_H

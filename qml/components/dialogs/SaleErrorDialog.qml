@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import QtQuick.Effects
 
 Dialog {
     id: root
@@ -11,19 +10,21 @@ Dialog {
     anchors.centerIn: parent
     width: 400
     
-    // Overlay con blur
+    // Activar blur en la página de fondo
+    property var parentPage: null
+    
+    onOpened: {
+        if (parentPage) parentPage.layer.enabled = true
+    }
+    onClosed: {
+        if (parentPage) parentPage.layer.enabled = false
+    }
+    
+    // Overlay con color semitransparente
     Overlay.modal: Rectangle {
         color: Material.theme === Material.Dark ? 
-            Qt.rgba(0, 0, 0, 0.5) : 
-            Qt.rgba(0.1, 0.1, 0.1, 0.4)
-        
-        MultiEffect {
-            anchors.fill: parent
-            source: parent.parent
-            blur: 1.0
-            blurMax: 64
-            blurMultiplier: 1.2
-        }
+            Qt.rgba(0, 0, 0, 0.6) : 
+            Qt.rgba(0.05, 0.05, 0.05, 0.5)
     }
 
     property string errorMessage: ""

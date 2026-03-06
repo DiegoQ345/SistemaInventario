@@ -3,11 +3,70 @@ import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
 import QtQuick.Effects
+import Qt.labs.settings
 import SistemaInventario 1.0
 
 Page {
     id: root
     title: qsTr("Ventas")
+    
+    // Habilitar captura de teclas para escáner de código de barras
+    focus: true
+    
+    Component.onCompleted: {
+        console.log("*** SalesPage: Página cargada, forzando foco ***")
+        root.forceActiveFocus()
+        // Los totales se calculan automáticamente desde el ViewModel
+        console.log("*** SalesPage: ViewModels inicializados ***")
+        
+        // Asignar automáticamente el usuario logueado como cajero
+        if (authService && authService.currentUserFullName) {
+            viewModel.cashierName = authService.currentUserFullName
+            console.log("*** SalesPage: Cajero asignado automáticamente:", authService.currentUserFullName, "***")
+        }
+        
+        // Cargar datos guardados de factura
+        if (salesSettings.savedRuc !== "") {
+            rucField.text = salesSettings.savedRuc
+        }
+        if (salesSettings.savedBusinessName !== "") {
+            businessNameField.text = salesSettings.savedBusinessName
+        }
+        if (salesSettings.savedAddress !== "") {
+            addressField.text = salesSettings.savedAddress
+        }
+    }
+    
+    onActiveFocusChanged: {
+        console.log("*** SalesPage: Foco activo =", activeFocus, "***")
+    }
+    
+    Keys.onPressed: function(event) {
+        console.log("*** SalesPage: Keys.onPressed disparado - Tecla:", event.key, "Texto:", event.text, "***")
+        // Solo procesar si no hay diálogos abiertos
+        if (!successDialog.opened && !errorDialog.opened && !printDialog.opened && !printerSettingsDialog.opened && !quantityDialog.opened) {
+            // Capturar caracteres alfanuméricos del escáner
+            if (event.text.length > 0) {
+                console.log("SalesPage: Tecla presionada:", event.text)
+                barcodeScanner.processCharacter(event.text)
+                event.accepted = true
+            }
+            // Enter finaliza el escaneo - IMPORTANTE: enviar al handler
+            else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                console.log("SalesPage: Enter detectado, finalizando escaneo")
+                barcodeScanner.processCharacter("\n")
+                event.accepted = true
+            }
+        }
+    }
+    
+    // Configuración del blur cuando se activa
+    layer.enabled: false
+    layer.effect: MultiEffect {
+        blur: 1.0
+        blurMax: 64
+        blurMultiplier: 1.2
+    }
     
     // Exponer ViewModels para que Main.qml pueda conectarse a sus señales
     property alias viewModel: viewModel
@@ -18,9 +77,31 @@ Page {
     property string currentRuc: ""
     property string currentBusinessName: ""
     property string currentAddress: ""
-
-    Component.onCompleted: {
-        // Los totales se calculan automáticamente desde el ViewModel
+    
+    // Último código de barras escaneado para detectar duplicados
+    property string lastScannedBarcode: ""
+    
+    // Settings para persistir datos de factura
+    Settings {
+        id: salesSettings
+        category: "SalesInvoiceData"
+        property string savedRuc: ""
+        property string savedBusinessName: ""
+        property string savedAddress: ""
+        property string savedPhone: ""
+        property string savedEmail: ""
+    }
+    
+    // MouseArea para capturar clics y mantener el foco
+    MouseArea {
+        anchors.fill: parent
+        propagateComposedEvents: true
+        z: -1
+        onClicked: function(mouse) {
+            console.log("*** SalesPage: Clic detectado, restaurando foco ***")
+            root.forceActiveFocus()
+            mouse.accepted = false
+        }
     }
 
         // ViewModel del carrito de ventas (base de datos real)
@@ -70,6 +151,7 @@ Page {
                 root.currentRuc = ""
                 root.currentBusinessName = ""
                 root.currentAddress = ""
+                root.lastScannedBarcode = ""  // Resetear último código escaneado
             }
 
             onSaleFailed: function(errorMessage) {
@@ -104,6 +186,55 @@ Page {
                 console.error("Error de impresión:", error)
                 errorDialog.errorMessage = "Error al imprimir: " + error
                 errorDialog.open()
+            }
+        }
+
+        // Handler para escáner de código de barras láser
+        BarcodeScannerHandler {
+            id: barcodeScanner
+            enabled: true
+            timeout: 100  // 100ms entre caracteres del escáner
+            
+            onBarcodeScanned: function(barcode) {
+                console.log("Código de barras escaneado:", barcode)
+                
+                // PASO 1: Verificar si el producto existe en la base de datos
+                var productData = viewModel.findProductByCode(barcode)
+                
+                if (!productData || !productData.exists) {
+                    // Producto NO existe - Mostrar error sin abrir diálogo
+                    console.log("Producto no encontrado:", barcode)
+                    errorDialog.errorMessage = qsTr("Producto no encontrado: ") + barcode
+                    errorDialog.open()
+                    root.lastScannedBarcode = ""  // Resetear
+                    return
+                }
+                
+                console.log("Producto encontrado:", productData.name, "- Stock:", productData.currentStock)
+                
+                // PASO 2: Verificar si es el mismo código escaneado consecutivamente
+                if (barcode === root.lastScannedBarcode && root.lastScannedBarcode !== "") {
+                    // Es el mismo código - Incrementar cantidad automáticamente
+                    console.log("Código duplicado detectado - Incrementando cantidad automáticamente")
+                    
+                    // Agregar 1 unidad más al carrito
+                    viewModel.searchAndAddProduct(barcode, 1)
+                    
+                    // Feedback visual rápido
+                    duplicateNotification.productName = productData.name
+                    duplicateNotification.open()
+                    
+                } else {
+                    // Es un código nuevo - Abrir diálogo para elegir cantidad
+                    console.log("Código nuevo - Abriendo diálogo de cantidad")
+                    quantityDialog.scannedBarcode = barcode
+                    quantityDialog.productName = productData.name
+                    quantityDialog.currentStock = productData.currentStock
+                    quantityDialog.open()
+                }
+                
+                // PASO 3: Guardar código como último escaneado
+                root.lastScannedBarcode = barcode
             }
         }
 
@@ -152,6 +283,15 @@ Page {
                         onTextChanged: {
                             if (text.length > 0) {
                                 searchTimer.restart()
+                                // Si es un número, también iniciar el timer de auto-add
+                                var trimmedText = text.trim()
+                                if (/^\d+$/.test(trimmedText) && trimmedText.length >= 3) {
+                                    autoAddTimer.restart()
+                                } else {
+                                    autoAddTimer.stop()
+                                }
+                            } else {
+                                autoAddTimer.stop()
                             }
                         }
 
@@ -162,6 +302,22 @@ Page {
                             onTriggered: {
                                 if (searchField.text.trim() !== "") {
                                     productsModel.searchProducts(searchField.text.trim())
+                                }
+                            }
+                        }
+                        
+                        // Timer para añadir automáticamente cuando se detecta un código numérico
+                        Timer {
+                            id: autoAddTimer
+                            interval: 800  // Esperar 800ms después de que termine de escribir
+                            repeat: false
+                            onTriggered: {
+                                var code = searchField.text.trim()
+                                // Solo auto-añadir si es un número de 3+ dígitos
+                                if (/^\d+$/.test(code) && code.length >= 3) {
+                                    viewModel.searchAndAddProduct(code, quantitySpinBox.value)
+                                    searchField.text = ""
+                                    quantitySpinBox.value = 1
                                 }
                             }
                         }
@@ -204,8 +360,8 @@ Page {
                         text: "\uE11A"  // Search icon
                         font.family: "Segoe MDL2 Assets"
                         font.pixelSize: 16
-                        Material.background: Material.primary
-                        Material.foreground: Material.theme === Material.Dark ? "white" : "white"
+                        Material.background: ApplicationWindow.window?.currentColors?.primary ?? Material.primary
+                        Material.foreground: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
                         implicitHeight: 40
                         implicitWidth: 40
 
@@ -239,7 +395,7 @@ Page {
                     }
 
                     Label {
-                        text: qsTr("(Presiona Enter en búsqueda para agregar)")
+                        text: qsTr("(Ingresa código numérico para añadir automáticamente)")
                         font.pixelSize: 11
                         opacity: 0.6
                         Layout.fillWidth: true
@@ -542,7 +698,7 @@ Page {
                                             text: "\uE7BF"  // Shopping bag icon
                                             font.family: "Segoe MDL2 Assets"
                                             font.pixelSize: 26
-                                            color: "white"
+                                            color: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
                                         }
                                     }
 
@@ -644,7 +800,7 @@ Page {
                                             Layout.preferredWidth: 44
                                             Layout.preferredHeight: 44
 
-                                            Material.foreground: "white"
+                                            Material.foreground: Material.theme === Material.Dark ? "#FFFFFF" : "#FFFFFF"
 
                                             background: Rectangle {
                                                 radius: 8
@@ -652,8 +808,9 @@ Page {
                                                        (parent.down ? Material.color(Material.Red, Material.Shade700) :
                                                         parent.hovered ? Material.color(Material.Red, Material.Shade600) :
                                                         Material.color(Material.Red, Material.Shade500)) :
-                                                       (parent.down ? "#1a1a1a" :
-                                                        parent.hovered ? "#333333" : "#000000")
+                                                       (parent.down ? Material.color(Material.Red, Material.Shade900) :
+                                                        parent.hovered ? Material.color(Material.Red, Material.Shade800) :
+                                                        Material.color(Material.Red, Material.Shade700))
                                                 border.width: 0
 
                                                 Behavior on color { ColorAnimation { duration: 150 } }
@@ -866,18 +1023,33 @@ Page {
                                 placeholderText: qsTr("RUC (11 dígitos)")
                                 validator: RegularExpressionValidator { regularExpression: /\d{11}/ }
                                 maximumLength: 11
+                                
+                                onTextChanged: {
+                                    // Guardar automáticamente cuando cambia
+                                    salesSettings.savedRuc = text
+                                }
                             }
 
                             TextField {
                                 id: businessNameField
                                 Layout.fillWidth: true
                                 placeholderText: qsTr("Razón Social")
+                                
+                                onTextChanged: {
+                                    // Guardar automáticamente cuando cambia
+                                    salesSettings.savedBusinessName = text
+                                }
                             }
 
                             TextField {
                                 id: addressField
                                 Layout.fillWidth: true
                                 placeholderText: qsTr("Dirección")
+                                
+                                onTextChanged: {
+                                    // Guardar automáticamente cuando cambia
+                                    salesSettings.savedAddress = text
+                                }
                             }
                         }
                     }
@@ -938,6 +1110,7 @@ Page {
                             viewModel.discount = 0
                             searchField.text = ""
                             quantitySpinBox.value = 1
+                            root.lastScannedBarcode = ""  // Resetear último código escaneado
                         }
                     }
 
@@ -950,8 +1123,8 @@ Page {
                                 (rucField.acceptableInput &&
                                 businessNameField.text.trim() !== "" &&
                                 addressField.text.trim() !== ""))
-                        Material.background: Material.primary
-                        Material.foreground: "white"
+                        Material.background: ApplicationWindow.window?.currentColors?.primary ?? Material.primary
+                        Material.foreground: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
 
                         onClicked: {
                             console.log("=== PROCESAR VENTA CLICKED ===")
@@ -1012,6 +1185,7 @@ Page {
     // Diálogo de confirmación de venta
     SaleSuccessDialog {
         id: successDialog
+        parentPage: root
 
         onPrintRequested: {
             // Preparar datos para impresión
@@ -1038,17 +1212,344 @@ Page {
     // Diálogo de error
     SaleErrorDialog {
         id: errorDialog
+        parentPage: root
+    }
+    
+    // Notificación rápida para código duplicado (incremento automático)
+    Popup {
+        id: duplicateNotification
+        anchors.centerIn: parent
+        width: 320
+        height: 100
+        modal: false
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        
+        property string productName: ""
+        
+        background: Rectangle {
+            color: Material.theme === Material.Dark ?
+                Qt.rgba(0.2, 0.8, 0.4, 0.95) :
+                Material.color(Material.Green, Material.Shade100)
+            radius: 8
+            border.width: 2
+            border.color: Material.color(Material.Green)
+        }
+
+        RowLayout {
+            anchors.centerIn: parent
+            spacing: 16
+
+            Label {
+                text: "\uE8FB"  // Icono de añadir
+                font.family: "Segoe MDL2 Assets"
+                font.pixelSize: 36
+                color: Material.color(Material.Green)
+            }
+            
+            ColumnLayout {
+                spacing: 4
+                
+                Label {
+                    text: qsTr("✓ Cantidad aumentada")
+                    font.weight: Font.Bold
+                    font.pixelSize: 16
+                }
+                
+                Label {
+                    text: duplicateNotification.productName
+                    font.pixelSize: 12
+                    opacity: 0.9
+                    Layout.maximumWidth: 220
+                    elide: Text.ElideRight
+                }
+            }
+        }
+
+        Timer {
+            interval: 1500
+            running: duplicateNotification.visible
+            onTriggered: duplicateNotification.close()
+        }
     }
 
     // Diálogo de vista previa de impresión
     PrintDialog {
         id: printDialog
         printViewModel: root.printViewModel
+        parentPage: root
     }
 
     // Diálogo de configuración de impresora
     PrinterSettingsDialog {
         id: printerSettingsDialog
         printViewModel: root.printViewModel
+        parentPage: root
+    }
+    
+    // Diálogo de selección de cantidad con numpad
+    Dialog {
+        id: quantityDialog
+        title: qsTr("Cantidad")
+        modal: true
+        anchors.centerIn: parent
+        width: 320
+        height: 500
+        
+        property string scannedBarcode: ""
+        property string currentQuantity: "1"
+        property string productName: ""
+        property int currentStock: 0
+        
+        onOpened: {
+            root.layer.enabled = true
+            currentQuantity = "1"
+            // Forzar foco después de que el diálogo se haya renderizado
+            Qt.callLater(function() {
+                quantityDisplay.forceActiveFocus()
+            })
+        }
+        
+        onClosed: {
+            root.layer.enabled = false
+            productName = ""
+            currentStock = 0
+        }
+        
+        // Overlay con color semitransparente
+        Overlay.modal: Rectangle {
+            color: Material.theme === Material.Dark ? 
+                Qt.rgba(0, 0, 0, 0.5) : 
+                Qt.rgba(0.1, 0.1, 0.1, 0.4)
+        }
+        
+        contentItem: ColumnLayout {
+            spacing: 16
+            
+            // Información del producto
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 60
+                color: Material.theme === Material.Dark ?
+                    Qt.rgba(1, 1, 1, 0.05) :
+                    Qt.rgba(0, 0, 0, 0.03)
+                radius: 6
+                border.width: 1
+                border.color: Material.frameColor
+                visible: quantityDialog.productName !== ""
+                
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    spacing: 4
+                    
+                    Label {
+                        text: quantityDialog.productName
+                        font.weight: Font.Medium
+                        font.pixelSize: 14
+                        Layout.fillWidth: true
+                        elide: Text.ElideRight
+                    }
+                    
+                    Label {
+                        text: qsTr("Stock disponible: ") + quantityDialog.currentStock
+                        font.pixelSize: 12
+                        opacity: 0.7
+                    }
+                }
+            }
+            
+            // Display de cantidad
+            TextField {
+                id: quantityDisplay
+                Layout.fillWidth: true
+                Layout.preferredHeight: 60
+                text: quantityDialog.currentQuantity
+                font.pixelSize: 32
+                font.bold: true
+                horizontalAlignment: Text.AlignRight
+                readOnly: true
+                focus: true
+                
+                background: Rectangle {
+                    color: Material.theme === Material.Dark ? "#2d2d2d" : "#f5f5f5"
+                    border.color: Material.frameColor
+                    border.width: 2
+                    radius: 4
+                }
+                
+                // Captura de teclado físico
+                Keys.onPressed: function(event) {
+                    console.log("*** NumPad: Tecla presionada:", event.key, "Texto:", event.text)
+                    if (event.key >= Qt.Key_0 && event.key <= Qt.Key_9) {
+                        // Números del teclado principal
+                        quantityDialog.appendDigit((event.key - Qt.Key_0).toString())
+                        event.accepted = true
+                    } else if (event.key >= 0x1000030 && event.key <= 0x1000039) {
+                        // Números del numpad
+                        quantityDialog.appendDigit((event.key - 0x1000030).toString())
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_Backspace || event.key === Qt.Key_C) {
+                        quantityDialog.clearQuantity()
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        quantityDialog.confirmQuantity()
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_Escape) {
+                        quantityDialog.close()
+                        event.accepted = true
+                    }
+                }
+            }
+            
+            // Grid de botones numéricos
+            GridLayout {
+                Layout.fillWidth: true
+                columns: 3
+                rowSpacing: 8
+                columnSpacing: 8
+                
+                // Botones 7-9
+                Repeater {
+                    model: ["7", "8", "9"]
+                    Button {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 60
+                        text: modelData
+                        font.pixelSize: 24
+                        font.bold: true
+                        onClicked: {
+                            console.log("Botón clickeado:", modelData)
+                            quantityDialog.appendDigit(modelData)
+                        }
+                    }
+                }
+                
+                // Botones 4-6
+                Repeater {
+                    model: ["4", "5", "6"]
+                    Button {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 60
+                        text: modelData
+                        font.pixelSize: 24
+                        font.bold: true
+                        onClicked: {
+                            console.log("Botón clickeado:", modelData)
+                            quantityDialog.appendDigit(modelData)
+                        }
+                    }
+                }
+                
+                // Botones 1-3
+                Repeater {
+                    model: ["1", "2", "3"]
+                    Button {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 60
+                        text: modelData
+                        font.pixelSize: 24
+                        font.bold: true
+                        onClicked: {
+                            console.log("Botón clickeado:", modelData)
+                            quantityDialog.appendDigit(modelData)
+                        }
+                    }
+                }
+                
+                // Botón C (limpiar)
+                Button {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 60
+                    text: "C"
+                    font.pixelSize: 24
+                    font.bold: true
+                    Material.background: Material.color(Material.Orange)
+                    onClicked: {
+                        console.log("Botón C clickeado")
+                        quantityDialog.clearQuantity()
+                    }
+                }
+                
+                // Botón 0
+                Button {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 60
+                    text: "0"
+                    font.pixelSize: 24
+                    font.bold: true
+                    onClicked: {
+                        console.log("Botón 0 clickeado")
+                        quantityDialog.appendDigit("0")
+                    }
+                }
+                
+                // Botón OK
+                Button {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 60
+                    text: "✓"
+                    font.pixelSize: 28
+                    font.bold: true
+                    Material.background: Material.color(Material.Green)
+                    onClicked: {
+                        console.log("Botón OK clickeado")
+                        quantityDialog.confirmQuantity()
+                    }
+                }
+            }
+            
+            // Botones de acción
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+                
+                Button {
+                    Layout.fillWidth: true
+                    text: qsTr("Cancelar")
+                    flat: true
+                    onClicked: quantityDialog.close()
+                }
+                
+                Button {
+                    Layout.fillWidth: true
+                    text: qsTr("Agregar al Carrito")
+                    highlighted: true
+                    onClicked: {
+                        console.log("Botón Agregar clickeado")
+                        quantityDialog.confirmQuantity()
+                    }
+                }
+            }
+        }
+        
+        // Funciones del numpad
+        function appendDigit(digit) {
+            console.log("appendDigit llamado con:", digit, "Cantidad actual:", currentQuantity)
+            if (currentQuantity === "0" || (currentQuantity === "1" && currentQuantity.length === 1)) {
+                currentQuantity = digit
+            } else if (currentQuantity.length < 4) {  // Máximo 9999
+                currentQuantity += digit
+            }
+            console.log("Nueva cantidad:", currentQuantity)
+        }
+        
+        function clearQuantity() {
+            console.log("clearQuantity llamado")
+            currentQuantity = "1"
+        }
+        
+        function confirmQuantity() {
+            console.log("confirmQuantity llamado. Cantidad:", currentQuantity, "Código:", scannedBarcode)
+            var qty = parseInt(currentQuantity)
+            if (qty > 0 && qty <= 9999) {
+                console.log("Agregando producto con cantidad:", qty)
+                viewModel.searchAndAddProduct(scannedBarcode, qty)
+                searchField.text = ""
+                quantitySpinBox.value = 1
+                quantityDialog.close()
+            } else {
+                console.log("Cantidad inválida:", qty)
+            }
+        }
     }
 }

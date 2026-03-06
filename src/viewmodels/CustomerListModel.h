@@ -1,0 +1,52 @@
+#ifndef CUSTOMERLISTMODEL_H
+#define CUSTOMERLISTMODEL_H
+
+#include <QAbstractListModel>
+#include "../models/Customer.h"
+
+class CustomerRepository;
+
+/**
+ * @brief Modelo de lista de clientes para QML
+ */
+class CustomerListModel : public QAbstractListModel
+{
+    Q_OBJECT
+    Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
+
+public:
+    enum CustomerRoles {
+        IdRole = Qt::UserRole + 1,
+        NameRole,
+        DocumentTypeRole,
+        DocumentNumberRole,
+        EmailRole,
+        PhoneRole,
+        AddressRole,
+        DisplayNameRole
+    };
+
+    explicit CustomerListModel(QObject *parent = nullptr);
+    ~CustomerListModel() override;
+
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QHash<int, QByteArray> roleNames() const override;
+
+    Q_INVOKABLE void refresh();
+    Q_INVOKABLE void search(const QString& searchTerm);
+    Q_INVOKABLE QVariantMap get(int index) const;
+    Q_INVOKABLE bool remove(int customerId);
+
+signals:
+    void countChanged();
+    void errorOccurred(const QString& message);
+
+private:
+    CustomerRepository* m_repository;
+    QList<Customer> m_customers;
+
+    void setCustomers(const QList<Customer>& customers);
+};
+
+#endif // CUSTOMERLISTMODEL_H

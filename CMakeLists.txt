@@ -13,7 +13,13 @@ find_package(Qt6 REQUIRED COMPONENTS
     Sql
     PrintSupport
     Widgets
+    Gui
 )
+
+# QXlsx requiere GuiPrivate en Qt 6.10+
+if(Qt6Gui_VERSION VERSION_GREATER_EQUAL "6.10.0")
+    find_package(Qt6 REQUIRED COMPONENTS GuiPrivate)
+endif()
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -27,6 +33,7 @@ add_subdirectory(external/QXlsx/QXlsx)
 # ============================================
 set(QML_FILES
     Main.qml
+    qml/pages/LoginPage.qml
     qml/pages/DashboardPage.qml
     qml/pages/ProductsPage.qml
     qml/pages/SalesPage.qml
@@ -35,6 +42,8 @@ set(QML_FILES
     qml/pages/ReportsPage.qml
     qml/pages/ImportPage.qml
     qml/pages/SettingsPage.qml
+    qml/pages/ConsolePage.qml
+    qml/pages/TicketsPage.qml
     
     # Componentes reutilizables
     qml/components/CartItemDelegate.qml
@@ -68,16 +77,27 @@ set(HEADER_FILES
     src/models/Sale.h
     src/models/Customer.h
     src/models/StockMovement.h
+    src/models/User.h
     src/repositories/ProductRepository.h
     src/repositories/SaleRepository.h
+    src/repositories/CustomerRepository.h
+    src/repositories/UserRepository.h
+    src/repositories/TicketTemplateRepository.h
     src/services/ProductService.h
     src/services/SalesService.h
     src/services/ExcelImportService.h
     src/services/PdfGeneratorService.h
     src/services/PrintService.h
+    src/services/AuthenticationService.h
+    src/services/NotificationService.h
+    src/printing/TicketLayout.h
+    src/printing/TicketRenderer.h
+    src/printing/TicketDynamicSection.h
     src/viewmodels/DashboardViewModel.h
     src/viewmodels/ProductListModel.h
     src/viewmodels/SalesCartViewModel.h
+    src/viewmodels/CustomerListModel.h
+    src/viewmodels/CustomerFormViewModel.h
     src/viewmodels/PrintViewModel.h
     src/viewmodels/ExcelImportViewModel.h
     src/viewmodels/ReportsViewModel.h
@@ -88,14 +108,24 @@ set(SOURCE_FILES
     src/database/DatabaseManager.cpp
     src/repositories/ProductRepository.cpp
     src/repositories/SaleRepository.cpp
+    src/repositories/CustomerRepository.cpp
+    src/repositories/UserRepository.cpp
+    src/repositories/TicketTemplateRepository.cpp
     src/services/ProductService.cpp
     src/services/SalesService.cpp
     src/services/ExcelImportService.cpp
     src/services/PdfGeneratorService.cpp
     src/services/PrintService.cpp
+    src/services/AuthenticationService.cpp
+    src/services/NotificationService.cpp
+    src/printing/TicketLayout.cpp
+    src/printing/TicketRenderer.cpp
+    src/printing/TicketDynamicSection.cpp
     src/viewmodels/DashboardViewModel.cpp
     src/viewmodels/ProductListModel.cpp
     src/viewmodels/SalesCartViewModel.cpp
+    src/viewmodels/CustomerListModel.cpp
+    src/viewmodels/CustomerFormViewModel.cpp
     src/viewmodels/PrintViewModel.cpp
     src/viewmodels/ExcelImportViewModel.cpp
     src/viewmodels/ReportsViewModel.cpp
@@ -120,6 +150,17 @@ qt_add_qml_module(appSistemaInventario
     VERSION 1.0
     QML_FILES ${QML_FILES}
     # NO agregar SOURCES aquí - causará errores de moc
+)
+
+# ============================================
+# RECURSOS (imágenes, iconos, etc.)
+# ============================================
+qt_add_resources(appSistemaInventario "recursos"
+    PREFIX "/"
+    FILES
+        resources/logo.png
+        resources/background.png
+        qtquickcontrols2.conf
 )
 
 # ============================================
@@ -157,8 +198,14 @@ target_link_libraries(appSistemaInventario
         Qt6::Sql
         Qt6::PrintSupport
         Qt6::Widgets
+        Qt6::Gui
         QXlsx::QXlsx  # Biblioteca QXlsx compilada como subdirectorio
 )
+
+# Enlazar GuiPrivate si es necesario (Qt 6.10+)
+if(Qt6Gui_VERSION VERSION_GREATER_EQUAL "6.10.0")
+    target_link_libraries(appSistemaInventario PRIVATE Qt6::GuiPrivate)
+endif()
 
 # Instalación
 include(GNUInstallDirs)
