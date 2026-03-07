@@ -14,6 +14,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     PrintSupport
     Widgets
     Gui
+    Charts
 )
 
 # QXlsx requiere GuiPrivate en Qt 6.10+
@@ -47,6 +48,7 @@ set(QML_FILES
     
     # Componentes reutilizables
     qml/components/CartItemDelegate.qml
+    qml/components/CustomerSelector.qml
     qml/components/NotificationBar.qml
     qml/components/PrimaryButton.qml
     qml/components/SecondaryButton.qml
@@ -136,10 +138,18 @@ set(SOURCE_FILES
 # CREAR EJECUTABLE
 # ============================================
 # Compilando backend completo con QXlsx
+
+# Agregar archivo de recursos de Windows (.rc) condicionalmente
+set(WIN_RC_FILE "")
+if(WIN32)
+    set(WIN_RC_FILE app.rc)
+endif()
+
 qt_add_executable(appSistemaInventario
     main.cpp
     ${SOURCE_FILES}
     ${HEADER_FILES}
+    ${WIN_RC_FILE}
 )
 
 # ============================================
@@ -159,6 +169,12 @@ qt_add_resources(appSistemaInventario "recursos"
     PREFIX "/"
     FILES
         resources/logo.png
+        resources/favicon.ico
+        resources/favicon-16x16.png
+        resources/favicon-32x32.png
+        resources/android-chrome-192x192.png
+        resources/android-chrome-512x512.png
+        resources/apple-touch-icon.png
         resources/background.png
         qtquickcontrols2.conf
 )
@@ -199,6 +215,7 @@ target_link_libraries(appSistemaInventario
         Qt6::PrintSupport
         Qt6::Widgets
         Qt6::Gui
+        Qt6::Charts
         QXlsx::QXlsx  # Biblioteca QXlsx compilada como subdirectorio
 )
 

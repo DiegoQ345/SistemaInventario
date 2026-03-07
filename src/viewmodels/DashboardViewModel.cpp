@@ -179,6 +179,20 @@ QString DashboardViewModel::getDailyReport()
     return closeDayShift();
 }
 
+void DashboardViewModel::generateDailyReportPDF()
+{
+    // Obtener el reporte del día
+    QString reportJson = getDailyReport();
+    
+    // TODO: Implementar generación de PDF del reporte diario
+    // Por ahora, solo mostramos un mensaje
+    qDebug() << "Generando PDF del reporte diario...";
+    qDebug() << "Reporte:" << reportJson;
+    
+    // Aquí se podría integrar con PdfGeneratorService
+    // para crear un PDF del reporte completo
+}
+
 void DashboardViewModel::loadAvailableCashiers()
 {
     m_availableCashiers.clear();
@@ -216,4 +230,97 @@ void DashboardViewModel::loadAvailableCashiers()
     
     emit availableCashiersChanged();
     emit currentCashierChanged();
+}
+
+QVariantList DashboardViewModel::getSalesByVoucherType()
+{
+    QVariantList result;
+    
+    QSqlQuery query(DatabaseManager::instance().database());
+    query.prepare(R"(
+        SELECT voucher_type, COUNT(*) as count, SUM(total) as total
+        FROM sales
+        WHERE DATE(created_at) = DATE('now', 'localtime')
+        AND status != 'CANCELLED'
+        GROUP BY voucher_type
+    )");
+    
+    if (query.exec()) {
+        while (query.next()) {
+            QVariantMap item;
+            item["label"] = query.value(0).toString();
+            item["count"] = query.value(1).toInt();
+            item["value"] = query.value(2).toDouble();
+            result.append(item);
+        }
+    } else {
+        qWarning() << "Error getting sales by voucher type:" << query.lastError().text();
+    }
+    
+    return result;
+}
+
+QVariantList DashboardViewModel::getTopProducts(int limit)
+{
+    QVariantList result;
+    
+    QSqlQuery query(DatabaseManager::instance().database());
+    query.prepare(R"(
+        SELECT p.name, SUM(si.quantity) as total_qty, SUM(si.subtotal) as revenue
+        FROM sale_items si
+        INNER JOIN sales s ON si.sale_id = s.id
+        INNER JOIN products p ON si.product_id = p.id
+        WHERE DATE(s.created_at) = DATE('now', 'localtime')
+        AND s.status != 'CANCELLED'
+        GROUP BY si.product_id
+        ORDER BY total_qty DESC
+        LIMIT :limit
+    )");
+    query.bindValue(":limit", limit);
+    
+    if (query.exec()) {
+        while (query.next()) {
+            QVariantMap item;
+            item["name"] = query.value(0).toString();
+            item["quantity"] = query.value(1).toDouble();
+            item["revenue"] = query.value(2).toDouble();
+            result.append(item);
+        }
+    } else {
+        qWarning() << "Error getting top products:" << query.lastError().text();
+    }
+    
+    return result;
+}
+
+QVariantList DashboardViewModel::getTopCustomers(int limit)
+{
+    QVariantList result;
+    
+    QSqlQuery query(DatabaseManager::instance().database());
+    query.prepare(R"(
+        SELECT c.name, COUNT(s.id) as purchases, SUM(s.total) as total_spent
+        FROM sales s
+        INNER JOIN customers c ON s.customer_id = c.id
+        WHERE strftime('%Y-%m', s.created_at) = strftime('%Y-%m', 'now', 'localtime')
+        AND s.status != 'CANCELLED'
+        GROUP BY s.customer_id
+        ORDER BY purchases DESC
+        LIMIT :limit
+    )");
+    query.bindValue(":limit", limit);
+    
+    if (query.exec()) {
+        while (query.next()) {
+            QVariantMap item;
+            item["name"] = query.value(0).toString();
+            item["purchases"] = query.value(1).toInt();
+            item["totalSpent"] = query.value(2).toDouble();
+            result.append(item);
+        }
+    } else {
+        qWarning() << "Error getting top customers:" << query.lastError().text();
+    }
+    
+    return result;
 }

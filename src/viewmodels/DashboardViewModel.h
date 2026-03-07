@@ -68,6 +68,31 @@ public slots:
      * @return JSON con estadísticas actuales del día
      */
     Q_INVOKABLE QString getDailyReport();
+    
+    /**
+     * @brief Generar PDF del reporte del día actual
+     */
+    Q_INVOKABLE void generateDailyReportPDF();
+    
+    /**
+     * @brief Obtener ventas por tipo de comprobante (hoy)
+     * @return QVariantList con {label, value, count} para cada tipo
+     */
+    Q_INVOKABLE QVariantList getSalesByVoucherType();
+    
+    /**
+     * @brief Obtener top productos más vendidos (hoy)
+     * @param limit Cantidad máxima de productos
+     * @return QVariantList con {name, quantity, revenue} para cada producto
+     */
+    Q_INVOKABLE QVariantList getTopProducts(int limit = 5);
+    
+    /**
+     * @brief Obtener clientes frecuentes (este mes)
+     * @param limit Cantidad máxima de clientes
+     * @return QVariantList con {name, purchases, totalSpent} para cada cliente
+     */
+    Q_INVOKABLE QVariantList getTopCustomers(int limit = 5);
 
 signals:
     void todaySalesChanged();

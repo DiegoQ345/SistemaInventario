@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
+import QtCharts
 import SistemaInventario
 import "../components"
 
@@ -30,20 +31,20 @@ Page {
 
     ScrollView {
         anchors.fill: parent
-        anchors.margins: 20
+        anchors.margins: root.width > 800 ? 20 : (root.width > 600 ? 16 : 12)
         contentWidth: availableWidth
 
         ColumnLayout {
             width: parent.width
-            spacing: 20
+            spacing: root.width > 800 ? 20 : (root.width > 600 ? 16 : 12)
 
             // Título
             Label {
                 text: qsTr("Panel de Control")
-                font.pixelSize: 32
+                font.pixelSize: root.width > 800 ? 32 : (root.width > 600 ? 28 : 24)
                 font.weight: Font.Bold
                 color: Material.foreground
-                Layout.bottomMargin: 8
+                Layout.bottomMargin: root.width > 600 ? 8 : 4
             }
 
             // Tarjetas de estadísticas
@@ -64,17 +65,21 @@ Page {
                         spacing: 12
                         
                         Label {
-                            text: "👤"
-                            font.pixelSize: 20
+                            text: "\uE77B"
+                            font.family: "Segoe MDL2 Assets"
+                            font.pixelSize: root.width > 600 ? 20 : 16
+                            color: Material.primary
                         }
                         
                         // Mostrar ComboBox solo si hay múltiples cajeros (Admin/Programador)
                         ComboBox {
                             id: cashierComboBox
-                            Layout.fillWidth: true
+                            Layout.fillWidth: root.width <= 700
+                            Layout.preferredWidth: root.width > 700 ? 200 : -1
                             model: viewModel.availableCashiers
                             currentIndex: viewModel.availableCashiers.indexOf(viewModel.currentCashier)
                             visible: viewModel.availableCashiers.length > 1
+                            font.pixelSize: root.width > 600 ? 14 : 12
                             onActivated: {
                                 viewModel.currentCashier = currentText
                             }
@@ -82,18 +87,24 @@ Page {
                         
                         // Mostrar Label si solo hay un cajero (Vendedor)
                         Label {
-                            Layout.fillWidth: true
+                            Layout.fillWidth: root.width <= 700
                             text: viewModel.currentCashier
-                            font.pixelSize: 14
+                            font.pixelSize: root.width > 600 ? 14 : 12
                             font.weight: Font.Medium
                             visible: viewModel.availableCashiers.length === 1
+                            elide: Text.ElideRight
                         }
                         
                         Label {
-                            text: qsTr("Ventas: S/") + viewModel.todaySalesByCashier.toFixed(2) + 
-                                  qsTr(" | Transacciones: ") + viewModel.todayTransactionsByCashier
+                            text: root.width > 700 ? 
+                                qsTr("Ventas: S/") + viewModel.todaySalesByCashier.toFixed(2) + 
+                                qsTr(" | Transacciones: ") + viewModel.todayTransactionsByCashier :
+                                "S/" + viewModel.todaySalesByCashier.toFixed(2) + " | " + viewModel.todayTransactionsByCashier
                             font.weight: Font.Medium
+                            font.pixelSize: root.width > 600 ? 14 : 11
                             color: Material.primary
+                            elide: Text.ElideRight
+                            Layout.fillWidth: root.width <= 700
                         }
                     }
                 }
@@ -101,7 +112,7 @@ Page {
                 // Ventas del día
                 StatCard {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 120
+                    Layout.preferredHeight: root.width > 800 ? 120 : (root.width > 600 ? 100 : 90)
                     title: qsTr("Ventas del Día")
                     value: "S/" + viewModel.todaySales.toFixed(2)
                     subtitle: viewModel.todayTransactions + " transacciones"
@@ -112,7 +123,7 @@ Page {
                 // Ventas del mes
                 StatCard {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 120
+                    Layout.preferredHeight: root.width > 800 ? 120 : (root.width > 600 ? 100 : 90)
                     title: qsTr("Ventas del Mes")
                     value: "S/" + viewModel.monthSales.toFixed(2)
                     subtitle: "Ticket promedio: S/" + viewModel.averageTicket.toFixed(2)
@@ -123,7 +134,7 @@ Page {
                 // Productos totales
                 StatCard {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 120
+                    Layout.preferredHeight: root.width > 800 ? 120 : (root.width > 600 ? 100 : 90)
                     title: qsTr("Productos")
                     value: viewModel.totalProducts.toString()
                     subtitle: qsTr("Total en catálogo")
@@ -134,7 +145,7 @@ Page {
                 // Stock bajo
                 StatCard {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 120
+                    Layout.preferredHeight: root.width > 800 ? 120 : (root.width > 600 ? 100 : 90)
                     title: qsTr("Stock Bajo")
                     value: viewModel.lowStockProducts.toString()
                     subtitle: qsTr("Requieren atención")
@@ -253,133 +264,234 @@ Page {
                 }
             }
 
-            // Gráfico de ventas - Barras de progreso visual
-            GroupBox {
+            // Gráficos de ventas - Siempre visibles
+            GridLayout {
                 Layout.fillWidth: true
-                title: qsTr("📊 Ventas por Tipo de Comprobante (Hoy)")
+                columns: root.width > 1000 ? 2 : 1
+                rowSpacing: 16
+                columnSpacing: 16
                 
-                ColumnLayout {
-                    anchors.fill: parent
-                    spacing: 16
+                // Gráfico circular - Ventas por comprobante
+                GroupBox {
+                    id: voucherChartBox
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 400
+                    title: "Ventas por Tipo de Comprobante (Hoy)"
                     
-                    Label {
-                        text: qsTr("Distribución visual de ventas del día")
-                        opacity: 0.7
-                        font.pixelSize: 12
-                    }
-                    
-                    // Boletas
                     ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 4
+                        anchors.fill: parent
+                        spacing: 12
                         
-                        RowLayout {
+                        // Resumen en cards
+                        GridLayout {
+                            visible: voucherSummaryModel.count > 0
                             Layout.fillWidth: true
-                            Label {
-                                text: qsTr("🧾 Boletas")
-                                font.weight: Font.Medium
-                                Layout.fillWidth: true
-                            }
-                            Label {
-                                text: "0 ventas | S/0.00"
-                                opacity: 0.7
-                                font.pixelSize: 12
+                            columns: root.width > 1200 ? 3 : (root.width > 600 ? 3 : 1)
+                            rowSpacing: 6
+                            columnSpacing: 6
+                            
+                            Repeater {
+                                id: voucherSummary
+                                model: ListModel { id: voucherSummaryModel }
+                                
+                                delegate: Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 50
+                                    radius: 6
+                                    color: "transparent"
+                                    border.width: 1
+                                    border.color: Material.theme === Material.Dark ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(0, 0, 0, 0.08)
+                                    
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.margins: 8
+                                        spacing: 8
+                                        
+                                        Rectangle {
+                                            Layout.preferredWidth: 8
+                                            Layout.preferredHeight: 8
+                                            radius: 4
+                                            color: {
+                                                var colors = ["#2196F3", "#9C27B0", "#4CAF50"]
+                                                return colors[index % colors.length]
+                                            }
+                                        }
+                                        
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 0
+                                            
+                                            Label {
+                                                text: model.label
+                                                font.weight: Font.Medium
+                                                font.pixelSize: 11
+                                            }
+                                            
+                                            Label {
+                                                text: model.count + " ventas (" + model.percentage + "%)"
+                                                opacity: 0.6
+                                                font.pixelSize: 9
+                                            }
+                                        }
+                                        
+                                        Label {
+                                            text: "S/ " + Number(model.value).toFixed(2)
+                                            font.weight: Font.Bold
+                                            font.pixelSize: 12
+                                            Layout.alignment: Qt.AlignRight
+                                        }
+                                    }
+                                }
                             }
                         }
                         
-                        Rectangle {
+                        // Gráfico circular
+                        ChartView {
+                            id: voucherChart
                             Layout.fillWidth: true
-                            height: 12
-                            radius: 6
-                            color: Material.frameColor
+                            Layout.fillHeight: true
+                            Layout.minimumHeight: 250
+                            antialiasing: true
+                            legend.visible: false
+                            backgroundColor: "transparent"
+                            animationOptions: ChartView.SeriesAnimations
+                            theme: Material.theme === Material.Dark ? ChartView.ChartThemeDark : ChartView.ChartThemeLight
+                            backgroundRoundness: 0
                             
-                            Rectangle {
-                                height: parent.height
-                                width: parent.width * 0.3  // Ejemplo
-                                radius: parent.radius
-                                color: Material.color(Material.Blue)
+                            PieSeries {
+                                id: voucherSeries
+                                size: 0.8
+                                holeSize: 0.45
                                 
-                                Behavior on width {
-                                    NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+                                onClicked: function(slice) {
+                                    slice.exploded = !slice.exploded
+                                }
+                                
+                                onHovered: function(slice, state) {
+                                    if(state) slice.explodeDistanceFactor = 0.05
+                                    else slice.explodeDistanceFactor = 0.03
                                 }
                             }
                         }
                     }
                     
-                    // Facturas
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 4
+                    Component.onCompleted: {
+                        updateVoucherChart()
+                    }
+                    
+                    function updateVoucherChart() {
+                        var data = viewModel.getSalesByVoucherType()
+                        voucherSeries.clear()
+                        voucherSummaryModel.clear()
                         
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Label {
-                                text: qsTr("📄 Facturas")
-                                font.weight: Font.Medium
-                                Layout.fillWidth: true
-                            }
-                            Label {
-                                text: "0 ventas | S/0.00"
-                                opacity: 0.7
-                                font.pixelSize: 12
-                            }
+                        if (data.length === 0) {
+                            var emptySlice = voucherSeries.append("Sin ventas", 1)
+                            emptySlice.color = Qt.rgba(0.5, 0.5, 0.5, 0.2)
+                            return
                         }
                         
-                        Rectangle {
-                            Layout.fillWidth: true
-                            height: 12
-                            radius: 6
-                            color: Material.frameColor
+                        // Calcular el total para porcentajes
+                        var total = 0
+                        for (var i = 0; i < data.length; i++) {
+                            total += data[i].value
+                        }
+                        
+                        var colors = ["#2196F3", "#9C27B0", "#4CAF50"]
+                        for (var i = 0; i < data.length; i++) {
+                            var percentage = total > 0 ? ((data[i].value / total) * 100).toFixed(1) : 0
                             
-                            Rectangle {
-                                height: parent.height
-                                width: parent.width * 0.5  // Ejemplo
-                                radius: parent.radius
-                                color: Material.color(Material.Purple)
+                            var slice = voucherSeries.append(data[i].label + "\n" + percentage + "%", data[i].value)
+                            slice.color = colors[i % colors.length]
+                            slice.labelVisible = true
+                            slice.labelPosition = PieSlice.LabelInsideHorizontal
+                            slice.labelColor = "#FFFFFF"
+                            slice.labelFont.pixelSize = 10
+                            slice.labelFont.bold = true
+                            
+                            voucherSummaryModel.append({
+                                "label": data[i].label,
+                                "count": data[i].count,
+                                "value": data[i].value,
+                                "percentage": percentage
+                            })
+                        }
+                    }
+                    
+                    Connections {
+                        target: viewModel
+                        function onTodaySalesChanged() {
+                            voucherChartBox.updateVoucherChart()
+                        }
+                    }
+                }
+                
+                // Gráfico de barras - Productos con stock bajo
+                GroupBox {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 400
+                    title: "Productos con Stock Bajo"
+                    
+                    ColumnLayout {
+                        anchors.fill: parent
+                        spacing: 12
+                        
+                        Label {
+                            text: viewModel.lowStockProducts > 0 ? 
+                                viewModel.lowStockProducts + " productos requieren atención" : 
+                                "Stock en niveles normales"
+                            font.pixelSize: 11
+                            opacity: 0.7
+                            color: viewModel.lowStockProducts > 0 ? Material.color(Material.Orange) : Material.color(Material.Green)
+                        }
+                        
+                        ChartView {
+                            id: stockChart
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            Layout.minimumHeight: 280
+                            antialiasing: true
+                            legend.visible: false
+                            backgroundColor: "transparent"
+                            animationOptions: ChartView.SeriesAnimations
+                            theme: Material.theme === Material.Dark ? ChartView.ChartThemeDark : ChartView.ChartThemeLight
+                            
+                            BarSeries {
+                                id: stockSeries
+                                labelsVisible: true
+                                labelsPosition: AbstractBarSeries.LabelsOutsideEnd
                                 
-                                Behavior on width {
-                                    NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+                                BarSet {
+                                    id: stockBarSet
+                                    label: "Stock actual"
+                                    color: Material.color(Material.Orange)
                                 }
+                            }
+                            
+                            BarCategoryAxis {
+                                id: stockAxisX
+                                titleText: ""
+                            }
+                            
+                            ValueAxis {
+                                id: stockAxisY
+                                titleText: "Unidades"
+                                min: 0
+                                max: 50
+                                tickCount: 6
+                            }
+                            
+                            Component.onCompleted: {
+                                stockSeries.axisX = stockAxisX
+                                stockSeries.axisY = stockAxisY
+                                updateStockChart()
                             }
                         }
                     }
                     
-                    // Tickets
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 4
-                        
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Label {
-                                text: qsTr("🎫 Tickets")
-                                font.weight: Font.Medium
-                                Layout.fillWidth: true
-                            }
-                            Label {
-                                text: "0 ventas | S/0.00"
-                                opacity: 0.7
-                                font.pixelSize: 12
-                            }
-                        }
-                        
-                        Rectangle {
-                            Layout.fillWidth: true
-                            height: 12
-                            radius: 6
-                            color: Material.frameColor
-                            
-                            Rectangle {
-                                height: parent.height
-                                width: parent.width * 0.2  // Ejemplo
-                                radius: parent.radius
-                                color: Material.color(Material.Green)
-                                
-                                Behavior on width {
-                                    NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
-                                }
-                            }
-                        }
+                    function updateStockChart() {
+                        // Simulación de datos - conectar con ViewModel más adelante
+                        stockAxisX.categories = ["Prod. A", "Prod. B", "Prod. C", "Prod. D", "Prod. E"]
+                        stockBarSet.values = [12, 8, 15, 5, 18]
                     }
                 }
             }
@@ -393,188 +505,387 @@ Page {
                 
                 // Productos más vendidos
                 GroupBox {
+                    id: topProductsBox
                     Layout.fillWidth: true
-                    Layout.minimumHeight: 380
-                    title: qsTr("🏆 Top 5 Productos Más Vendidos (Hoy)")
+                    Layout.minimumHeight: Math.max(300, Math.min(380, root.height * 0.35))
+                    Layout.preferredHeight: Math.max(350, Math.min(450, root.height * 0.4))
+                    title: qsTr("Top 5 Productos Más Vendidos (Hoy)")
                     
                     ColumnLayout {
                         anchors.fill: parent
                         spacing: 8
                         
                         Repeater {
-                            model: 5
+                            id: topProductsRepeater
+                            model: ListModel { id: topProductsModel }
                             
                             delegate: Rectangle {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 56
-                                radius: 8
-                                color: Material.theme === Material.Dark ?
-                                    Qt.lighter(Material.background, 1.1) :
-                                    Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.05)
-                                border.width: 1
-                                border.color: Material.frameColor
+                                Layout.preferredHeight: 48
+                                radius: 4
+                                color: "transparent"
+                                border.width: Material.theme === Material.Dark ? 0 : 1
+                                border.color: Material.theme === Material.Dark ? "transparent" : Qt.rgba(0, 0, 0, 0.08)
+                                
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: parent.radius
+                                    opacity: 0.03
+                                    color: Material.primary
+                                }
                                 
                                 RowLayout {
                                     anchors.fill: parent
-                                    anchors.margins: 12
-                                    spacing: 12
+                                    anchors.leftMargin: 16
+                                    anchors.rightMargin: 16
+                                    anchors.topMargin: 8
+                                    anchors.bottomMargin: 8
+                                    spacing: 16
                                     
-                                    Rectangle {
-                                        Layout.preferredWidth: 36
-                                        Layout.preferredHeight: 36
-                                        radius: 18
-                                        color: index === 0 ? Material.color(Material.Amber) :
-                                               index === 1 ? Material.color(Material.BlueGrey) :
-                                               index === 2 ? Material.color(Material.DeepOrange) :
-                                               Material.primary
-                                        
-                                        Label {
-                                            anchors.centerIn: parent
-                                            text: index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : (index + 1)
-                                            font.weight: Font.Bold
-                                            font.pixelSize: index < 3 ? 18 : 14
-                                            color: index < 3 ? "#FFFFFF" : (Material.theme === Material.Dark ? "#000000" : "#FFFFFF")
-                                        }
+                                    Label {
+                                        text: index === 0 ? "\uE735" : index === 1 ? "\uE735" : index === 2 ? "\uE735" : (index + 1)
+                                        font.family: index < 3 ? "Segoe MDL2 Assets" : ""
+                                        font.weight: Font.Bold
+                                        font.pixelSize: 16
+                                        color: index === 0 ? "#FFD700" : index === 1 ? "#C0C0C0" : index === 2 ? "#CD7F32" : Material.primary
+                                        Layout.preferredWidth: 24
                                     }
                                     
                                     ColumnLayout {
                                         Layout.fillWidth: true
-                                        spacing: 2
+                                        spacing: 0
                                         
                                         Label {
-                                            text: qsTr("Producto ") + (index + 1)
+                                            text: model.name
                                             font.weight: Font.Medium
+                                            font.pixelSize: 13
                                             elide: Text.ElideRight
                                             Layout.fillWidth: true
                                         }
                                         
                                         Label {
-                                            text: qsTr("Sin datos disponibles")
+                                            text: "S/ " + Number(model.revenue).toFixed(2)
                                             opacity: 0.6
                                             font.pixelSize: 11
                                         }
                                     }
                                     
-                                    ColumnLayout {
-                                        spacing: 2
-                                        
-                                        Label {
-                                            text: "0"
-                                            font.weight: Font.Bold
-                                            font.pixelSize: 18
-                                            color: Material.color(Material.Orange)
-                                            Layout.alignment: Qt.AlignRight
-                                        }
-                                        
-                                        Label {
-                                            text: qsTr("unidades")
-                                            opacity: 0.6
-                                            font.pixelSize: 10
-                                            Layout.alignment: Qt.AlignRight
-                                        }
+                                    Label {
+                                        text: Number(model.quantity).toFixed(0) + " u."
+                                        font.weight: Font.DemiBold
+                                        font.pixelSize: 14
+                                        color: Material.accent
+                                        Layout.alignment: Qt.AlignRight
                                     }
                                 }
                             }
                         }
                         
-                        Label {
-                            text: qsTr("💡 Realiza ventas para ver estadísticas")
-                            opacity: 0.5
-                            font.italic: true
+                        ColumnLayout {
+                            visible: topProductsModel.count === 0
                             Layout.alignment: Qt.AlignHCenter
-                            Layout.topMargin: 8
+                            Layout.topMargin: 40
+                            spacing: 8
+                            
+                            Label {
+                                text: "\uE7C5"
+                                font.family: "Segoe MDL2 Assets"
+                                font.pixelSize: 48
+                                opacity: 0.2
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+                            
+                            Label {
+                                text: qsTr("Realiza ventas para ver estadísticas")
+                                opacity: 0.5
+                                font.pixelSize: 12
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+                        }
+                    }
+                    
+                    Component.onCompleted: {
+                        updateTopProducts()
+                    }
+                    
+                    function updateTopProducts() {
+                        var data = viewModel.getTopProducts(5)
+                        topProductsModel.clear()
+                        
+                        for (var i = 0; i < data.length; i++) {
+                            topProductsModel.append({
+                                "name": data[i].name,
+                                "quantity": data[i].quantity,
+                                "revenue": data[i].revenue
+                            })
+                        }
+                    }
+                    
+                    Connections {
+                        target: viewModel
+                        function onTodaySalesChanged() {
+                            topProductsBox.updateTopProducts()
                         }
                     }
                 }
                 
                 // Clientes frecuentes
                 GroupBox {
+                    id: topCustomersBox
                     Layout.fillWidth: true
-                    Layout.minimumHeight: 380
-                    title: qsTr("👥 Clientes Frecuentes (Este Mes)")
+                    Layout.minimumHeight: Math.max(300, Math.min(380, root.height * 0.35))
+                    Layout.preferredHeight: Math.max(350, Math.min(450, root.height * 0.4))
+                    title: qsTr("Clientes Frecuentes (Este Mes)")
                     
                     ColumnLayout {
                         anchors.fill: parent
                         spacing: 8
                         
                         Repeater {
-                            model: 5
+                            id: topCustomersRepeater
+                            model: ListModel { id: topCustomersModel }
                             
                             delegate: Rectangle {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 56
-                                radius: 8
-                                color: Material.theme === Material.Dark ?
-                                    Qt.lighter(Material.background, 1.1) :
-                                    Qt.rgba(Material.primary.r, Material.primary.g, Material.primary.b, 0.05)
-                                border.width: 1
-                                border.color: Material.frameColor
+                                Layout.preferredHeight: 48
+                                radius: 4
+                                color: "transparent"
+                                border.width: Material.theme === Material.Dark ? 0 : 1
+                                border.color: Material.theme === Material.Dark ? "transparent" : Qt.rgba(0, 0, 0, 0.08)
+                                
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: parent.radius
+                                    opacity: 0.03
+                                    color: Material.primary
+                                }
                                 
                                 RowLayout {
                                     anchors.fill: parent
-                                    anchors.margins: 12
-                                    spacing: 12
+                                    anchors.leftMargin: 16
+                                    anchors.rightMargin: 16
+                                    anchors.topMargin: 8
+                                    anchors.bottomMargin: 8
+                                    spacing: 16
                                     
-                                    Rectangle {
-                                        Layout.preferredWidth: 36
-                                        Layout.preferredHeight: 36
-                                        radius: 18
-                                        color: Material.color(Material.Teal)
-                                        
-                                        Label {
-                                            anchors.centerIn: parent
-                                            text: "👤"
-                                            font.pixelSize: 18
-                                        }
+                                    Label {
+                                        text: "\uE77B"
+                                        font.family: "Segoe MDL2 Assets"
+                                        font.pixelSize: 18
+                                        color: Material.primary
+                                        opacity: 0.7
+                                        Layout.preferredWidth: 24
                                     }
                                     
                                     ColumnLayout {
                                         Layout.fillWidth: true
-                                        spacing: 2
+                                        spacing: 0
                                         
                                         Label {
-                                            text: qsTr("Cliente ") + (index + 1)
+                                            text: model.name
                                             font.weight: Font.Medium
+                                            font.pixelSize: 13
                                             elide: Text.ElideRight
                                             Layout.fillWidth: true
                                         }
                                         
                                         Label {
-                                            text: qsTr("Sin datos disponibles")
+                                            text: qsTr("%1 compras").arg(model.purchases)
                                             opacity: 0.6
                                             font.pixelSize: 11
                                         }
                                     }
                                     
-                                    ColumnLayout {
-                                        spacing: 2
-                                        
-                                        Label {
-                                            text: "S/0.00"
-                                            font.weight: Font.Bold
-                                            font.pixelSize: 16
-                                            color: Material.color(Material.Teal)
-                                            Layout.alignment: Qt.AlignRight
-                                        }
-                                        
-                                        Label {
-                                            text: qsTr("0 compras")
-                                            opacity: 0.6
-                                            font.pixelSize: 10
-                                            Layout.alignment: Qt.AlignRight
-                                        }
+                                    Label {
+                                        text: "S/ " + Number(model.totalSpent).toFixed(2)
+                                        font.weight: Font.DemiBold
+                                        font.pixelSize: 14
+                                        color: Material.accent
+                                        Layout.alignment: Qt.AlignRight
                                     }
                                 }
                             }
                         }
                         
-                        Label {
-                            text: qsTr("💡 Registra clientes para ver estadísticas")
-                            opacity: 0.5
-                            font.italic: true
+                        ColumnLayout {
+                            visible: topCustomersModel.count === 0
                             Layout.alignment: Qt.AlignHCenter
-                            Layout.topMargin: 8
+                            Layout.topMargin: 40
+                            spacing: 8
+                            
+                            Label {
+                                text: "\uE716"
+                                font.family: "Segoe MDL2 Assets"
+                                font.pixelSize: 48
+                                opacity: 0.2
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+                            
+                            Label {
+                                text: qsTr("Registra clientes para ver estadísticas")
+                                opacity: 0.5
+                                font.pixelSize: 12
+                                Layout.alignment: Qt.AlignHCenter
+                            }
                         }
+                    }
+                    
+                    Component.onCompleted: {
+                        updateTopCustomers()
+                    }
+                    
+                    function updateTopCustomers() {
+                        var data = viewModel.getTopCustomers(5)
+                        topCustomersModel.clear()
+                        
+                        for (var i = 0; i < data.length; i++) {
+                            topCustomersModel.append({
+                                "name": data[i].name,
+                                "purchases": data[i].purchases,
+                                "totalSpent": data[i].totalSpent
+                            })
+                        }
+                    }
+                    
+                    Connections {
+                        target: viewModel
+                        function onMonthSalesChanged() {
+                            topCustomersBox.updateTopCustomers()
+                        }
+                    }
+                }
+            }
+            
+            // Gráfico de líneas - Tendencia de ventas últimos 7 días
+            GroupBox {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 400
+                title: "Tendencia de Ventas (Últimos 7 Días)"
+                
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 12
+                    
+                    // Leyenda personalizada con puntos redondos
+                    RowLayout {
+                        Layout.alignment: Qt.AlignHCenter
+                        spacing: 20
+                        
+                        RowLayout {
+                            spacing: 6
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius: 5
+                                color: Material.color(Material.Blue)
+                            }
+                            Label {
+                                text: "Total Ventas"
+                                font.pixelSize: 11
+                            }
+                        }
+                        
+                        RowLayout {
+                            spacing: 6
+                            Rectangle {
+                                width: 10
+                                height: 10
+                                radius: 5
+                                color: Material.color(Material.Green)
+                            }
+                            Label {
+                                text: "N° Transacciones"
+                                font.pixelSize: 11
+                            }
+                        }
+                    }
+                    
+                    ChartView {
+                        id: salesTrendChart
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.minimumHeight: 280
+                        antialiasing: true
+                        legend.visible: false
+                        backgroundColor: "transparent"
+                        animationOptions: ChartView.SeriesAnimations
+                        theme: Material.theme === Material.Dark ? ChartView.ChartThemeDark : ChartView.ChartThemeLight
+                        
+                        LineSeries {
+                            id: salesAmountSeries
+                            name: "Total Ventas"
+                            color: Material.color(Material.Blue)
+                            width: 2
+                            pointsVisible: true
+                            
+                            axisX: DateTimeAxis {
+                                id: salesDateAxis
+                                format: "dd/MM"
+                                tickCount: 7
+                                labelsAngle: 0
+                            }
+                            
+                            axisY: ValueAxis {
+                                id: salesAmountAxis
+                                titleText: "Monto (S/)"
+                                min: 0
+                                max: 1000
+                                tickCount: 6
+                            }
+                        }
+                        
+                        LineSeries {
+                            id: salesCountSeries
+                            name: "N° Transacciones"
+                            color: Material.color(Material.Green)
+                            width: 2
+                            pointsVisible: true
+                            
+                            axisX: salesDateAxis
+                            axisYRight: ValueAxis {
+                                id: salesCountAxis
+                                titleText: "Cantidad"
+                                min: 0
+                                max: 50
+                                tickCount: 6
+                            }
+                        }
+                    }
+                    
+                    Component.onCompleted: {
+                        updateSalesTrend()
+                    }
+                    
+                    function updateSalesTrend() {
+                        // Simulación de datos - conectar con ViewModel más adelante
+                        salesAmountSeries.clear()
+                        salesCountSeries.clear()
+                        
+                        var today = new Date()
+                        for (var i = 6; i >= 0; i--) {
+                            var date = new Date(today)
+                            date.setDate(date.getDate() - i)
+                            var timestamp = date.getTime()
+                            
+                            // Datos simulados
+                            var amount = 200 + Math.random() * 500
+                            var count = 5 + Math.floor(Math.random() * 20)
+                            
+                            salesAmountSeries.append(timestamp, amount)
+                            salesCountSeries.append(timestamp, count)
+                        }
+                        
+                        // Ajustar máximo del eje Y
+                        var maxAmount = 0
+                        var maxCount = 0
+                        for (var j = 0; j < salesAmountSeries.count; j++) {
+                            if (salesAmountSeries.at(j).y > maxAmount) maxAmount = salesAmountSeries.at(j).y
+                        }
+                        for (var k = 0; k < salesCountSeries.count; k++) {
+                            if (salesCountSeries.at(k).y > maxCount) maxCount = salesCountSeries.at(k).y
+                        }
+                        salesAmountAxis.max = Math.ceil(maxAmount * 1.2 / 100) * 100
+                        salesCountAxis.max = Math.ceil(maxCount * 1.2 / 5) * 5
                     }
                 }
             }
@@ -582,7 +893,7 @@ Page {
             // Productos con stock bajo
             GroupBox {
                 Layout.fillWidth: true
-                title: qsTr("Alertas de Stock Bajo")
+                title: "Alertas de Stock Bajo"
                 visible: viewModel.lowStockProducts > 0
 
                 Label {
@@ -592,28 +903,28 @@ Page {
                 }
             }
             
-            // Cierre de día
+            // Reportes del día
             GroupBox {
                 Layout.fillWidth: true
-                title: qsTr("📊 Cierre de Día")
+                title: qsTr("Reportes del Día")
                 
                 ColumnLayout {
                     anchors.fill: parent
                     spacing: 12
                     
                     Label {
-                        text: qsTr("Generar reporte de cierre del día actual")
+                        text: qsTr("Genera reportes y consulta las ventas del día")
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
+                        opacity: 0.7
                     }
                     
                     RowLayout {
                         spacing: 12
                         
-OutlinedButton {
-                        text: qsTr("Ver Reporte del Día")
-                        iconText: "📋"
-                        isIconFont: false
+                        OutlinedButton {
+                            text: qsTr("Ver Reporte del Día")
+                            iconText: "\uE8A5"
                             onClicked: {
                                 var report = viewModel.getDailyReport()
                                 closingReportDialog.reportData = JSON.parse(report)
@@ -621,16 +932,33 @@ OutlinedButton {
                             }
                         }
                         
+                        PrimaryButton {
+                            text: qsTr("Generar PDF del Reporte")
+                            iconText: "\uE8A5"
+                            onClicked: {
+                                var report = viewModel.getDailyReport()
+                                closingReportDialog.reportData = JSON.parse(report)
+                                closingReportDialog.generatePDF()
+                            }
+                        }
+                        
                         Button {
-                            text: qsTr("🔒 Cerrar Día")
+                            text: qsTr("Cerrar Día")
                             Material.background: Material.color(Material.Green)
                             font.weight: Font.Medium
-                            contentItem: Label {
-                                text: parent.text
-                                font: parent.font
-                                color: "white"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
+                            contentItem: RowLayout {
+                                spacing: 8
+                                Label {
+                                    text: "\uE72E"
+                                    font.family: "Segoe MDL2 Assets"
+                                    font.pixelSize: 14
+                                    color: "white"
+                                }
+                                Label {
+                                    text: parent.parent.text
+                                    font: parent.parent.font
+                                    color: "white"
+                                }
                             }
                             onClicked: {
                                 closeDayConfirmDialog.open()
@@ -645,7 +973,8 @@ OutlinedButton {
     // Diálogo de confirmación de cierre de día
     Dialog {
         id: closeDayConfirmDialog
-        title: qsTr("⚠️ Confirmar Cierre de Día")
+        title: "\uE7BA  " + qsTr("Confirmar Cierre de Día")
+        font.family: "Segoe MDL2 Assets"
         modal: true
         anchors.centerIn: parent
         width: Math.min(400, root.width * 0.9)
@@ -698,7 +1027,8 @@ OutlinedButton {
     // Diálogo de reporte de cierre
     Dialog {
         id: closingReportDialog
-        title: qsTr("📊 Reporte de Cierre de Día")
+        title: qsTr("Reporte de Cierre de Día")
+        font.family: "Segoe MDL2 Assets"
         modal: true
         anchors.centerIn: parent
         width: Math.min(700, root.width * 0.95)
@@ -796,7 +1126,10 @@ OutlinedButton {
                         Label { text: qsTr("Total"); font.weight: Font.Bold; Layout.alignment: Qt.AlignRight }
                         
                         // Boletas
-                        Label { text: qsTr("🧾 Boletas") }
+                        Label { 
+                            text: "\uE8A5  " + qsTr("Boletas")
+                            font.family: "Segoe MDL2 Assets"
+                        }
                         Label { 
                             text: closingReportDialog.reportData.byVoucherType?.boletas?.count || "0"
                             Layout.alignment: Qt.AlignRight
@@ -808,7 +1141,10 @@ OutlinedButton {
                         }
                         
                         // Facturas
-                        Label { text: qsTr("📄 Facturas") }
+                        Label { 
+                            text: "\uE8A5  " + qsTr("Facturas")
+                            font.family: "Segoe MDL2 Assets"
+                        }
                         Label { 
                             text: closingReportDialog.reportData.byVoucherType?.facturas?.count || "0"
                             Layout.alignment: Qt.AlignRight
@@ -820,7 +1156,10 @@ OutlinedButton {
                         }
                         
                         // Tickets
-                        Label { text: qsTr("🎫 Tickets") }
+                        Label { 
+                            text: "\uE8A5  " + qsTr("Tickets")
+                            font.family: "Segoe MDL2 Assets"
+                        }
                         Label { 
                             text: closingReportDialog.reportData.byVoucherType?.tickets?.count || "0"
                             Layout.alignment: Qt.AlignRight
@@ -836,7 +1175,8 @@ OutlinedButton {
                 // Productos más vendidos
                 GroupBox {
                     Layout.fillWidth: true
-                    title: qsTr("🏆 Productos Más Vendidos")
+                    title: "\uE734  " + qsTr("Productos Más Vendidos")
+                    font.family: "Segoe MDL2 Assets"
                     
                     ColumnLayout {
                         anchors.fill: parent
@@ -885,6 +1225,13 @@ OutlinedButton {
                 }
             }
         }
+        
+        function generatePDF() {
+            // Usar el ViewModel para generar el PDF del reporte
+            if (viewModel && reportData) {
+                viewModel.generateDailyReportPDF()
+            }
+        }
     }
 
     // Componente de tarjeta estadística
@@ -896,7 +1243,7 @@ OutlinedButton {
         property color accentColor: Material.primary
         property bool warning: false
 
-        radius: 16
+        radius: root.width > 800 ? 16 : 12
         color: Material.theme === Material.Dark ?
             Qt.lighter(Material.background, 1.15) :
             Material.background
@@ -915,47 +1262,53 @@ OutlinedButton {
 
         RowLayout {
             anchors.fill: parent
-            anchors.margins: 20
-            spacing: 16
+            anchors.margins: root.width > 600 ? 20 : 12
+            spacing: root.width > 600 ? 16 : 10
 
             Rectangle {
-                Layout.preferredWidth: 64
-                Layout.preferredHeight: 64
-                radius: 16
+                Layout.preferredWidth: root.width > 600 ? 64 : 48
+                Layout.preferredHeight: root.width > 600 ? 64 : 48
+                radius: root.width > 600 ? 16 : 12
                 color: Qt.rgba(parent.parent.accentColor.r, parent.parent.accentColor.g, parent.parent.accentColor.b, 0.12)
 
                 Label {
                     anchors.centerIn: parent
                     text: parent.parent.parent.icon
-                    font.pixelSize: 32
+                    font.pixelSize: root.width > 600 ? 32 : 24
                     color: parent.parent.parent.accentColor
                 }
             }
 
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: root.width > 600 ? 6 : 4
 
                 Label {
                     text: parent.parent.parent.title
-                    font.pixelSize: 13
+                    font.pixelSize: root.width > 600 ? 13 : 11
                     font.weight: Font.Medium
                     opacity: 0.6
                     color: Material.foreground
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
                 }
 
                 Label {
                     text: parent.parent.parent.value
-                    font.pixelSize: 28
+                    font.pixelSize: root.width > 800 ? 28 : (root.width > 600 ? 24 : 20)
                     font.weight: Font.Bold
                     color: Material.foreground
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
                 }
 
                 Label {
                     text: parent.parent.parent.subtitle
-                    font.pixelSize: 12
+                    font.pixelSize: root.width > 600 ? 12 : 10
                     opacity: 0.5
                     color: Material.foreground
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
                 }
             }
         }
