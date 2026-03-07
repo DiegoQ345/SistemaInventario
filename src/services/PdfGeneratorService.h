@@ -2,6 +2,7 @@
 #define PDFGENERATORSERVICE_H
 
 #include "../models/Sale.h"
+#include "../models/Customer.h"
 #include <QObject>
 #include <QString>
 
@@ -60,6 +61,17 @@ public:
      */
     bool printReceipt(const Sale& sale, const QString& printerName = "");
 
+    /**
+     * @brief Generar reporte de historial de compras de un cliente
+     * @param customer Cliente del cual generar el reporte
+     * @param sales Lista de ventas del cliente
+     * @param outputPath Ruta donde guardar el PDF
+     * @return true si se generó correctamente
+     */
+    bool generateCustomerPurchaseHistory(const Customer& customer, 
+                                         const QList<Sale>& sales, 
+                                         const QString& outputPath);
+
 signals:
     /**
      * @brief Progreso de generación del PDF
@@ -83,6 +95,11 @@ private:
      * @brief Aplicar estilos CSS al HTML
      */
     QString getReceiptStyles(bool isThermal = false);
+    
+    /**
+     * @brief Generar HTML para reporte de historial de compras
+     */
+    QString generatePurchaseHistoryHtml(const Customer& customer, const QList<Sale>& sales);
 };
 
 #endif // PDFGENERATORSERVICE_H

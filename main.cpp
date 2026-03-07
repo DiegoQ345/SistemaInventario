@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
 #include <QQmlContext>
+#include <QIcon>
 #include "src/database/DatabaseManager.h"
 #include "src/services/AuthenticationService.h"
 #include "src/services/NotificationService.h"
@@ -26,6 +27,14 @@ int main(int argc, char *argv[])
     app.setOrganizationDomain("sistemainventario.com");
     app.setApplicationName("Sistema de Inventario");
     app.setApplicationVersion("1.0.0");
+    
+    // Configurar ícono de la aplicación - usar logo.png que es más grande
+    QIcon appIcon;
+    appIcon.addFile(":/resources/logo.png");
+    appIcon.addFile(":/resources/favicon-32x32.png", QSize(32, 32));
+    appIcon.addFile(":/resources/android-chrome-192x192.png", QSize(192, 192));
+    appIcon.addFile(":/resources/android-chrome-512x512.png", QSize(512, 512));
+    app.setWindowIcon(appIcon);
 
     // Aplicar estilo Material Design
     QQuickStyle::setStyle("Material");

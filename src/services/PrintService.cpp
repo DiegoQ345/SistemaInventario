@@ -87,6 +87,17 @@ void PrintService::setDefaultPrinter(const QString& printerName)
     m_defaultPrinter = printerName;
 }
 
+void PrintService::setCompanyInfo(const QString& name, const QString& ruc, const QString& address, const QString& phone)
+{
+    m_companyName = name;
+    m_companyRuc = ruc;
+    m_companyAddress = address;
+    if (!phone.isEmpty()) {
+        m_companyPhone = phone;
+    }
+    qDebug() << "PrintService: Información de empresa actualizada -" << name << ruc << address << phone;
+}
+
 QStringList PrintService::getAvailablePrinters()
 {
     QStringList printers;
@@ -463,6 +474,8 @@ QMap<QString, QString> PrintService::createVariablesMap(const Sale& sale,
     vars["{{companyRuc}}"] = m_companyRuc;
     vars["{{address}}"] = m_companyAddress;
     vars["{{companyAddress}}"] = m_companyAddress;
+    vars["{{phone}}"] = m_companyPhone;
+    vars["{{companyPhone}}"] = m_companyPhone;
     
     // Tipo de comprobante
     QString voucherTypeStr = (type == FACTURA) ? "FACTURA" : "BOLETA";

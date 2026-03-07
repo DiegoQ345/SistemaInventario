@@ -1,6 +1,12 @@
 <RCC>
     <qresource prefix="/">
         <file>resources/logo.png</file>
+        <file>resources/favicon.ico</file>
+        <file>resources/favicon-16x16.png</file>
+        <file>resources/favicon-32x32.png</file>
+        <file>resources/android-chrome-192x192.png</file>
+        <file>resources/android-chrome-512x512.png</file>
+        <file>resources/apple-touch-icon.png</file>
         <file>resources/background.png</file>
     </qresource>
 </RCC>

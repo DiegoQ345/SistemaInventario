@@ -37,7 +37,7 @@ SistemaInventario/
 ├── src/
 │   ├── database/          # Gestión de base de datos
 │   │   ├── DatabaseManager.h/cpp
-│   │   └── Migraciones automáticas
+│   │   └── Migraciones automáticas (schema v5)
 │   ├── models/            # Modelos de dominio (POJOs)
 │   │   ├── Product.h
 │   │   ├── Sale.h
@@ -45,25 +45,60 @@ SistemaInventario/
 │   │   └── StockMovement.h
 │   ├── repositories/      # Acceso a datos (patrón Repository)
 │   │   ├── ProductRepository.h/cpp
-│   │   └── SaleRepository.h/cpp
+│   │   ├── SaleRepository.h/cpp
+│   │   ├── CustomerRepository.h/cpp
+│   │   └── TicketTemplateRepository.h/cpp  ← Plantillas de tickets
 │   ├── services/          # Lógica de negocio
 │   │   ├── ProductService.h/cpp
 │   │   ├── SalesService.h/cpp
-│   │   ├── ExcelImportService.h/cpp  ← Importación Excel
-│   │   └── PdfGeneratorService.h/cpp ← Generación de PDF
+│   │   ├── ExcelImportService.h/cpp       ← Importación Excel
+│   │   ├── PdfGeneratorService.h/cpp      ← PDF estándar A4
+│   │   ├── PrintService.h/cpp             ← Sistema de impresión
+│   │   ├── NotificationService.h/cpp      ← Notificaciones
+│   │   └── AuthenticationService.h/cpp    ← Autenticación
+│   ├── printing/          # Sistema de tickets personalizados
+│   │   ├── TicketLayout.h/cpp             ← Parser de diseños JSON
+│   │   ├── TicketRenderer.h/cpp           ← Renderizado a QPainter
+│   │   └── TicketDynamicSection.h/cpp     ← Sección de productos
 │   ├── viewmodels/        # ViewModels para MVVM
 │   │   ├── DashboardViewModel.h/cpp
-│   │   └── ProductListModel.h/cpp
+│   │   ├── ProductListModel.h/cpp
+│   │   ├── SalesCartViewModel.h/cpp       ← Carrito de ventas
+│   │   ├── PrintViewModel.h/cpp           ← Impresión/PDF
+│   │   └── ExcelImportViewModel.h/cpp
 │   └── utils/             # Utilidades
 │       └── BarcodeScannerHandler.h/cpp
 ├── qml/                   # Interfaz de usuario
 │   ├── pages/             # Páginas de la aplicación
 │   │   ├── DashboardPage.qml
-│   │   └── ProductsPage.qml
+│   │   ├── ProductsPage.qml
+│   │   ├── SalesPage.qml              ← Sistema de ventas completo
+│   │   ├── TicketsPage.qml            ← Diseñador visual de tickets
+│   │   ├── CustomersPage.qml
+│   │   ├── ReportsPage.qml
+│   │   └── SettingsPage.qml
 │   └── components/        # Componentes reutilizables
+│       ├── dialogs/
+│       │   ├── PrintDialog.qml        ← Diálogo de impresión
+│       │   ├── SaleSuccessDialog.qml
+│       │   └── ConfirmDialog.qml
+│       ├── Badge.qml
+│       ├── PrimaryButton.qml
+│       ├── SearchField.qml
+│       ├── NotificationBar.qml
+│       └── LoadingSpinner.qml
+├── external/              # Dependencias externas
+│   └── QXlsx/             # Librería para Excel
+├── documentation/         # 📚 Documentación técnica
+│   ├── README.md          # Índice de documentación
+│   ├── ARQUITECTURA.md
+│   ├── PRINTING_SYSTEM.md
+│   ├── MVVM_ARCHITECTURE.md
+│   └── build_log.txt      # Logs de compilación
 ├── Main.qml               # Punto de entrada QML
 ├── main.cpp               # Punto de entrada C++
-└── CMakeLists.txt         # Configuración de compilación
+├── CMakeLists.txt         # Configuración de compilación
+└── vcpkg.json             # Dependencias (QXlsx)
 ```
 
 ## 🗄️ Esquema de Base de Datos
@@ -90,6 +125,11 @@ SistemaInventario/
 - id: INTEGER PRIMARY KEY
 - invoice_number: TEXT UNIQUE
 - customer_id: INTEGER
+- voucher_type: TEXT (BOLETA, FACTURA)
+- customer_name: TEXT
+- customer_ruc: TEXT (para facturas)
+- customer_business_name: TEXT (razón social para facturas)
+- customer_address: TEXT (para facturas)
 - subtotal: REAL
 - tax: REAL
 - discount: REAL
@@ -112,13 +152,55 @@ SistemaInventario/
 - created_at: DATETIME
 ```
 
+**ticket_templates** (Plantillas de Tickets)
+```sql
+- id: INTEGER PRIMARY KEY
+- name: TEXT UNIQUE (nombre de la plantilla)
+- layout_json: TEXT (diseño completo en JSON)
+- is_active: BOOLEAN (plantilla activa para impresión)
+- created_at: DATETIME
+- updated_at: DATETIME
+```
+
+**Estructura del layout_json:**
+```json
+{
+  "size": {
+    "width": 80,
+    "height": 200
+  },
+  "elements": [
+    {
+      "type": "Text",
+      "content": "{{businessName}}",
+      "x": 5,
+      "y": 10,
+      "width": 70,
+      "height": 8,
+      "fontSize": 12,
+      "alignment": "Center",
+      "bold": true
+    },
+    {
+      "type": "ItemsPlaceholder",
+      "content": "{{Productos}}",
+      "x": 5,
+      "y": 50,
+      "width": 70
+    }
+  ]
+}
+```
+
 ### Migraciones Automáticas
 
-El sistema implementa un sistema de migraciones automático:
+El sistema implementa un sistema de migraciones automático en **schema versión 5**:
 - Al iniciar, verifica la versión del esquema
 - Aplica migraciones pendientes automáticamente
 - Garantiza integridad referencial (FOREIGN KEYS)
 - Índices optimizados para búsquedas rápidas
+- Tabla `ticket_templates` para almacenar diseños personalizados
+- Campos adicionales en `sales` para datos de facturación completos
 
 ## 💡 Funcionalidades Principales
 
@@ -131,6 +213,8 @@ El sistema implementa un sistema de migraciones automático:
 - ✅ Control de stock mínimo con alertas
 - ✅ Historial completo de movimientos (Kardex)
 - ✅ Soft delete (eliminación lógica)
+- ✅ Importación masiva desde Excel con mapeo flexible
+- ✅ Soporte para lectores de código de barras
 
 **Ejemplo de uso en C++:**
 ```cpp
@@ -149,6 +233,7 @@ if (productService.createProduct(product, errorMessage)) {
 } else {
     qDebug() << "Error:" << errorMessage;
 }
+```
 ```
 
 ### 2️⃣ Importación desde Excel (REQUISITO CRÍTICO)
@@ -201,48 +286,141 @@ auto savedMappings = importService.loadTemplate("Mi Plantilla");
 **Proceso completo de venta:**
 1. Agregar productos al carrito
 2. Calcular totales (subtotal, impuestos, descuentos)
-3. Seleccionar método de pago
-4. Generar número de factura automático
-5. Actualizar stock automáticamente
-6. Registrar movimientos en el Kardex
-7. Generar comprobante en PDF
+3. Capturar datos de factura (RUC, razón social, dirección) si aplica
+4. Seleccionar método de pago y tipo de comprobante (BOLETA/FACTURA)
+5. Generar número de factura automático
+6. Actualizar stock automáticamente
+7. Registrar movimientos en el Kardex
+8. Generar comprobante con diseño personalizado
+9. Mostrar diálogo de éxito con opción de imprimir/guardar PDF
+
+**Soporte de comprobantes:**
+- 🧾 **BOLETA**: Para clientes sin RUC (datos básicos)
+- 🧾 **FACTURA**: Para clientes con RUC (incluye razón social y dirección)
 
 **Ejemplo:**
 ```cpp
-SalesService salesService;
+SalesCartViewModel cartViewModel;
 
-Sale sale;
-sale.customerId = 1;
-sale.paymentMethodId = 1; // Efectivo
+// Agregar productos al carrito
+cartViewModel.addProduct(productId, quantity);
+cartViewModel.updateQuantity(index, newQuantity);
+cartViewModel.removeItem(index);
 
-// Agregar items
-SaleItem item1;
-item1.productId = 5;
-item1.productName = "Laptop Dell XPS 15";
-item1.quantity = 1;
-item1.unitPrice = 1299.99;
-item1.calculateSubtotal();
-sale.items.append(item1);
+// Datos de factura (opcional, solo para FACTURA)
+InvoiceData invoiceData;
+invoiceData.ruc = "20123456789";
+invoiceData.businessName = "Empresa SAC";
+invoiceData.address = "Jr. Los Negocios 456";
 
-// Calcular totales
-sale.calculateTotals();
+// Procesar venta con datos de factura
+cartViewModel.processSaleWithInvoiceData(
+    customerId,
+    paymentMethodId, 
+    discount,
+    invoiceData,
+    isInvoice  // true = FACTURA, false = BOLETA
+);
 
-QString errorMessage;
-if (salesService.createSale(sale, errorMessage)) {
-    qDebug() << "Venta creada:" << sale.invoiceNumber;
-    // Stock actualizado automáticamente
-} else {
-    qDebug() << "Error:" << errorMessage;
+// El ViewModel emite señal saleCompleted con todos los datos
+// que luego usa PrintDialog para generar el comprobante
+```
+
+**Carrito de compras (QML):**
+```qml
+SalesCartViewModel {
+    id: cartViewModel
+    
+    onSaleCompleted: function(invoiceNumber, total, voucherType, items, subtotal, discount) {
+        // Mostrar diálogo de éxito
+        successDialog.invoiceNumber = invoiceNumber
+        successDialog.total = total
+        successDialog.voucherType = voucherType
+        successDialog.open()
+        
+        // Abrir diálogo de impresión
+        printDialog.preparePrint(invoiceNumber, total, voucherType, items, subtotal, discount)
+    }
 }
 ```
 
-### 4️⃣ Generación de PDF para Comprobantes
+### 4️⃣ Sistema de Impresión y Tickets Personalizados
 
-**Dos formatos soportados:**
-- 📄 **Formato A4 estándar** (para impresoras de oficina)
-- 🧾 **Formato térmico** (58mm o 80mm, para tickets)
+**🎨 Diseñador Visual de Tickets**
 
-**Ejemplo:**
+El sistema incluye un **editor WYSIWYG completo** para crear diseños de tickets personalizados sin código:
+
+**Características del diseñador:**
+- ✅ Drag & drop para posicionar elementos
+- ✅ Redimensionamiento visual con handles
+- ✅ Vista previa en tiempo real
+- ✅ Variables dinámicas (nombre negocio, RUC, totales, etc.)
+- ✅ Soporte para imágenes (logos)
+- ✅ Sección de productos dinámica con auto-cálculo de altura
+- ✅ Múltiples plantillas guardadas en base de datos
+- ✅ Plantilla activa seleccionable
+
+**Elementos soportados:**
+- 📝 **Texto**: Con fuentes, tamaños y alineación personalizables
+- ➖ **Líneas**: Separadores horizontales o verticales
+- 🖼️ **Imágenes**: Logos y gráficos
+- 📦 **Lista de productos**: Placeholder especial que se expande automáticamente
+
+**Flujo de uso:**
+1. Ir a página de "Tickets" en el sistema
+2. Crear nuevo diseño o editar existente
+3. Arrastrar elementos (texto, líneas, imágenes)
+4. Configurar variables: `{{businessName}}`, `{{ruc}}`, `{{total}}`, etc.
+5. Agregar placeholder de productos: `{{Productos}}`
+6. Guardar diseño y marcar como activo
+7. El sistema usará automáticamente el diseño activo al imprimir ventas
+
+**Arquitectura de impresión:**
+```cpp
+// 1. TicketLayout: Parsea JSON del diseño (almacena medidas en MM)
+TicketLayout layout;
+layout.loadFromJson(templateJson);
+
+// 2. TicketRenderer: Convierte MM a píxeles según DPI y renderiza
+TicketRenderer renderer;
+renderer.setLayout(layout);
+renderer.setDeviceDpi(printer->resolution(), printer->resolution());
+
+// 3. TicketDynamicSection: Calcula altura de lista de productos
+TicketDynamicSection dynamicSection(sale.items, renderer.pixelsPerMM());
+qreal finalY = dynamicSection.render(&painter, startY);
+
+// 4. PrintService: Orquesta todo el proceso
+PrintService printService;
+printService.printCustomTicket(sale, invoiceData); // Imprime
+printService.generateCustomTicketPdf(sale, invoiceData, "ticket.pdf"); // PDF
+```
+
+**Variables disponibles:**
+- `{{businessName}}` - Nombre del negocio
+- `{{ruc}}` - RUC/NIT del negocio
+- `{{address}}` - Dirección
+- `{{phone}}` - Teléfono
+- `{{invoiceNumber}}` - Número de factura/boleta
+- `{{date}}` - Fecha de emisión
+- `{{time}}` - Hora de emisión
+- `{{customerName}}` - Nombre del cliente
+- `{{customerRuc}}` - RUC del cliente (facturas)
+- `{{customerBusinessName}}` - Razón social (facturas)
+- `{{customerAddress}}` - Dirección del cliente (facturas)
+- `{{voucherType}}` - FACTURA o BOLETA
+- `{{subtotal}}` - Subtotal
+- `{{tax}}` - IGV/IVA
+- `{{discount}}` - Descuento
+- `{{total}}` - Total final
+- `{{Productos}}` - Placeholder para lista de productos (auto-expansión)
+
+**Configuración DPI:**
+- **Estándar de impresión**: 300 DPI (STANDARD_DPI constante)
+- **Conversión automática**: Diseños en MM → Píxeles según DPI del dispositivo
+- **Font scaling**: Factor de /3 aplicado desde diseñador a renderizado
+
+**Generación de PDF estándar:**
 ```cpp
 PdfGeneratorService pdfService;
 
@@ -254,14 +432,8 @@ info.phone = "(555) 123-4567";
 info.taxId = "RUC: 12345678901";
 pdfService.setBusinessInfo(info);
 
-// Generar PDF estándar
+// Generar PDF estándar A4
 pdfService.generateSaleReceipt(sale, "comprobante_001.pdf");
-
-// Generar ticket térmico (80mm)
-pdfService.generateThermalReceipt(sale, "ticket_001.pdf", 80);
-
-// Imprimir directamente
-pdfService.printReceipt(sale);
 ```
 
 ### 5️⃣ Soporte para Hardware
@@ -295,7 +467,37 @@ BarcodeScannerHandler {
 }
 ```
 
-### 6️⃣ Dashboard con Estadísticas
+**Impresoras:**
+- ✅ **Impresoras térmicas**: Tickets con diseños personalizados
+- ✅ **Impresoras de oficina**: PDFs estándar A4
+- ✅ **Configuración automática**: El sistema detecta resolución DPI
+- ✅ **Vista previa**: Antes de imprimir se muestra preview
+
+### 6️⃣ Sistema de Notificaciones
+
+**Barra de notificaciones flotante** para mensajes al usuario:
+
+**Desde QML:**
+```qml
+NotificationBar {
+    id: notificationBar
+    anchors.top: parent.top
+}
+
+// Mostrar notificación
+notificationBar.show("Producto guardado exitosamente", "success")
+notificationBar.show("Error al procesar venta", "error")
+notificationBar.show("Stock bajo detectado", "warning")
+notificationBar.show("Procesando importación...", "info")
+```
+
+**Tipos de notificación:**
+- ✅ `success` - Verde, operaciones exitosas
+- ⚠️ `warning` - Amarillo, advertencias
+- ❌ `error` - Rojo, errores
+- ℹ️ `info` - Azul, información general
+
+### 7️⃣ Dashboard con Estadísticas
 
 **Métricas en tiempo real:**
 - 💰 Ventas del día y del mes
@@ -333,28 +535,72 @@ La aplicación usa **Material Design** para una experiencia moderna:
 ### Navegación
 
 **Menú lateral (Drawer)** con opciones:
-- Dashboard
-- Productos
-- Ventas
-- Inventario
-- Clientes
-- Reportes
-- Importar Excel
-- Configuración
+- 📊 Dashboard
+- 📦 Productos
+- 💰 Ventas (con carrito completo)
+- 📋 Inventario (movimientos de stock)
+- 👥 Clientes
+- 📈 Reportes
+- 🎫 Tickets (diseñador visual)
+- 📥 Importar Excel
+- ⚙️ Configuración
+- 👤 Perfil de Usuario
+- 🔐 Gestión de Usuarios
+
+### Componentes Reutilizables
+
+El sistema incluye una biblioteca de componentes Material Design:
+
+**Botones:**
+- `PrimaryButton.qml` - Botón principal (acción primaria)
+- `SecondaryButton.qml` - Botón secundario
+- `OutlinedButton.qml` - Botón con borde
+
+**Formularios:**
+- `SearchField.qml` - Campo de búsqueda con icono
+- `QuantitySpinBox.qml` - Selector de cantidad para ventas
+
+**Diálogos:**
+- `ConfirmDialog.qml` - Confirmación de acciones
+- `ErrorDialog.qml` - Mostrar errores
+- `SuccessDialog.qml` - Confirmación de éxito
+- `PrintDialog.qml` - Impresión y generación de PDF
+- `SaleSuccessDialog.qml` - Éxito de venta con opciones
+
+**Otros:**
+- `Badge.qml` - Insignias numéricas (ej: items en carrito)
+- `LoadingSpinner.qml` - Indicador de carga
+- `NotificationBar.qml` - Barra de notificaciones
+- `StatCard.qml` - Tarjetas de estadísticas (Dashboard)
+- `CartItemDelegate.qml` - Item de carrito de ventas
+
+Todos documentados en `qml/components/USAGE_GUIDE.md`
 
 ## 🔧 Compilación y Configuración
 
 ### Requisitos
 
-- **Qt 6.8+** (Open Source LGPL)
+- **Qt 6.10.1+** (Open Source LGPL)
 - **CMake 3.16+**
-- **Compilador C++17** (MSVC, GCC, Clang)
-- **QXlsx** (para importación Excel) - opcional
+- **Compilador C++17** (MinGW 13.1.0 para Windows)
+- **QXlsx** (para importación Excel) - incluido en `external/`
+- **Ninja** o **Visual Studio** (generador de build)
 
-### Compilar en Windows
+### Compilar en Windows con Qt Creator
+
+```bash
+# 1. Abrir Qt Creator
+# 2. File → Open File or Project → CMakeLists.txt
+# 3. Configurar kit (Desktop Qt 6.10.1 MinGW 64-bit)
+# 4. Build → Build Project
+# 5. Run → Run (Ctrl+R)
+```
+
+### Compilar desde línea de comandos
 
 ```bash
 # 1. Clonar el repositorio
+git clone https://github.com/tu-usuario/SistemaInventario.git
 cd SistemaInventario
 
 # 2. Crear directorio de compilación
@@ -371,17 +617,10 @@ cmake --build .
 ./appSistemaInventario.exe
 ```
 
-### Instalar QXlsx (Opcional, para Excel)
+### Dependencias
 
-**Opción 1: vcpkg**
-```bash
-vcpkg install qxlsx
-```
-
-**Opción 2: Manual**
-1. Descargar desde: https://github.com/QtExcel/QXlsx
-2. Colocar en `thirdparty/QXlsx/`
-3. Descomentar líneas en CMakeLists.txt
+**QXlsx (incluida):**
+La librería QXlsx está incluida en `external/QXlsx/` y se compila automáticamente con el proyecto.
 
 ## 📝 Decisiones de Arquitectura
 
@@ -416,23 +655,31 @@ vcpkg install qxlsx
 
 ## 🚀 Roadmap / Mejoras Futuras
 
+### En Desarrollo
+- [ ] Corrección de bug de doble-wrapping en variables de tickets
+- [ ] Variables faltantes para facturas (customerBusinessName, customerAddress)
+- [ ] Unificación de constantes DPI entre QML y C++
+
 ### Versión 1.1
 - [ ] Módulo de compras (órdenes de compra)
 - [ ] Gestión de proveedores
 - [ ] Múltiples almacenes/sucursales
 - [ ] Códigos QR para productos
+- [ ] Sistema completo de permisos por rol
 
 ### Versión 1.2
 - [ ] Reportes avanzados (gráficos)
 - [ ] Exportar a Excel desde el sistema
-- [ ] Sistema de usuarios y permisos
-- [ ] Auditoría de cambios
+- [ ] Auditoría completa de cambios
+- [ ] Dashboard con gráficos de tendencias
+- [ ] Backup automático de base de datos
 
 ### Versión 2.0
 - [ ] Aplicación móvil complementaria
 - [ ] Sincronización en la nube
 - [ ] API REST para integraciones
 - [ ] Soporte multi-idioma
+- [ ] Facturación electrónica (SUNAT/SRI)
 
 ## 📄 Licencia
 
@@ -453,15 +700,25 @@ Para contribuir:
 4. Push: `git push origin feature/nueva-funcionalidad`
 5. Abre un Pull Request
 
+## � Documentación Adicional
+
+Para documentación técnica detallada, consulta la carpeta `documentation/`:
+
+- **Arquitectura**: MVVM, componentes, servicios
+- **Sistema de impresión**: TicketLayout, TicketRenderer, PrintService
+- **Base de datos**: Esquema, migraciones, versiones
+- **Flujos de trabajo**: Ventas, impresión, notificaciones
+- **Fixes aplicados**: Historial de correcciones y mejoras
+
 ## 📞 Soporte
 
 Para preguntas o soporte:
 - 📧 Email: soporte@sistemainventario.com
-- 📚 Wiki: [GitHub Wiki](enlace-wiki)
-- 🐛 Reportar bugs: [GitHub Issues](enlace-issues)
+- 📚 Documentación: `documentation/README.md`
+- 🐛 Reportar bugs: GitHub Issues
 
 ---
 
-**¡Sistema listo para producción! 🎉**
+**Desarrollado con ❤️ usando Qt 6.10.1 y C++17**
 
-Desarrollado con ❤️ usando Qt 6 y C++17
+

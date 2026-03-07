@@ -354,7 +354,11 @@ bool SalesCartViewModel::addProductById(int productId, double quantity)
 
 bool SalesCartViewModel::processSale(int customerId, const QString& customerName,
                                      int paymentMethodId, const QString& paymentMethodName,
-                                     double discount, const QString& notes)
+                                     double discount, const QString& notes,
+                                     const QString& customerRuc,
+                                     const QString& customerBusinessName,
+                                     const QString& customerAddress,
+                                     const QString& paymentType)
 {
     qDebug() << "=== processSale ===";
     
@@ -376,10 +380,24 @@ bool SalesCartViewModel::processSale(int customerId, const QString& customerName
     sale.discount = discount;
     sale.notes = notes;
     sale.items = m_cart->items();
+    
+    // Agregar datos de facturación si están disponibles
+    sale.customerRuc = customerRuc;
+    sale.customerBusinessName = customerBusinessName;
+    sale.customerAddress = customerAddress;
+    
+    // Tipo de pago (CONTADO/CREDITO)
+    sale.paymentType = paymentType;
+    sale.paymentStatus = (paymentType == "CREDITO") ? "PENDING" : "PAID";
+    
     sale.calculateTotals();
 
     qDebug() << "  Sale created - Items:" << sale.items.count();
+    qDebug() << "  Sale Customer Name:" << sale.customerName;
+    qDebug() << "  Sale Customer ID:" << sale.customerId;
     qDebug() << "  Sale Total:" << sale.total;
+    qDebug() << "  Customer RUC:" << customerRuc;
+    qDebug() << "  Customer Business:" << customerBusinessName;
 
     QString errorMessage;
     bool success = m_salesService.createSale(sale, errorMessage);
@@ -483,12 +501,18 @@ bool SalesCartViewModel::processSaleWithInvoiceData(
     bool isInvoice,
     const QString& ruc,
     const QString& businessName,
-    const QString& address)
+    const QString& address,
+    const QString& paymentType)
 {
     qDebug() << "=== processSaleWithInvoiceData ===";
-    qDebug() << "  Customer:" << customerName;
+    qDebug() << "  Customer ID:" << customerId;
+    qDebug() << "  Customer Name:" << customerName;
     qDebug() << "  Payment Method:" << paymentMethodName;
+    qDebug() << "  Payment Type:" << paymentType;
     qDebug() << "  Is Invoice:" << isInvoice;
+    qDebug() << "  RUC:" << ruc;
+    qDebug() << "  Business Name:" << businessName;
+    qDebug() << "  Address:" << address;
     qDebug() << "  Items count:" << m_cart->rowCount();
     qDebug() << "  Subtotal:" << m_cart->subtotal();
     qDebug() << "  Discount:" << m_discount;
@@ -506,6 +530,7 @@ bool SalesCartViewModel::processSaleWithInvoiceData(
     double subtotal = m_cart->subtotal();
     double discountAmount = m_discount;
     double total = totalWithDiscount();
+    QString capturedCustomerName = customerName;  // Capturar nombre para la señal
     
     qDebug() << "  Total with discount:" << total;
     
@@ -515,10 +540,11 @@ bool SalesCartViewModel::processSaleWithInvoiceData(
         notes += QString(" - RUC: %1 - %2").arg(ruc, businessName);
     }
     
-    // Procesar la venta
-    qDebug() << "  Calling processSale...";
+    // Procesar la venta con los datos de facturación y tipo de pago
+    qDebug() << "  Calling processSale with invoice data...";
     bool success = processSale(customerId, customerName, paymentMethodId, 
-                              paymentMethodName, m_discount, notes);
+                              paymentMethodName, m_discount, notes,
+                              ruc, businessName, address, paymentType);
     
     qDebug() << "  processSale result:" << success;
     
@@ -530,9 +556,9 @@ bool SalesCartViewModel::processSaleWithInvoiceData(
         
         // Emitir señal con todos los datos capturados para que QML los use
         emit saleCompleted(m_lastInvoiceNumber, total, voucherType, 
-                          items, subtotal, discountAmount);
+                          items, subtotal, discountAmount, capturedCustomerName);
         
-        qDebug() << "  saleCompleted signal emitted";
+        qDebug() << "  saleCompleted signal emitted with customer:" << capturedCustomerName;
     } else {
         qDebug() << "  Sale failed - error should be emitted by processSale";
     }

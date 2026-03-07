@@ -135,7 +135,11 @@ public slots:
      */
     bool processSale(int customerId, const QString& customerName,
                      int paymentMethodId, const QString& paymentMethodName,
-                     double discount, const QString& notes);
+                     double discount, const QString& notes,
+                     const QString& customerRuc = "",
+                     const QString& customerBusinessName = "",
+                     const QString& customerAddress = "",
+                     const QString& paymentType = "CONTADO");
     
     /**
      * @brief Procesar venta con datos de factura completos
@@ -148,7 +152,8 @@ public slots:
         bool isInvoice,
         const QString& ruc,
         const QString& businessName,
-        const QString& address
+        const QString& address,
+        const QString& paymentType = "CONTADO"
     );
 
     /**
@@ -169,7 +174,7 @@ signals:
     void canProcessSaleChanged();
     void cashierNameChanged();
     void saleCompleted(const QString& invoiceNumber, double total, const QString& voucherType,
-                      const QVariantList& items, double subtotal, double discount);
+                      const QVariantList& items, double subtotal, double discount, const QString& customerName);
     void saleFailed(const QString& errorMessage);
     void productAdded(const QString& productName, double quantity);
     void productNotFound(const QString& code);

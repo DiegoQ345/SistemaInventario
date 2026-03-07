@@ -20,6 +20,9 @@ PrintViewModel::PrintViewModel(QObject *parent)
     businessInfo.phone = "(01) 234-5678";
     businessInfo.email = "ventas@sistemainventario.com";
     m_pdfService.setBusinessInfo(businessInfo);
+    
+    // Configurar PrintService con la misma información
+    m_printService.setCompanyInfo(businessInfo.name, businessInfo.taxId, businessInfo.address, businessInfo.phone);
 
     // Conectar señales del servicio de PDF
     connect(&m_pdfService, &PdfGeneratorService::pdfGenerated,
@@ -101,6 +104,9 @@ QString PrintViewModel::generatePdf(const QString& invoiceNumber,
     
     // Agregar datos de factura si aplica
     if (voucherType == Factura) {
+        sale.customerRuc = ruc;
+        sale.customerBusinessName = businessName;
+        sale.customerAddress = address;
         sale.notes = QString("RUC: %1 - %2 - %3")
                      .arg(ruc)
                      .arg(businessName)
@@ -145,7 +151,14 @@ bool PrintViewModel::printVoucher(const QString& invoiceNumber,
     Sale sale = createSaleFromData(invoiceNumber, customerName, items, 
                                    subtotal, discount, total);
 
-    // Configurar datos de factura
+    // Agregar datos de factura al objeto Sale
+    if (voucherType == Factura) {
+        sale.customerRuc = ruc;
+        sale.customerBusinessName = businessName;
+        sale.customerAddress = address;
+    }
+
+    // Configurar datos de factura para impresión
     PrintService::InvoiceData invoiceData;
     if (voucherType == Factura) {
         invoiceData.ruc = ruc;
@@ -192,7 +205,14 @@ bool PrintViewModel::printCustomTicket(const QString& invoiceNumber,
     Sale sale = createSaleFromData(invoiceNumber, customerName, items, 
                                    subtotal, discount, total);
 
-    // Configurar datos de factura
+    // Agregar datos de factura al objeto Sale
+    if (voucherType == Factura) {
+        sale.customerRuc = ruc;
+        sale.customerBusinessName = businessName;
+        sale.customerAddress = address;
+    }
+
+    // Configurar datos de factura para impresión
     PrintService::InvoiceData invoiceData;
     if (voucherType == Factura) {
         invoiceData.ruc = ruc;
@@ -276,6 +296,9 @@ void PrintViewModel::setBusinessInfo(const QString& name,
     info.email = email;
     
     m_pdfService.setBusinessInfo(info);
+    
+    // También actualizar PrintService
+    m_printService.setCompanyInfo(name, taxId, address, phone);
     
     emit businessInfoChanged();
 }

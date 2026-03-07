@@ -299,6 +299,186 @@ bool DatabaseManager::runMigrations()
         qDebug() << "Migración 5 completada";
     }
 
+    // Migración 6: Agregar campos de estadísticas a customers
+    if (currentVersion < 6) {
+        qDebug() << "Aplicando migración 6: Campos de estadísticas en customers";
+        
+        // Verificar si las columnas ya existen
+        query.exec("PRAGMA table_info(customers)");
+        QStringList existingColumns;
+        while (query.next()) {
+            existingColumns << query.value(1).toString();
+        }
+        
+        // Agregar total_purchases si no existe
+        if (!existingColumns.contains("total_purchases")) {
+            if (!query.exec("ALTER TABLE customers ADD COLUMN total_purchases INTEGER DEFAULT 0")) {
+                qWarning() << "Error agregando total_purchases:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna total_purchases agregada";
+            }
+        }
+        
+        // Agregar total_spent si no existe
+        if (!existingColumns.contains("total_spent")) {
+            if (!query.exec("ALTER TABLE customers ADD COLUMN total_spent REAL DEFAULT 0.0")) {
+                qWarning() << "Error agregando total_spent:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna total_spent agregada";
+            }
+        }
+        
+        // Agregar last_purchase_date si no existe
+        if (!existingColumns.contains("last_purchase_date")) {
+            if (!query.exec("ALTER TABLE customers ADD COLUMN last_purchase_date TEXT")) {
+                qWarning() << "Error agregando last_purchase_date:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna last_purchase_date agregada";
+            }
+        }
+        
+        // Calcular estadísticas iniciales desde las ventas existentes
+        qDebug() << "Calculando estadísticas iniciales de clientes...";
+        if (!query.exec(
+            "UPDATE customers SET "
+            "total_purchases = (SELECT COUNT(*) FROM sales WHERE sales.customer_id = customers.id AND sales.status = 'COMPLETED'), "
+            "total_spent = COALESCE((SELECT SUM(total) FROM sales WHERE sales.customer_id = customers.id AND sales.status = 'COMPLETED'), 0), "
+            "last_purchase_date = (SELECT MAX(created_at) FROM sales WHERE sales.customer_id = customers.id AND sales.status = 'COMPLETED')"
+        )) {
+            qWarning() << "Error calculando estadísticas iniciales:" << query.lastError().text();
+        } else {
+            qDebug() << "Estadísticas iniciales calculadas";
+        }
+        
+        if (!setSchemaVersion(6)) {
+            qCritical() << "Error estableciendo versión de esquema 6";
+            return false;
+        }
+        qDebug() << "Migración 6 completada";
+    }
+
+    // Migración 7: Agregar campos de facturación a sales
+    if (currentVersion < 7) {
+        qDebug() << "Aplicando migración 7: Campos de facturación en sales";
+        
+        // Verificar si las columnas ya existen
+        query.exec("PRAGMA table_info(sales)");
+        QStringList existingColumns;
+        while (query.next()) {
+            existingColumns << query.value(1).toString();
+        }
+        
+        // Agregar customer_name si no existe
+        if (!existingColumns.contains("customer_name")) {
+            if (!query.exec("ALTER TABLE sales ADD COLUMN customer_name TEXT")) {
+                qWarning() << "Error agregando customer_name:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna customer_name agregada";
+            }
+        }
+        
+        // Agregar customer_ruc si no existe
+        if (!existingColumns.contains("customer_ruc")) {
+            if (!query.exec("ALTER TABLE sales ADD COLUMN customer_ruc TEXT")) {
+                qWarning() << "Error agregando customer_ruc:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna customer_ruc agregada";
+            }
+        }
+        
+        // Agregar customer_business_name si no existe
+        if (!existingColumns.contains("customer_business_name")) {
+            if (!query.exec("ALTER TABLE sales ADD COLUMN customer_business_name TEXT")) {
+                qWarning() << "Error agregando customer_business_name:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna customer_business_name agregada";
+            }
+        }
+        
+        // Agregar customer_address si no existe
+        if (!existingColumns.contains("customer_address")) {
+            if (!query.exec("ALTER TABLE sales ADD COLUMN customer_address TEXT")) {
+                qWarning() << "Error agregando customer_address:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna customer_address agregada";
+            }
+        }
+        
+        if (!setSchemaVersion(7)) {
+            qCritical() << "Error estableciendo versión de esquema 7";
+            return false;
+        }
+        qDebug() << "Migración 7 completada";
+    }
+
+    // Migración 8: Sistema de créditos y deudas
+    if (currentVersion < 8) {
+        qDebug() << "Aplicando migración 8: Sistema de créditos y deudas";
+        
+        // Verificar columnas existentes en customers
+        query.exec("PRAGMA table_info(customers)");
+        QStringList customerColumns;
+        while (query.next()) {
+            customerColumns << query.value(1).toString();
+        }
+        
+        // Agregar credit_limit si no existe
+        if (!customerColumns.contains("credit_limit")) {
+            if (!query.exec("ALTER TABLE customers ADD COLUMN credit_limit REAL DEFAULT 0")) {
+                qWarning() << "Error agregando credit_limit:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna credit_limit agregada";
+            }
+        }
+        
+        // Agregar current_debt si no existe
+        if (!customerColumns.contains("current_debt")) {
+            if (!query.exec("ALTER TABLE customers ADD COLUMN current_debt REAL DEFAULT 0")) {
+                qWarning() << "Error agregando current_debt:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna current_debt agregada";
+            }
+        }
+        
+        // Verificar columnas existentes en sales
+        query.exec("PRAGMA table_info(sales)");
+        QStringList salesColumns;
+        while (query.next()) {
+            salesColumns << query.value(1).toString();
+        }
+        
+        // Agregar payment_type si no existe (CONTADO o CREDITO)
+        if (!salesColumns.contains("payment_type")) {
+            if (!query.exec("ALTER TABLE sales ADD COLUMN payment_type TEXT DEFAULT 'CONTADO'")) {
+                qWarning() << "Error agregando payment_type:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna payment_type agregada";
+            }
+        }
+        
+        // Agregar payment_status si no existe (PAID, PENDING, PARTIAL)
+        if (!salesColumns.contains("payment_status")) {
+            if (!query.exec("ALTER TABLE sales ADD COLUMN payment_status TEXT DEFAULT 'PAID'")) {
+                qWarning() << "Error agregando payment_status:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna payment_status agregada";
+            }
+        }
+        
+        // Actualizar ventas existentes: todas son al contado y pagadas
+        if (!query.exec("UPDATE sales SET payment_type = 'CONTADO', payment_status = 'PAID' WHERE payment_type IS NULL OR payment_status IS NULL")) {
+            qWarning() << "Error actualizando ventas existentes:" << query.lastError().text();
+        } else {
+            qDebug() << "Ventas existentes marcadas como CONTADO y PAID";
+        }
+        
+        if (!setSchemaVersion(8)) {
+            qCritical() << "Error estableciendo versión de esquema 8";
+            return false;
+        }
+        qDebug() << "Migración 8 completada";
+    }
+
     qDebug() << "=== MIGRACIONES COMPLETADAS ===";
     return true;
 }

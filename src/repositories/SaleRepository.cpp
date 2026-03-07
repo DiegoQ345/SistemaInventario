@@ -16,20 +16,30 @@ int SaleRepository::create(Sale& sale)
     
     // Insertar venta principal
     query.prepare(
-        "INSERT INTO sales (invoice_number, voucher_type, customer_id, subtotal, tax, discount, total, "
-        "payment_method_id, status, notes, created_by) "
-        "VALUES (:invoice_number, :voucher_type, :customer_id, :subtotal, :tax, :discount, :total, "
-        ":payment_method_id, :status, :notes, :created_by)"
+        "INSERT INTO sales (invoice_number, voucher_type, customer_id, customer_name, "
+        "customer_ruc, customer_business_name, customer_address, "
+        "subtotal, tax, discount, total, payment_method_id, payment_type, payment_status, "
+        "status, notes, created_by) "
+        "VALUES (:invoice_number, :voucher_type, :customer_id, :customer_name, "
+        ":customer_ruc, :customer_business_name, :customer_address, "
+        ":subtotal, :tax, :discount, :total, :payment_method_id, :payment_type, :payment_status, "
+        ":status, :notes, :created_by)"
     );
 
     query.bindValue(":invoice_number", sale.invoiceNumber);
     query.bindValue(":voucher_type", sale.voucherType);
     query.bindValue(":customer_id", sale.customerId > 0 ? sale.customerId : QVariant());
+    query.bindValue(":customer_name", sale.customerName);
+    query.bindValue(":customer_ruc", sale.customerRuc);
+    query.bindValue(":customer_business_name", sale.customerBusinessName);
+    query.bindValue(":customer_address", sale.customerAddress);
     query.bindValue(":subtotal", sale.subtotal);
     query.bindValue(":tax", sale.tax);
     query.bindValue(":discount", sale.discount);
     query.bindValue(":total", sale.total);
     query.bindValue(":payment_method_id", sale.paymentMethodId > 0 ? sale.paymentMethodId : QVariant());
+    query.bindValue(":payment_type", sale.paymentType);
+    query.bindValue(":payment_status", sale.paymentStatus);
     query.bindValue(":status", sale.status);
     query.bindValue(":notes", sale.notes);
     query.bindValue(":created_by", sale.createdBy);
@@ -165,6 +175,32 @@ QList<Sale> SaleRepository::findToday()
 {
     QDate today = QDate::currentDate();
     return findByDateRange(today, today);
+}
+
+QList<Sale> SaleRepository::findByCustomerId(int customerId)
+{
+    QList<Sale> sales;
+    QSqlQuery query(DatabaseManager::instance().database());
+    
+    query.prepare(
+        "SELECT * FROM sales "
+        "WHERE customer_id = :customer_id AND status = 'COMPLETED' "
+        "ORDER BY created_at DESC"
+    );
+    query.bindValue(":customer_id", customerId);
+    
+    if (!query.exec()) {
+        qCritical() << "Error obteniendo ventas por cliente:" << query.lastError().text();
+        return sales;
+    }
+
+    while (query.next()) {
+        Sale sale = mapFromQuery(query);
+        sale.items = loadSaleItems(sale.id);
+        sales.append(sale);
+    }
+
+    return sales;
 }
 
 bool SaleRepository::cancel(int saleId)
@@ -341,12 +377,17 @@ Sale SaleRepository::mapFromQuery(const QSqlQuery& query)
     sale.voucherType = query.value("voucher_type").toString();
     sale.customerId = query.value("customer_id").toInt();
     sale.customerName = query.value("customer_name").toString();
+    sale.customerRuc = query.value("customer_ruc").toString();
+    sale.customerBusinessName = query.value("customer_business_name").toString();
+    sale.customerAddress = query.value("customer_address").toString();
     sale.subtotal = query.value("subtotal").toDouble();
     sale.tax = query.value("tax").toDouble();
     sale.discount = query.value("discount").toDouble();
     sale.total = query.value("total").toDouble();
     sale.paymentMethodId = query.value("payment_method_id").toInt();
     sale.paymentMethodName = query.value("payment_method_name").toString();
+    sale.paymentType = query.value("payment_type").toString();
+    sale.paymentStatus = query.value("payment_status").toString();
     sale.status = query.value("status").toString();
     sale.notes = query.value("notes").toString();
     sale.createdAt = QDateTime::fromString(query.value("created_at").toString(), Qt::ISODate);

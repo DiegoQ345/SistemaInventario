@@ -33,12 +33,23 @@ struct Sale
     QString voucherType = "TICKET";  // BOLETA, FACTURA, TICKET
     int customerId = 0;
     QString customerName;  // Para joins
+    
+    // Campos de facturación (para FACTURA)
+    QString customerRuc;
+    QString customerBusinessName;  // Razón social
+    QString customerAddress;
+    
     double subtotal = 0.0;
     double tax = 0.0;
     double discount = 0.0;
     double total = 0.0;
     int paymentMethodId = 0;
     QString paymentMethodName;  // Para joins
+    
+    // Sistema de créditos
+    QString paymentType = "CONTADO";  // CONTADO o CREDITO
+    QString paymentStatus = "PAID";   // PAID, PENDING, PARTIAL
+    
     QString status = "COMPLETED";  // COMPLETED, CANCELLED, PENDING
     QString notes;
     QDateTime createdAt;
@@ -71,6 +82,14 @@ struct Sale
             sum += item.quantity;
         }
         return sum;
+    }
+    
+    bool isCredit() const {
+        return paymentType == "CREDITO";
+    }
+    
+    bool isPending() const {
+        return paymentStatus == "PENDING" || paymentStatus == "PARTIAL";
     }
 };
 

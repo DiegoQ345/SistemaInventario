@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import QtQuick.Effects
 import Qt.labs.settings
 import SistemaInventario 1.0
+import "../components"
 
 Page {
     id: root
@@ -73,7 +74,9 @@ Page {
     property alias printViewModel: printViewModel
     
     // Datos temporales del cliente para la venta actual
-    property string currentCustomerName: ""
+    property int currentCustomerId: 0  // 0 = cliente genérico
+    property string currentCustomerName: "Cliente General"
+    property string currentCustomerDocument: ""
     property string currentRuc: ""
     property string currentBusinessName: ""
     property string currentAddress: ""
@@ -120,7 +123,7 @@ Page {
                 console.log("Stock insuficiente de", productName, "Disponible:", available, "Solicitado:", requested)
             }
 
-            onSaleCompleted: function(invoiceNumber, total, voucherType, items, subtotal, discount) {
+            onSaleCompleted: function(invoiceNumber, total, voucherType, items, subtotal, discount, customerName) {
                 // Guardar todos los datos recibidos del ViewModel
                 successDialog.invoiceNumber = invoiceNumber
                 successDialog.total = total
@@ -129,8 +132,8 @@ Page {
                 successDialog.subtotal = subtotal
                 successDialog.discount = discount
                 
-                // Asignar datos del cliente guardados temporalmente
-                successDialog.customerName = root.currentCustomerName
+                // Usar el customerName recibido directamente del ViewModel
+                successDialog.customerName = customerName
                 successDialog.ruc = root.currentRuc
                 successDialog.businessName = root.currentBusinessName
                 successDialog.address = root.currentAddress
@@ -145,9 +148,13 @@ Page {
                 searchField.text = ""
                 quantitySpinBox.value = 1
                 discountSpinBox.value = 0
+                customerSelector.clearSelection()  // Limpiar selección de cliente
+                boletaRadio.checked = true  // Volver a boleta por defecto
                 
                 // Limpiar datos temporales
-                root.currentCustomerName = ""
+                root.currentCustomerId = 0
+                root.currentCustomerName = "Cliente General"
+                root.currentCustomerDocument = ""
                 root.currentRuc = ""
                 root.currentBusinessName = ""
                 root.currentAddress = ""
@@ -967,13 +974,98 @@ Page {
 
                     ColumnLayout {
                         anchors.fill: parent
-                        spacing: 8
+                        spacing: 12
 
-                        ComboBox {
-                            id: customerComboBox
+                        CustomerSelector {
+                            id: customerSelector
                             Layout.fillWidth: true
-                            model: ["Cliente General", "Cliente Frecuente", "Empresa XYZ"]
-                            // TODO: Conectar con modelo real de clientes
+                            
+                            onCustomerSelected: function(customerId, customerName, documentNumber, address) {
+                                root.currentCustomerId = customerId
+                                root.currentCustomerName = customerName
+                                root.currentCustomerDocument = documentNumber
+                                
+                                console.log("Cliente seleccionado:", customerId, customerName, "Doc:", documentNumber, "Dir:", address)
+                                
+                                // Si tiene RUC (11 dígitos), autocompletar datos de factura
+                                if (documentNumber && documentNumber.length === 11) {
+                                    facturaRadio.checked = true
+                                    rucField.text = documentNumber
+                                    businessNameField.text = customerName
+                                    if (address && address.length > 0) {
+                                        addressField.text = address
+                                    }
+                                }
+                            }
+                            
+                            onCustomerCleared: {
+                                root.currentCustomerId = 0
+                                root.currentCustomerName = "Cliente General"
+                                root.currentCustomerDocument = ""
+                            }
+                        }
+                        
+                        // Botón para limpiar selección
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+                            
+                            Button {
+                                text: qsTr("Limpiar")
+                                flat: true
+                                icon.source: "qrc:/icons/clear.png"
+                                
+                                onClicked: {
+                                    customerSelector.clearSelection()
+                                }
+                                
+                                ToolTip.visible: hovered
+                                ToolTip.text: qsTr("Limpiar selección de cliente")
+                            }
+                            
+                            Button {
+                                text: qsTr("Historial PDF")
+                                flat: true
+                                icon.source: "qrc:/icons/pdf.png"
+                                Material.foreground: Material.color(Material.Red)
+                                enabled: root.currentCustomerId > 0
+                                
+                                onClicked: {
+                                    // Generar nombre de archivo
+                                    var timestamp = new Date().getTime()
+                                    var fileName = "historial_cliente_" + root.currentCustomerId + "_" + timestamp + ".pdf"
+                                    var outputPath = "C:/Users/Public/Documents/" + fileName
+                                    
+                                    // Intentar generar el PDF
+                                    var success = customerSelector.model.generatePurchaseHistoryPdf(root.currentCustomerId, outputPath)
+                                    
+                                    if (success) {
+                                        // Abrir el PDF automáticamente con la aplicación predeterminada
+                                        Qt.openUrlExternally("file:///" + outputPath.replace(/\\/g, "/"))
+                                        notificationBar.show("PDF generado y abierto: " + fileName, "success")
+                                    } else {
+                                        notificationBar.show("Error al generar el PDF del historial", "error")
+                                    }
+                                }
+                                
+                                ToolTip.visible: hovered
+                                ToolTip.text: qsTr("Generar y abrir PDF del historial de compras")
+                            }
+                            
+                            Button {
+                                text: qsTr("Nuevo Cliente")
+                                flat: true
+                                icon.source: "qrc:/icons/add.png"
+                                Material.foreground: Material.accent
+                                
+                                onClicked: {
+                                    // TODO: Abrir diálogo para crear nuevo cliente
+                                    console.log("Abrir diálogo de nuevo cliente")
+                                }
+                                
+                                ToolTip.visible: hovered
+                                ToolTip.text: qsTr("Crear nuevo cliente")
+                            }
                         }
                     }
                 }
@@ -1055,20 +1147,67 @@ Page {
                     }
                 }
 
-                // Método de pago
+                // Tipo de pago
                 GroupBox {
                     Layout.fillWidth: true
-                    title: qsTr("Método de Pago")
+                    title: qsTr("Tipo de Pago")
 
                     ColumnLayout {
                         anchors.fill: parent
-                        spacing: 8
+                        spacing: 12
 
-                        ComboBox {
-                            id: paymentMethodComboBox
+                        // Tipo: Contado o Crédito
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            model: ["Efectivo", "Tarjeta", "Transferencia"]
-                            // TODO: Conectar con modelo real de métodos de pago
+                            spacing: 4
+                            
+                            Label {
+                                text: qsTr("Tipo:")
+                                font.pixelSize: 13
+                                font.weight: Font.Medium
+                            }
+                            
+                            ComboBox {
+                                id: paymentTypeComboBox
+                                Layout.fillWidth: true
+                                model: ["Al Contado", "Al Crédito"]
+                                currentIndex: 0  // Por defecto: Al Contado
+                                
+                                onCurrentIndexChanged: {
+                                    // Si es crédito y no hay cliente seleccionado, mostrar advertencia
+                                    if (currentIndex === 1 && root.currentCustomerId === 0) {
+                                        console.warn("⚠️ TIPO CRÉDITO: Se requiere seleccionar un cliente")
+                                    }
+                                }
+                            }
+                            
+                            // Advertencia cuando es crédito sin cliente
+                            Label {
+                                Layout.fillWidth: true
+                                text: "⚠️ Las ventas al crédito requieren un cliente seleccionado"
+                                visible: paymentTypeComboBox.currentIndex === 1 && root.currentCustomerId === 0
+                                color: Material.color(Material.Orange)
+                                font.pixelSize: 12
+                                wrapMode: Text.Wrap
+                            }
+                        }
+                        
+                        // Método: Efectivo, Tarjeta, etc.
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+                            
+                            Label {
+                                text: qsTr("Método:")
+                                font.pixelSize: 13
+                                font.weight: Font.Medium
+                            }
+                            
+                            ComboBox {
+                                id: paymentMethodComboBox
+                                Layout.fillWidth: true
+                                model: ["Efectivo", "Tarjeta", "Transferencia", "Yape", "Plin"]
+                            }
                         }
                     }
                 }
@@ -1111,6 +1250,8 @@ Page {
                             searchField.text = ""
                             quantitySpinBox.value = 1
                             root.lastScannedBarcode = ""  // Resetear último código escaneado
+                            customerSelector.clearSelection()  // Limpiar selección de cliente
+                            boletaRadio.checked = true  // Volver a boleta por defecto
                         }
                     }
 
@@ -1122,7 +1263,8 @@ Page {
                                 (!facturaRadio.checked ||
                                 (rucField.acceptableInput &&
                                 businessNameField.text.trim() !== "" &&
-                                addressField.text.trim() !== ""))
+                                addressField.text.trim() !== "")) &&
+                                (paymentTypeComboBox.currentIndex === 0 || root.currentCustomerId !== 0)  // Validar cliente para crédito
                         Material.background: ApplicationWindow.window?.currentColors?.primary ?? Material.primary
                         Material.foreground: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
 
@@ -1132,27 +1274,36 @@ Page {
                             console.log("  Subtotal:", viewModel.cart.subtotal)
                             console.log("  Descuento:", viewModel.discount)
                             console.log("  Total:", viewModel.totalWithDiscount)
+                            console.log("  Cliente ID:", root.currentCustomerId)
+                            console.log("  Cliente:", root.currentCustomerName)
+                            console.log("  Tipo de pago:", paymentTypeComboBox.currentText)
+                            console.log("  Método de pago:", paymentMethodComboBox.currentText)
+                            
+                            // Validación adicional para crédito
+                            if (paymentTypeComboBox.currentIndex === 1 && root.currentCustomerId === 0) {
+                                errorDialog.errorMessage = "Las ventas al crédito requieren un cliente seleccionado.\n\nPor favor, seleccione un cliente antes de procesar la venta."
+                                errorDialog.open()
+                                return
+                            }
                             
                             // Guardar datos de factura temporalmente para usar después de onSaleCompleted
-                            root.currentCustomerName = customerComboBox.currentText || "Cliente General"
                             root.currentRuc = facturaRadio.checked ? rucField.text : ""
                             root.currentBusinessName = facturaRadio.checked ? businessNameField.text : ""
                             root.currentAddress = facturaRadio.checked ? addressField.text : ""
                             
-                            console.log("  Cliente:", root.currentCustomerName)
-                            console.log("  Método de pago:", paymentMethodComboBox.currentText)
                             console.log("  Es factura:", facturaRadio.checked)
 
-                            // Llamar al ViewModel con todos los datos
+                            // Llamar al ViewModel con todos los datos incluyendo tipo y método de pago
                             var result = viewModel.processSaleWithInvoiceData(
-                                0,  // customerId - 0 = cliente genérico
+                                root.currentCustomerId,  // customerId real del selector
                                 root.currentCustomerName,
-                                paymentMethodComboBox.currentIndex + 1,  // paymentMethodId (1, 2, 3)
+                                paymentMethodComboBox.currentIndex + 1,  // paymentMethodId (1, 2, 3, 4, 5)
                                 paymentMethodComboBox.currentText,
                                 facturaRadio.checked,  // isInvoice
                                 root.currentRuc,
                                 root.currentBusinessName,
-                                root.currentAddress
+                                root.currentAddress,
+                                paymentTypeComboBox.currentIndex === 0 ? "CONTADO" : "CREDITO"  // paymentType
                             )
                             
                             console.log("  Resultado processSaleWithInvoiceData:", result)

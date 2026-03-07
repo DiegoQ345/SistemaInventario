@@ -39,6 +39,11 @@ public:
      * @brief Obtener ventas del día
      */
     QList<Sale> findToday();
+    
+    /**
+     * @brief Obtener ventas por cliente
+     */
+    QList<Sale> findByCustomerId(int customerId);
 
     /**
      * @brief Cancelar venta (cambia estado a CANCELLED)

@@ -16,6 +16,16 @@ struct Customer
     QString email;
     QString phone;
     QString address;
+    
+    // Estadísticas de compras
+    int totalPurchases = 0;
+    double totalSpent = 0.0;
+    QDateTime lastPurchaseDate;
+    
+    // Sistema de créditos
+    double creditLimit = 0.0;   // Límite de crédito disponible
+    double currentDebt = 0.0;    // Deuda actual
+    
     QDateTime createdAt;
     QDateTime updatedAt;
 
@@ -28,6 +38,24 @@ struct Customer
             return QString("%1 (%2)").arg(name, documentNumber);
         }
         return name;
+    }
+    
+    QString displayNameWithStats() const {
+        if (totalPurchases > 0) {
+            return QString("%1 - %2 compras - S/ %3")
+                .arg(displayName())
+                .arg(totalPurchases)
+                .arg(totalSpent, 0, 'f', 2);
+        }
+        return displayName();
+    }
+    
+    double availableCredit() const {
+        return creditLimit - currentDebt;
+    }
+    
+    bool hasDebt() const {
+        return currentDebt > 0.0;
     }
 };
 

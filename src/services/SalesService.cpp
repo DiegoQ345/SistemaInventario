@@ -1,6 +1,7 @@
 #include "SalesService.h"
 #include "ProductService.h"
 #include "../database/DatabaseManager.h"
+#include "../repositories/CustomerRepository.h"
 #include <QDebug>
 
 SalesService::SalesService(QObject *parent)
@@ -58,6 +59,27 @@ bool SalesService::createSale(Sale& sale, QString& errorMessage)
     }
     
     qDebug() << "  Sale saved with ID:" << saleId;
+
+    // Actualizar estadísticas del cliente si no es cliente genérico (ID > 0)
+    if (sale.customerId > 0) {
+        CustomerRepository customerRepo(DatabaseManager::instance().database());
+        if (!customerRepo.updatePurchaseStats(sale.customerId, sale.total)) {
+            qWarning() << "  Warning: Could not update customer stats:" << customerRepo.lastError();
+            // No revertimos la transacción, solo logueamos el warning
+        } else {
+            qDebug() << "  Customer stats updated for customer ID:" << sale.customerId;
+        }
+        
+        // Si es venta a crédito, actualizar deuda del cliente
+        if (sale.paymentType == "CREDITO") {
+            if (!customerRepo.updateDebt(sale.customerId, sale.total, true)) {
+                qWarning() << "  Warning: Could not update customer debt:" << customerRepo.lastError();
+                // No revertimos la transacción, solo logueamos el warning
+            } else {
+                qDebug() << "  Customer debt updated - Added:" << sale.total;
+            }
+        }
+    }
 
     // Confirmar transacción
     if (!DatabaseManager::instance().commit()) {

@@ -31,6 +31,15 @@ public:
     QList<Customer> findTopCustomers(int limit = 10);
     int getTotalCustomers();
     QList<Customer> findByDocumentNumber(const QString& documentNumber);
+    
+    // Purchase statistics
+    bool updatePurchaseStats(int customerId, double saleTotal);
+    
+    // Credit management
+    bool updateDebt(int customerId, double amount, bool add = true);
+    bool setCreditLimit(int customerId, double limit);
+    double getCurrentDebt(int customerId);
+    double getAvailableCredit(int customerId);
 
     QString lastError() const { return m_lastError; }
 

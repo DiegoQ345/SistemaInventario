@@ -361,3 +361,386 @@ QString PdfGeneratorService::getReceiptStyles(bool isThermal)
 
     return styles;
 }
+
+bool PdfGeneratorService::generateCustomerPurchaseHistory(const Customer& customer, 
+                                                          const QList<Sale>& sales, 
+                                                          const QString& outputPath)
+{
+    emit generationProgress(10);
+
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(outputPath);
+    printer.setPageSize(QPageSize(QPageSize::A4));
+    printer.setPageMargins(QMarginsF(8, 8, 8, 8), QPageLayout::Millimeter);
+
+    emit generationProgress(30);
+
+    // Generar HTML del historial
+    QString html = generatePurchaseHistoryHtml(customer, sales);
+
+    emit generationProgress(60);
+
+    // Renderizar HTML a PDF
+    QTextDocument document;
+    document.setHtml(html);
+    document.setPageSize(printer.pageRect(QPrinter::Point).size());
+
+    emit generationProgress(80);
+
+    document.print(&printer);
+
+    emit generationProgress(100);
+    emit pdfGenerated(outputPath);
+
+    qDebug() << "PDF de historial de compras generado:" << outputPath;
+    return true;
+}
+
+QString PdfGeneratorService::generatePurchaseHistoryHtml(const Customer& customer, const QList<Sale>& sales)
+{
+    QString html = R"(
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 10px;
+                    font-size: 8pt;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 12px;
+                    border-bottom: 2px solid #2196F3;
+                    padding-bottom: 8px;
+                }
+                .header h1 {
+                    color: #2196F3;
+                    margin: 0;
+                    font-size: 16pt;
+                }
+                .header h2 {
+                    color: #666;
+                    margin: 4px 0 0 0;
+                    font-size: 11pt;
+                    font-weight: normal;
+                }
+                .customer-info {
+                    background-color: #f5f5f5;
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                    margin-bottom: 12px;
+                    border-left: 3px solid #2196F3;
+                }
+                .customer-info h3 {
+                    margin: 0 0 6px 0;
+                    color: #2196F3;
+                    font-size: 10pt;
+                }
+                .customer-info p {
+                    margin: 3px 0;
+                    font-size: 8pt;
+                    line-height: 1.3;
+                }
+                .stats-box {
+                    margin-bottom: 12px;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 4px;
+                    overflow: hidden;
+                }
+                .stats-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                .stats-table td {
+                    padding: 6px 8px;
+                    text-align: left;
+                    border-bottom: 1px solid #e0e0e0;
+                    border-right: 1px solid #e0e0e0;
+                    font-size: 7pt;
+                    background-color: #f5f5f5;
+                }
+                .stats-table td:last-child {
+                    border-right: none;
+                }
+                .stats-table .label {
+                    font-weight: 600;
+                    color: #000000;
+                }
+                .stats-table .value {
+                    font-weight: bold;
+                    font-size: 10pt;
+                    color: #1976D2;
+                }
+                .credit-box {
+                    background-color: #fff3e0;
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                    margin-bottom: 12px;
+                    border-left: 3px solid #ff9800;
+                }
+                .credit-box h3 {
+                    margin: 0 0 6px 0;
+                    color: #ff9800;
+                    font-size: 10pt;
+                }
+                .credit-stats {
+                    display: flex;
+                    justify-content: space-around;
+                }
+                .credit-stats > div {
+                    text-align: center;
+                }
+                .credit-stats p {
+                    margin: 0;
+                    font-size: 7pt;
+                    color: #000000;
+                }
+                .credit-stats .value {
+                    margin: 2px 0;
+                    font-size: 11pt;
+                    font-weight: bold;
+                }
+                h3.section-title {
+                    color: #2196F3;
+                    margin: 12px 0 6px 0;
+                    font-size: 10pt;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 7pt;
+                }
+                thead {
+                    background-color: #1976D2;
+                }
+                th {
+                    padding: 6px 8px;
+                    text-align: left;
+                    font-weight: 600;
+                    font-size: 8pt;
+                    color: #FFFFFF;
+                    background-color: #1976D2;
+                }
+                td {
+                    padding: 5px 8px;
+                    border-bottom: 1px solid #e0e0e0;
+                    font-size: 7pt;
+                    line-height: 1.2;
+                }
+                tbody tr:nth-child(even) {
+                    background-color: #f9f9f9;
+                }
+                .total-row {
+                    font-weight: bold;
+                    background-color: #e3f2fd !important;
+                    font-size: 8pt;
+                }
+                .pending-row {
+                    background-color: #ffebee !important;
+                    font-weight: bold;
+                    font-size: 7pt;
+                }
+                .footer {
+                    text-align: center;
+                    margin-top: 15px;
+                    padding-top: 8px;
+                    border-top: 1px solid #e0e0e0;
+                    color: #666;
+                    font-size: 7pt;
+                }
+                .footer p {
+                    margin: 2px 0;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>)" + m_businessInfo.name + R"(</h1>)";
+    
+    if (!m_businessInfo.taxId.isEmpty()) {
+        html += R"(
+                <p style="margin: 0; font-size: 8pt; color: #666;">RUC: )" + m_businessInfo.taxId + R"(</p>)";
+    }
+    if (!m_businessInfo.address.isEmpty()) {
+        html += R"(
+                <p style="margin: 0; font-size: 7pt; color: #666;">)" + m_businessInfo.address + R"(</p>)";
+    }
+    if (!m_businessInfo.phone.isEmpty()) {
+        html += R"(
+                <p style="margin: 0; font-size: 7pt; color: #666;">Tel: )" + m_businessInfo.phone + R"(</p>)";
+    }
+    if (!m_businessInfo.email.isEmpty()) {
+        html += R"(
+                <p style="margin: 0; font-size: 7pt; color: #666;">)" + m_businessInfo.email + R"(</p>)";
+    }
+    
+    html += R"(
+                <h2>Historial de Compras del Cliente</h2>
+            </div>
+            
+            <div class="customer-info">
+                <h3>Información del Cliente</h3>
+                <p><strong>Nombre:</strong> )" + customer.name + R"(</p>
+                <p><strong>Documento:</strong> )" + customer.documentType + " " + customer.documentNumber + R"(</p>)";
+    
+    if (!customer.phone.isEmpty()) {
+        html += R"(<p><strong>Teléfono:</strong> )" + customer.phone + R"(</p>)";
+    }
+    
+    if (!customer.email.isEmpty()) {
+        html += R"(<p><strong>Email:</strong> )" + customer.email + R"(</p>)";
+    }
+    
+    if (!customer.address.isEmpty()) {
+        html += R"(<p><strong>Dirección:</strong> )" + customer.address + R"(</p>)";
+    }
+    
+    html += R"(
+            </div>
+            
+            <div class="stats-box">
+                <table class="stats-table">
+                    <tr>
+                        <td class="label">Total de Compras:</td>
+                        <td class="label">Monto Total:</td>
+                        <td class="label">Ticket Promedio:</td>
+                    </tr>
+                    <tr>
+                        <td class="value">)" + QString::number(customer.totalPurchases) + R"(</td>
+                        <td class="value">S/ )" + QString::number(customer.totalSpent, 'f', 2) + R"(</td>
+                        <td class="value">S/ )" + QString::number(customer.totalPurchases > 0 ? customer.totalSpent / customer.totalPurchases : 0.0, 'f', 2) + R"(</td>
+                    </tr>
+                </table>
+            </div>)";
+    
+    // Agregar información de crédito si el cliente tiene límite configurado
+    if (customer.creditLimit > 0.0) {
+        double availableCredit = customer.creditLimit - customer.currentDebt;
+        QString debtColor = customer.currentDebt > 0 ? "#f44336" : "#4CAF50";
+        QString creditColor = availableCredit > 0 ? "#4CAF50" : "#f44336";
+        
+        html += R"(
+            <div class="credit-box">
+                <h3>Estado de Crédito</h3>
+                <div class="credit-stats">
+                    <div>
+                        <p>Límite de Crédito</p>
+                        <p class="value" style="color: #ff9800;">S/ )" + QString::number(customer.creditLimit, 'f', 2) + R"(</p>
+                    </div>
+                    <div>
+                        <p>Deuda Actual</p>
+                        <p class="value" style="color: )" + debtColor + R"(;">S/ )" + QString::number(customer.currentDebt, 'f', 2) + R"(</p>
+                    </div>
+                    <div>
+                        <p>Crédito Disponible</p>
+                        <p class="value" style="color: )" + creditColor + R"(;">S/ )" + QString::number(availableCredit, 'f', 2) + R"(</p>
+                    </div>
+                </div>
+            </div>)";
+    }
+    
+    html += R"(
+            
+            <h3 class="section-title">Detalle de Compras</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Factura</th>
+                        <th>Tipo</th>
+                        <th>Items</th>
+                        <th>Pago</th>
+                        <th>Estado</th>
+                        <th style="text-align: right;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>)";
+    
+    // Agregar cada venta
+    double totalGeneral = 0.0;
+    double totalPendiente = 0.0;
+    for (const Sale& sale : sales) {
+        QString fecha = sale.createdAt.toString("dd/MM/yyyy hh:mm");
+        QString voucherType = sale.voucherType.isEmpty() ? "TICKET" : sale.voucherType;
+        int itemCount = sale.items.size();
+        
+        // Tipo de pago y estado
+        QString paymentType = sale.paymentType.isEmpty() ? "CONTADO" : sale.paymentType;
+        QString paymentStatus = sale.paymentStatus.isEmpty() ? "PAID" : sale.paymentStatus;
+        QString paymentTypeDisplay = paymentType;
+        
+        // Estado con color
+        QString statusDisplay = "";
+        QString statusColor = "#4CAF50";  // Verde por defecto (PAID)
+        if (paymentStatus == "PENDING") {
+            statusDisplay = "Pendiente";
+            statusColor = "#f44336";  // Rojo
+            totalPendiente += sale.total;
+        } else if (paymentStatus == "PARTIAL") {
+            statusDisplay = "Parcial";
+            statusColor = "#ff9800";  // Naranja
+            totalPendiente += sale.total;
+        } else {
+            statusDisplay = "Pagado";
+            statusColor = "#4CAF50";  // Verde
+        }
+        
+        html += R"(
+                    <tr>
+                        <td>)" + fecha + R"(</td>
+                        <td>)" + sale.invoiceNumber + R"(</td>
+                        <td>)" + voucherType + R"(</td>
+                        <td>)" + QString::number(itemCount) + " producto" + (itemCount != 1 ? "s" : "") + R"(</td>
+                        <td>)" + paymentTypeDisplay + R"(</td>
+                        <td><span style="color: )" + statusColor + R"(; font-weight: bold;">)" + statusDisplay + R"(</span></td>
+                        <td style="text-align: right;">S/ )" + QString::number(sale.total, 'f', 2) + R"(</td>
+                    </tr>)";
+        
+        totalGeneral += sale.total;
+    }
+    
+    // Fila de total pendiente si hay deudas
+    if (totalPendiente > 0.0) {
+        html += R"(
+                    <tr class="pending-row">
+                        <td colspan="6" style="text-align: right; color: #f44336;">TOTAL PENDIENTE:</td>
+                        <td style="text-align: right; color: #f44336;">S/ )" + QString::number(totalPendiente, 'f', 2) + R"(</td>
+                    </tr>)";
+    }
+    
+    // Fila de total
+    html += R"(
+                    <tr class="total-row">
+                        <td colspan="6" style="text-align: right;">TOTAL GENERAL:</td>
+                        <td style="text-align: right;">S/ )" + QString::number(totalGeneral, 'f', 2) + R"(</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="footer">
+                <p>)" + m_businessInfo.name + R"(</p>)";
+    
+    // Agregar RUC si está disponible
+    if (!m_businessInfo.taxId.isEmpty()) {
+        html += R"(<p>RUC: )" + m_businessInfo.taxId + R"(</p>)";
+    }
+    
+    html += R"(<p>)" + m_businessInfo.address + R"( | )" + m_businessInfo.phone + R"(</p>)";
+    
+    // Agregar email si está disponible
+    if (!m_businessInfo.email.isEmpty()) {
+        html += R"(<p>)" + m_businessInfo.email + R"(</p>)";
+    }
+    
+    html += R"(<p>Reporte generado el )" + QDateTime::currentDateTime().toString("dd/MM/yyyy hh:mm") + R"(</p>
+            </div>
+        </body>
+        </html>
+    )";
+    
+    return html;
+}
+

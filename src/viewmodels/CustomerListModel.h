@@ -2,6 +2,7 @@
 #define CUSTOMERLISTMODEL_H
 
 #include <QAbstractListModel>
+#include <QDate>
 #include "../models/Customer.h"
 
 class CustomerRepository;
@@ -23,7 +24,14 @@ public:
         EmailRole,
         PhoneRole,
         AddressRole,
-        DisplayNameRole
+        DisplayNameRole,
+        TotalPurchasesRole,
+        TotalSpentRole,
+        LastPurchaseDateRole,
+        DisplayNameWithStatsRole,
+        CreditLimitRole,
+        CurrentDebtRole,
+        AvailableCreditRole
     };
 
     explicit CustomerListModel(QObject *parent = nullptr);
@@ -37,6 +45,8 @@ public:
     Q_INVOKABLE void search(const QString& searchTerm);
     Q_INVOKABLE QVariantMap get(int index) const;
     Q_INVOKABLE bool remove(int customerId);
+    Q_INVOKABLE bool generatePurchaseHistoryPdf(int customerId, const QString& outputPath);
+    Q_INVOKABLE QVariantList getCustomerSales(int customerId, const QDate& fromDate = QDate(), const QDate& toDate = QDate());
 
 signals:
     void countChanged();

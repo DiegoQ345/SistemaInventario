@@ -62,6 +62,14 @@ void CustomerFormViewModel::setAddress(const QString& address)
     }
 }
 
+void CustomerFormViewModel::setCreditLimit(double limit)
+{
+    if (qAbs(m_customer.creditLimit - limit) > 0.001) {
+        m_customer.creditLimit = limit;
+        emit creditLimitChanged();
+    }
+}
+
 void CustomerFormViewModel::loadCustomer(int customerId)
 {
     auto customer = m_repository->findById(customerId);
@@ -73,6 +81,8 @@ void CustomerFormViewModel::loadCustomer(int customerId)
         emit emailChanged();
         emit phoneChanged();
         emit addressChanged();
+        emit creditLimitChanged();
+        emit currentDebtChanged();
         emit isEditModeChanged();
     }
 }
@@ -86,6 +96,8 @@ void CustomerFormViewModel::clear()
     emit emailChanged();
     emit phoneChanged();
     emit addressChanged();
+    emit creditLimitChanged();
+    emit currentDebtChanged();
     emit isEditModeChanged();
 }
 

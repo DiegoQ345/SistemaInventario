@@ -292,8 +292,8 @@ QString TicketRenderer::replaceVariables(const QString& text, const QMap<QString
     QMapIterator<QString, QString> it(variables);
     while (it.hasNext()) {
         it.next();
-        QString placeholder = "{{" + it.key() + "}}";
-        result.replace(placeholder, it.value());
+        // Las claves ya incluyen {{}} así que no agregar más
+        result.replace(it.key(), it.value());
     }
     
     return result;

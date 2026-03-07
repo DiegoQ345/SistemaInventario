@@ -122,6 +122,15 @@ public slots:
     void setDefaultPrinter(const QString& printerName);
 
     /**
+     * @brief Configurar información de la empresa
+     * @param name Nombre de la empresa
+     * @param ruc RUC de la empresa
+     * @param address Dirección de la empresa
+     * @param phone Teléfono de la empresa
+     */
+    void setCompanyInfo(const QString& name, const QString& ruc, const QString& address, const QString& phone = "");
+
+    /**
      * @brief Obtener lista de impresoras disponibles
      */
     QStringList getAvailablePrinters();
@@ -140,6 +149,7 @@ private:
     QString m_companyName = "SISTEMA DE INVENTARIO";
     QString m_companyRuc = "20123456789";
     QString m_companyAddress = "Av. Principal 123, Lima, Perú";
+    QString m_companyPhone = "(01) 234-5678";
 
     /**
      * @brief Dibujar comprobante A4
