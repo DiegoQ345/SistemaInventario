@@ -47,6 +47,7 @@ public:
     Q_INVOKABLE bool remove(int customerId);
     Q_INVOKABLE bool generatePurchaseHistoryPdf(int customerId, const QString& outputPath);
     Q_INVOKABLE QVariantList getCustomerSales(int customerId, const QDate& fromDate = QDate(), const QDate& toDate = QDate());
+    Q_INVOKABLE int payCustomerDebts(int customerId);
 
 signals:
     void countChanged();

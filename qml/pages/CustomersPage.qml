@@ -800,6 +800,23 @@ Page {
                 }
             }
 
+            // Botón para pagar deudas
+            Button {
+                id: payDebtsButton
+                Layout.fillWidth: true
+                Layout.preferredHeight: 50
+                visible: totalPendingLabel.text !== "S/ 0.00" && totalPendingLabel.text !== ""
+                text: qsTr("💰 Pagar Todas las Deudas Pendientes")
+                font.pixelSize: 14
+                font.weight: Font.Bold
+                Material.background: Material.color(Material.Green)
+                Material.foreground: "white"
+                
+                onClicked: {
+                    payDebtsConfirmDialog.open()
+                }
+            }
+
             // Tabla de ventas
             Rectangle {
                 Layout.fillWidth: true
@@ -991,6 +1008,148 @@ Page {
         onOpened: {
             fromDateField.text = ""
             toDateField.text = ""
+        }
+    }
+
+    // Diálogo de confirmación para pagar deudas
+    Dialog {
+        id: payDebtsConfirmDialog
+        title: qsTr("Confirmar Pago de Deudas")
+        width: Math.min(500, root.width * 0.9)
+        modal: true
+        anchors.centerIn: parent
+        standardButtons: Dialog.Yes | Dialog.No
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 16
+
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("¿Está seguro que desea marcar todas las deudas pendientes de este cliente como pagadas?")
+                wrapMode: Text.WordWrap
+                font.pixelSize: 14
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 60
+                color: Material.color(Material.Red, Material.Shade100)
+                radius: 4
+                border.color: Material.color(Material.Red)
+                border.width: 1
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    spacing: 4
+
+                    Label {
+                        text: qsTr("Total a pagar:")
+                        font.pixelSize: 12
+                        opacity: 0.8
+                    }
+
+                    Label {
+                        text: totalPendingLabel.text
+                        font.pixelSize: 20
+                        font.weight: Font.Bold
+                        color: Material.color(Material.Red)
+                    }
+                }
+            }
+
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("Esta acción cambiará el estado de todas las ventas pendientes a 'PAGADO' en la base de datos.")
+                wrapMode: Text.WordWrap
+                font.pixelSize: 12
+                opacity: 0.7
+            }
+        }
+
+        onAccepted: {
+            console.log("=== INICIANDO PAGO DE DEUDAS ===")
+            console.log("Cliente ID:", customerDetailsDialog.customerId)
+            console.log("Monto pendiente antes:", totalPendingLabel.text)
+            
+            var updatedCount = customerListModel.payCustomerDebts(customerDetailsDialog.customerId)
+            
+            console.log("Ventas actualizadas:", updatedCount)
+            
+            if (updatedCount > 0) {
+                // Mostrar mensaje de éxito con el monto pagado
+                var paidAmount = totalPendingLabel.text
+                snackbar.show(qsTr("✓ ¡Pago exitoso! %1 venta(s) marcadas como PAGADAS. Total: %2").arg(updatedCount).arg(paidAmount), "success")
+                
+                // Recargar las ventas del cliente (esto actualizará los estados a PAID)
+                customerDetailsDialog.loadSales()
+                
+                // Forzar actualización de la lista principal de clientes
+                customerListModel.refresh()
+                
+                console.log("Monto pendiente después:", totalPendingLabel.text)
+                console.log("=== PAGO COMPLETADO ===")
+            } else {
+                snackbar.show(qsTr("No se encontraron deudas pendientes para pagar"), "info")
+            }
+        }
+    }
+
+    // Snackbar para mensajes
+    Rectangle {
+        id: snackbar
+        anchors.bottom: parent.bottom
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottomMargin: 20
+        width: Math.min(400, parent.width - 40)
+        height: 50
+        radius: 4
+        color: Material.dialogColor
+        border.color: Material.accentColor
+        border.width: 1
+        visible: false
+        z: 1000
+
+        property string messageType: "info"
+
+        function show(message, type) {
+            messageType = type || "info"
+            snackbarLabel.text = message
+            
+            if (type === "success") {
+                snackbar.color = Material.color(Material.Green, Material.Shade900)
+                snackbar.border.color = Material.color(Material.Green)
+            } else if (type === "error") {
+                snackbar.color = Material.color(Material.Red, Material.Shade900)
+                snackbar.border.color = Material.color(Material.Red)
+            } else {
+                snackbar.color = Material.dialogColor
+                snackbar.border.color = Material.accentColor
+            }
+            
+            visible = true
+            snackbarTimer.restart()
+        }
+
+        Label {
+            id: snackbarLabel
+            anchors.centerIn: parent
+            anchors.margins: 12
+            color: "white"
+            font.pixelSize: 14
+            font.weight: Font.Medium
+        }
+
+        Timer {
+            id: snackbarTimer
+            interval: 4000
+            onTriggered: snackbar.visible = false
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: snackbar.visible = false
         }
     }
 }

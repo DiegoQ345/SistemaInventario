@@ -228,6 +228,27 @@ QVariantList CustomerListModel::getCustomerSales(int customerId, const QDate& fr
     return result;
 }
 
+int CustomerListModel::payCustomerDebts(int customerId)
+{
+    qDebug() << "[CustomerListModel] Pagando deudas del cliente ID:" << customerId;
+    
+    SaleRepository saleRepo;
+    int updatedCount = saleRepo.markCustomerDebtsAsPaid(customerId);
+    
+    qDebug() << "[CustomerListModel] Ventas actualizadas:" << updatedCount;
+    
+    if (updatedCount > 0) {
+        qDebug() << "[CustomerListModel] Refrescando lista de clientes...";
+        // Refrescar la lista de clientes para actualizar la deuda actual
+        refresh();
+        qDebug() << "[CustomerListModel] Lista de clientes actualizada";
+    } else {
+        qDebug() << "[CustomerListModel] No se encontraron ventas pendientes para actualizar";
+    }
+    
+    return updatedCount;
+}
+
 void CustomerListModel::setCustomers(const QList<Customer>& customers)
 {
     beginResetModel();

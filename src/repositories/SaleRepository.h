@@ -51,6 +51,20 @@ public:
     bool cancel(int saleId);
 
     /**
+     * @brief Marcar venta como pagada
+     * @param saleId ID de la venta
+     * @return true si se actualizó correctamente
+     */
+    bool markAsPaid(int saleId);
+
+    /**
+     * @brief Marcar todas las ventas pendientes de un cliente como pagadas
+     * @param customerId ID del cliente
+     * @return Número de ventas actualizadas
+     */
+    int markCustomerDebtsAsPaid(int customerId);
+
+    /**
      * @brief Generar siguiente número de factura
      */
     QString generateNextInvoiceNumber();

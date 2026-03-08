@@ -217,6 +217,78 @@ bool SaleRepository::cancel(int saleId)
     return query.numRowsAffected() > 0;
 }
 
+bool SaleRepository::markAsPaid(int saleId)
+{
+    QSqlQuery query(DatabaseManager::instance().database());
+    query.prepare("UPDATE sales SET payment_status = 'PAID' WHERE id = :id");
+    query.bindValue(":id", saleId);
+    
+    if (!query.exec()) {
+        qCritical() << "Error marcando venta como pagada:" << query.lastError().text();
+        return false;
+    }
+
+    return query.numRowsAffected() > 0;
+}
+
+int SaleRepository::markCustomerDebtsAsPaid(int customerId)
+{
+    auto& db = DatabaseManager::instance();
+    QSqlDatabase database = db.database();
+    
+    // Iniciar transacción
+    if (!database.transaction()) {
+        qCritical() << "Error iniciando transacción para pagar deudas";
+        return 0;
+    }
+    
+    QSqlQuery query(database);
+    
+    // 1. Actualizar estado de ventas a PAID
+    query.prepare(
+        "UPDATE sales SET payment_status = 'PAID' "
+        "WHERE customer_id = :customer_id "
+        "AND payment_status IN ('PENDING', 'PARTIAL') "
+        "AND status = 'ACTIVE'"
+    );
+    query.bindValue(":customer_id", customerId);
+    
+    if (!query.exec()) {
+        qCritical() << "Error marcando deudas del cliente como pagadas:" << query.lastError().text();
+        database.rollback();
+        return 0;
+    }
+
+    int rowsUpdated = query.numRowsAffected();
+    qDebug() << "Deudas pagadas del cliente" << customerId << ":" << rowsUpdated << "ventas actualizadas";
+    
+    // 2. Actualizar current_debt del cliente a 0
+    QSqlQuery updateCustomerQuery(database);
+    updateCustomerQuery.prepare(
+        "UPDATE customers SET current_debt = 0 WHERE id = :customer_id"
+    );
+    updateCustomerQuery.bindValue(":customer_id", customerId);
+    
+    if (!updateCustomerQuery.exec()) {
+        qCritical() << "Error actualizando deuda del cliente:" << updateCustomerQuery.lastError().text();
+        database.rollback();
+        return 0;
+    }
+    
+    qDebug() << "Deuda del cliente actualizada a 0";
+    
+    // Confirmar transacción
+    if (!database.commit()) {
+        qCritical() << "Error confirmando transacción de pago de deudas";
+        database.rollback();
+        return 0;
+    }
+    
+    qDebug() << "Transacción de pago completada exitosamente";
+    
+    return rowsUpdated;
+}
+
 QString SaleRepository::generateNextInvoiceNumber()
 {
     QSqlQuery query(DatabaseManager::instance().database());

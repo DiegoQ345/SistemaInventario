@@ -140,16 +140,17 @@ set(SOURCE_FILES
 # Compilando backend completo con QXlsx
 
 # Agregar archivo de recursos de Windows (.rc) condicionalmente
-set(WIN_RC_FILE "")
-if(WIN32)
-    set(WIN_RC_FILE app.rc)
-endif()
+# NOTA: Comentado temporalmente porque app.rc no existe
+# set(WIN_RC_FILE "")
+# if(WIN32)
+#     set(WIN_RC_FILE app.rc)
+# endif()
 
 qt_add_executable(appSistemaInventario
     main.cpp
     ${SOURCE_FILES}
     ${HEADER_FILES}
-    ${WIN_RC_FILE}
+    # ${WIN_RC_FILE}
 )
 
 # ============================================
