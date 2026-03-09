@@ -141,7 +141,9 @@ bool PrintViewModel::printVoucher(const QString& invoiceNumber,
                                  VoucherType voucherType,
                                  const QString& ruc,
                                  const QString& businessName,
-                                 const QString& address)
+                                 const QString& address,
+                                 double amountPaid,
+                                 double changeGiven)
 {
     qDebug() << "Imprimiendo comprobante:" << invoiceNumber;
 
@@ -150,6 +152,10 @@ bool PrintViewModel::printVoucher(const QString& invoiceNumber,
     // Crear objeto Sale
     Sale sale = createSaleFromData(invoiceNumber, customerName, items, 
                                    subtotal, discount, total);
+
+    // Asignar monto pagado y vuelto
+    sale.amountPaid = amountPaid;
+    sale.changeGiven = changeGiven;
 
     // Agregar datos de factura al objeto Sale
     if (voucherType == Factura) {
@@ -195,7 +201,9 @@ bool PrintViewModel::printCustomTicket(const QString& invoiceNumber,
                                       const QString& layoutJson,
                                       const QString& ruc,
                                       const QString& businessName,
-                                      const QString& address)
+                                      const QString& address,
+                                      double amountPaid,
+                                      double changeGiven)
 {
     qDebug() << "Imprimiendo ticket personalizado:" << invoiceNumber;
 
@@ -204,6 +212,10 @@ bool PrintViewModel::printCustomTicket(const QString& invoiceNumber,
     // Crear objeto Sale
     Sale sale = createSaleFromData(invoiceNumber, customerName, items, 
                                    subtotal, discount, total);
+
+    // Asignar monto pagado y vuelto
+    sale.amountPaid = amountPaid;
+    sale.changeGiven = changeGiven;
 
     // Agregar datos de factura al objeto Sale
     if (voucherType == Factura) {

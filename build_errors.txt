@@ -1,0 +1,11 @@
+﻿FAILED: CMakeFiles/appSistemaInventario.dir/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/.rcc/qmlcache/appSistemaInventario_qml/pages/ImportPage_qml.cpp.obj 
+FAILED: CMakeFiles/appSistemaInventario.dir/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/.rcc/qmlcache/appSistemaInventario_qml/pages/DashboardPage_qml.cpp.obj 
+FAILED: CMakeFiles/appSistemaInventario.dir/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/.rcc/qmlcache/appSistemaInventario_qml/pages/ConsolePage_qml.cpp.obj 
+FAILED: CMakeFiles/appSistemaInventario.dir/appSistemaInventario_autogen/mocs_compilation.cpp.obj 
+FAILED: CMakeFiles/appSistemaInventario.dir/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/.rcc/qmlcache/appSistemaInventario_qml/components/CartItemDelegate_qml.cpp.obj 
+FAILED: CMakeFiles/appSistemaInventario.dir/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/.rcc/qmlcache/appSistemaInventario_qml/pages/TicketsPage_qml.cpp.obj 
+FAILED: CMakeFiles/appSistemaInventario.dir/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/.rcc/qmlcache/appSistemaInventario_qml/pages/ReportsPage_qml.cpp.obj 
+FAILED: CMakeFiles/appSistemaInventario.dir/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/.rcc/qmlcache/appSistemaInventario_qml/pages/CustomersPage_qml.cpp.obj 
+FAILED: CMakeFiles/appSistemaInventario.dir/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/.rcc/qmlcache/appSistemaInventario_qml/components/CustomerSelector_qml.cpp.obj 
+FAILED: CMakeFiles/appSistemaInventario.dir/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/.rcc/qmlcache/appSistemaInventario_qml/pages/SettingsPage_qml.cpp.obj 
+ninja: build stopped: subcommand failed.

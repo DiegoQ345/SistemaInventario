@@ -1223,6 +1223,156 @@ Page {
                         }
                     }
                 }
+                
+                // Tabla de ventas del día
+                GroupBox {
+                    Layout.fillWidth: true
+                    title: "\uE8A5  " + qsTr("Ventas del Día")
+                    font.family: "Segoe MDL2 Assets"
+                    
+                    ColumnLayout {
+                        anchors.fill: parent
+                        spacing: 8
+                        
+                        // Encabezado de tabla
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 40
+                            color: Material.primary
+                            radius: 4
+                            
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 8
+                                spacing: 8
+                                
+                                Label {
+                                    text: qsTr("Factura")
+                                    font.weight: Font.Bold
+                                    color: "white"
+                                    Layout.preferredWidth: 100
+                                }
+                                
+                                Label {
+                                    text: qsTr("Hora")
+                                    font.weight: Font.Bold
+                                    color: "white"
+                                    Layout.preferredWidth: 80
+                                }
+                                
+                                Label {
+                                    text: qsTr("Tipo")
+                                    font.weight: Font.Bold
+                                    color: "white"
+                                    Layout.preferredWidth: 70
+                                }
+                                
+                                Label {
+                                    text: qsTr("Items")
+                                    font.weight: Font.Bold
+                                    color: "white"
+                                    Layout.preferredWidth: 50
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                                
+                                Label {
+                                    text: qsTr("Total")
+                                    font.weight: Font.Bold
+                                    color: "white"
+                                    Layout.preferredWidth: 90
+                                    horizontalAlignment: Text.AlignRight
+                                }
+                                
+                                Label {
+                                    text: qsTr("Detalles")
+                                    font.weight: Font.Bold
+                                    color: "white"
+                                    Layout.fillWidth: true
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                            }
+                        }
+                        
+                        // Lista de ventas
+                        ScrollView {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 300
+                            clip: true
+                            
+                            ListView {
+                                model: closingReportDialog.reportData.sales || []
+                                spacing: 4
+                                
+                                delegate: Rectangle {
+                                    width: ListView.view.width
+                                    height: 50
+                                    radius: 4
+                                    color: Material.theme === Material.Dark ?
+                                        Qt.lighter(Material.background, 1.15) :
+                                        Material.background
+                                    border.width: 1
+                                    border.color: Material.frameColor
+                                    
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.margins: 8
+                                        spacing: 8
+                                        
+                                        Label {
+                                            text: modelData.invoiceNumber || ""
+                                            Layout.preferredWidth: 100
+                                            elide: Text.ElideRight
+                                        }
+                                        
+                                        Label {
+                                            text: {
+                                                var dateStr = modelData.createdAt || ""
+                                                var parts = dateStr.split(" ")
+                                                return parts.length > 1 ? parts[1] : ""
+                                            }
+                                            Layout.preferredWidth: 80
+                                            opacity: 0.7
+                                        }
+                                        
+                                        Label {
+                                            text: modelData.voucherType || ""
+                                            Layout.preferredWidth: 70
+                                            font.pixelSize: 11
+                                        }
+                                        
+                                        Label {
+                                            text: modelData.itemCount || 0
+                                            Layout.preferredWidth: 50
+                                            horizontalAlignment: Text.AlignHCenter
+                                            font.weight: Font.Medium
+                                        }
+                                        
+                                        Label {
+                                            text: "S/ " + (modelData.total || 0).toFixed(2)
+                                            Layout.preferredWidth: 90
+                                            horizontalAlignment: Text.AlignRight
+                                            color: Material.color(Material.Green)
+                                            font.weight: Font.Bold
+                                        }
+                                        
+                                        Button {
+                                            text: "\uE8A5  Ver"
+                                            font.family: "Segoe MDL2 Assets"
+                                            flat: true
+                                            Layout.fillWidth: true
+                                            Material.foreground: Material.accent
+                                            
+                                            onClicked: {
+                                                saleDetailsDialog.saleData = modelData
+                                                saleDetailsDialog.open()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         
@@ -1230,6 +1380,192 @@ Page {
             // Usar el ViewModel para generar el PDF del reporte
             if (viewModel && reportData) {
                 viewModel.generateDailyReportPDF()
+            }
+        }
+    }
+    
+    // Diálogo de detalles de venta
+    Dialog {
+        id: saleDetailsDialog
+        title: qsTr("Detalles de Venta - %1").arg(saleData.invoiceNumber || "")
+        modal: true
+        anchors.centerIn: parent
+        
+        property var saleData: ({})
+        
+        width: Math.min(500, root.width * 0.9)
+        height: Math.min(root.height * 0.9, 700)
+        
+        standardButtons: Dialog.Close
+        
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 12
+            
+            // Información de la venta
+            Rectangle {
+                Layout.fillWidth: true
+                height: 80
+                radius: 6
+                color: Material.theme === Material.Dark ?
+                    Qt.lighter(Material.background, 1.2) :
+                    Material.color(Material.Grey, Material.Shade100)
+                
+                GridLayout {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    columns: 2
+                    rowSpacing: 6
+                    columnSpacing: 12
+                    
+                    Label { 
+                        text: qsTr("Tipo de Comprobante:")
+                        font.weight: Font.Medium
+                    }
+                    Label { 
+                        text: saleDetailsDialog.saleData.voucherType || ""
+                        Layout.fillWidth: true
+                    }
+                    
+                    Label { 
+                        text: qsTr("Tipo de Pago:")
+                        font.weight: Font.Medium
+                    }
+                    Label { text: saleDetailsDialog.saleData.paymentType || "" }
+                    
+                    Label { 
+                        text: qsTr("Fecha:")
+                        font.weight: Font.Medium
+                    }
+                    Label { text: saleDetailsDialog.saleData.createdAt || "" }
+                }
+            }
+            
+            // Título de productos
+            Label {
+                text: qsTr("Productos Vendidos:")
+                font.weight: Font.Bold
+                font.pixelSize: 14
+            }
+            
+            // Lista de productos
+            ScrollView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                
+                ColumnLayout {
+                    width: saleDetailsDialog.availableWidth
+                    spacing: 6
+                    
+                    Repeater {
+                        model: saleDetailsDialog.saleData.items || []
+                        
+                        delegate: Rectangle {
+                            Layout.fillWidth: true
+                            height: 60
+                            radius: 6
+                            color: Material.theme === Material.Dark ?
+                                Qt.lighter(Material.background, 1.15) :
+                                Material.background
+                            border.width: 1
+                            border.color: Material.frameColor
+                            
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 12
+                                
+                                // Cantidad
+                                Rectangle {
+                                    Layout.preferredWidth: 50
+                                    Layout.preferredHeight: 40
+                                    radius: 6
+                                    color: Material.accent
+                                    
+                                    ColumnLayout {
+                                        anchors.centerIn: parent
+                                        spacing: 0
+                                        
+                                        Label {
+                                            text: modelData.quantity || 0
+                                            font.weight: Font.Bold
+                                            font.pixelSize: 16
+                                            color: "white"
+                                            Layout.alignment: Qt.AlignHCenter
+                                        }
+                                        
+                                        Label {
+                                            text: "cant."
+                                            font.pixelSize: 9
+                                            color: "white"
+                                            opacity: 0.9
+                                            Layout.alignment: Qt.AlignHCenter
+                                        }
+                                    }
+                                }
+                                
+                                // Nombre del producto
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 2
+                                    
+                                    Label {
+                                        text: modelData.productName || ""
+                                        font.weight: Font.Medium
+                                        font.pixelSize: 13
+                                        Layout.fillWidth: true
+                                        elide: Text.ElideRight
+                                    }
+                                    
+                                    Label {
+                                        text: "S/ " + (modelData.unitPrice || 0).toFixed(2) + " c/u"
+                                        font.pixelSize: 11
+                                        opacity: 0.7
+                                    }
+                                }
+                                
+                                // Subtotal
+                                Label {
+                                    text: "S/ " + (modelData.subtotal || 0).toFixed(2)
+                                    font.weight: Font.Bold
+                                    font.pixelSize: 16
+                                    color: Material.color(Material.Green)
+                                    Layout.preferredWidth: 100
+                                    horizontalAlignment: Text.AlignRight
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Total
+            Rectangle {
+                Layout.fillWidth: true
+                height: 50
+                radius: 6
+                color: Material.color(Material.Green)
+                
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    
+                    Label {
+                        text: qsTr("TOTAL:")
+                        font.weight: Font.Bold
+                        font.pixelSize: 16
+                        color: "white"
+                        Layout.fillWidth: true
+                    }
+                    
+                    Label {
+                        text: "S/ " + (saleDetailsDialog.saleData.total || 0).toFixed(2)
+                        font.weight: Font.Bold
+                        font.pixelSize: 20
+                        color: "white"
+                    }
+                }
             }
         }
     }

@@ -29,12 +29,14 @@ public:
         int detailFontSizePixels; // Tamaño fuente detalles (px)
         QString fontFamily;     // Familia de fuente
         double itemSpacing;     // Espaciado entre productos (px)
+        QString bulletChar;     // Carácter de viñeta (•, -, *, etc.)
         
         Config()
             : startX(0), startY(0), maxWidth(200)
             , itemFontSizePixels(8), detailFontSizePixels(7)
             , fontFamily("Courier New")
             , itemSpacing(2)
+            , bulletChar("•")
         {}
     };
     

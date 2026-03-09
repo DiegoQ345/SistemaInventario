@@ -50,6 +50,7 @@ double TicketRenderer::calculateTotalHeight(QPainter& painter, const TicketLayou
             config.detailFontSizePixels = qRound(mmToPixels(element.fontSizeMM * 0.875));
             config.fontFamily = element.fontFamily;
             config.itemSpacing = 2;
+            config.bulletChar = layout.getBulletChar();
             
             double dynamicHeight = m_dynamicSection.calculateHeight(painter, sale.items, config);
             m_placeholderY = yPx;
@@ -120,6 +121,7 @@ void TicketRenderer::render(QPainter& painter,
             config.detailFontSizePixels = qRound(mmToPixels(element.fontSizeMM * 0.875));  // 7/8
             config.fontFamily = element.fontFamily;
             config.itemSpacing = 2;
+            config.bulletChar = layout.getBulletChar();
             
             double finalY = m_dynamicSection.render(painter, sale.items, config);
             double dynamicHeight = m_dynamicSection.getLastCalculatedHeight();

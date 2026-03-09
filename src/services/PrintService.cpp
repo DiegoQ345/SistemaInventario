@@ -221,7 +221,23 @@ void PrintService::drawVoucherA4(QPainter& painter, const Sale& sale, VoucherTyp
     painter.setFont(titleFont);
     painter.drawText(pageWidth - margin - 300, y, "TOTAL:");
     painter.drawText(pageWidth - margin - 100, y, "$" + QString::number(sale.total, 'f', 2));
-    y += 60;
+    y += 40;
+
+    // Monto pagado y vuelto
+    if (sale.amountPaid > 0) {
+        painter.setFont(boldFont);
+        painter.drawText(pageWidth - margin - 300, y, "PAGADO:");
+        painter.drawText(pageWidth - margin - 100, y, "$" + QString::number(sale.amountPaid, 'f', 2));
+        y += 25;
+        
+        if (sale.changeGiven > 0) {
+            painter.drawText(pageWidth - margin - 300, y, "VUELTO:");
+            painter.drawText(pageWidth - margin - 100, y, "$" + QString::number(sale.changeGiven, 'f', 2));
+            y += 25;
+        }
+    }
+    
+    y += 20;
 
     // Footer
     painter.drawLine(margin, y, pageWidth - margin, y);
@@ -321,7 +337,23 @@ void PrintService::drawTicket(QPainter& painter, const Sale& sale, VoucherType t
     painter.setFont(titleFont);
     painter.drawText(margin, y, "TOTAL:");
     painter.drawText(pageWidth - margin - 80, y, "$" + QString::number(sale.total, 'f', 2));
-    y += 25;
+    y += 20;
+
+    // Monto pagado y vuelto
+    if (sale.amountPaid > 0) {
+        painter.setFont(normalFont);
+        painter.drawText(margin, y, "PAGADO:");
+        painter.drawText(pageWidth - margin - 80, y, "$" + QString::number(sale.amountPaid, 'f', 2));
+        y += 15;
+        
+        if (sale.changeGiven > 0) {
+            painter.drawText(margin, y, "VUELTO:");
+            painter.drawText(pageWidth - margin - 80, y, "$" + QString::number(sale.changeGiven, 'f', 2));
+            y += 15;
+        }
+    }
+    
+    y += 10;
 
     painter.drawLine(margin, y, pageWidth - margin, y);
     y += 20;
@@ -458,6 +490,10 @@ QString PrintService::replaceVariables(const QString& text, const Sale& sale,
     result.replace("{{tax}}", QString::number(sale.tax, 'f', 2));
     result.replace("{{total}}", QString::number(sale.total, 'f', 2));
     
+    // Información de pago (monto pagado y vuelto)
+    result.replace("{{amountPaid}}", QString::number(sale.amountPaid, 'f', 2));
+    result.replace("{{changeGiven}}", QString::number(sale.changeGiven, 'f', 2));
+    
     return result;
 }
 
@@ -496,6 +532,10 @@ QMap<QString, QString> PrintService::createVariablesMap(const Sale& sale,
     vars["{{discount}}"] = QString::number(sale.discount, 'f', 2);
     vars["{{tax}}"] = QString::number(sale.tax, 'f', 2);
     vars["{{total}}"] = QString::number(sale.total, 'f', 2);
+    
+    // Información de pago (monto pagado y vuelto)
+    vars["{{amountPaid}}"] = QString::number(sale.amountPaid, 'f', 2);
+    vars["{{changeGiven}}"] = QString::number(sale.changeGiven, 'f', 2);
     
     return vars;
 }
@@ -599,6 +639,8 @@ bool PrintService::generatePreviewPdf(const QString& layoutJson,
     sampleSale.discount = 0.00;
     sampleSale.tax = 18.00;
     sampleSale.total = 118.00;
+    sampleSale.amountPaid = 150.00;   // Monto pagado de ejemplo
+    sampleSale.changeGiven = 32.00;   // Vuelto calculado (150 - 118)
     sampleSale.paymentMethodId = 1;
     sampleSale.createdAt = QDateTime::currentDateTime();
     

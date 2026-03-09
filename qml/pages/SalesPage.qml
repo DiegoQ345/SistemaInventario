@@ -106,6 +106,43 @@ Page {
             mouse.accepted = false
         }
     }
+    
+    // Función para procesar la venta después de confirmar el pago
+    function processSaleAfterPayment() {
+        console.log("=== PROCESAR VENTA ===")
+        console.log("  Items en carrito:", viewModel.cart.count)
+        console.log("  Subtotal:", viewModel.cart.subtotal)
+        console.log("  Descuento:", viewModel.discount)
+        console.log("  Total:", viewModel.totalWithDiscount)
+        console.log("  Cliente ID:", root.currentCustomerId)
+        console.log("  Cliente:", root.currentCustomerName)
+        console.log("  Tipo de pago:", paymentTypeComboBox.currentText)
+        console.log("  Método de pago:", paymentMethodComboBox.currentText)
+        console.log("  Monto pagado:", viewModel.amountPaid)
+        console.log("  Vuelto:", viewModel.changeGiven)
+        
+        // Guardar datos de factura temporalmente para usar después de onSaleCompleted
+        root.currentRuc = facturaRadio.checked ? rucField.text : ""
+        root.currentBusinessName = facturaRadio.checked ? businessNameField.text : ""
+        root.currentAddress = facturaRadio.checked ? addressField.text : ""
+        
+        console.log("  Es factura:", facturaRadio.checked)
+
+        // Llamar al ViewModel con todos los datos incluyendo tipo y método de pago
+        var result = viewModel.processSaleWithInvoiceData(
+            root.currentCustomerId,  // customerId real del selector
+            root.currentCustomerName,
+            paymentMethodComboBox.currentIndex + 1,  // paymentMethodId (1, 2, 3, 4, 5)
+            paymentMethodComboBox.currentText,
+            facturaRadio.checked,  // isInvoice
+            root.currentRuc,
+            root.currentBusinessName,
+            root.currentAddress,
+            paymentTypeComboBox.currentIndex === 0 ? "CONTADO" : "CREDITO"  // paymentType
+        )
+        
+        console.log("  Resultado processSaleWithInvoiceData:", result)
+    }
 
         // ViewModel del carrito de ventas (base de datos real)
         SalesCartViewModel {
@@ -123,7 +160,7 @@ Page {
                 console.log("Stock insuficiente de", productName, "Disponible:", available, "Solicitado:", requested)
             }
 
-            onSaleCompleted: function(invoiceNumber, total, voucherType, items, subtotal, discount, customerName) {
+            onSaleCompleted: function(invoiceNumber, total, voucherType, items, subtotal, discount, customerName, amountPaid, changeGiven) {
                 // Guardar todos los datos recibidos del ViewModel
                 successDialog.invoiceNumber = invoiceNumber
                 successDialog.total = total
@@ -131,6 +168,8 @@ Page {
                 successDialog.items = items
                 successDialog.subtotal = subtotal
                 successDialog.discount = discount
+                successDialog.amountPaid = amountPaid
+                successDialog.changeGiven = changeGiven
                 
                 // Usar el customerName recibido directamente del ViewModel
                 successDialog.customerName = customerName
@@ -1286,27 +1325,16 @@ Page {
                                 return
                             }
                             
-                            // Guardar datos de factura temporalmente para usar después de onSaleCompleted
-                            root.currentRuc = facturaRadio.checked ? rucField.text : ""
-                            root.currentBusinessName = facturaRadio.checked ? businessNameField.text : ""
-                            root.currentAddress = facturaRadio.checked ? addressField.text : ""
-                            
-                            console.log("  Es factura:", facturaRadio.checked)
-
-                            // Llamar al ViewModel con todos los datos incluyendo tipo y método de pago
-                            var result = viewModel.processSaleWithInvoiceData(
-                                root.currentCustomerId,  // customerId real del selector
-                                root.currentCustomerName,
-                                paymentMethodComboBox.currentIndex + 1,  // paymentMethodId (1, 2, 3, 4, 5)
-                                paymentMethodComboBox.currentText,
-                                facturaRadio.checked,  // isInvoice
-                                root.currentRuc,
-                                root.currentBusinessName,
-                                root.currentAddress,
-                                paymentTypeComboBox.currentIndex === 0 ? "CONTADO" : "CREDITO"  // paymentType
-                            )
-                            
-                            console.log("  Resultado processSaleWithInvoiceData:", result)
+                            // Si es pago en EFECTIVO, mostrar diálogo de ingreso de monto
+                            if (paymentMethodComboBox.currentIndex === 0) {
+                                paymentAmountDialog.totalAmount = viewModel.totalWithDiscount
+                                paymentAmountDialog.open()
+                            } else {
+                                // Para otros métodos de pago, asumir pago exacto
+                                viewModel.amountPaid = viewModel.totalWithDiscount
+                                // changeGiven se calcula automáticamente en el setter (será 0)
+                                processSaleAfterPayment()
+                            }
                         }
                     }
 
@@ -1351,6 +1379,8 @@ Page {
             printDialog.subtotal = successDialog.subtotal
             printDialog.discount = successDialog.discount
             printDialog.total = successDialog.total
+            printDialog.amountPaid = successDialog.amountPaid
+            printDialog.changeGiven = successDialog.changeGiven
             printDialog.voucherType = voucherType
             printDialog.ruc = successDialog.ruc
             printDialog.businessName = successDialog.businessName
@@ -1701,6 +1731,20 @@ Page {
             } else {
                 console.log("Cantidad inválida:", qty)
             }
+        }
+    }
+    
+    // Diálogo de ingreso de monto pagado (solo para efectivo)
+    PaymentAmountDialog {
+        id: paymentAmountDialog
+        
+        onPaymentConfirmed: function(amountPaid, changeGiven) {
+            // Guardar valores en el viewModel
+            viewModel.amountPaid = amountPaid
+            // changeGiven ya se calcula automáticamente en el setter
+            
+            // Procesar la venta después de confirmar el pago
+            processSaleAfterPayment()
         }
     }
 }

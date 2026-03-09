@@ -8,6 +8,7 @@
 TicketLayout::TicketLayout()
     : m_widthMM(0)
     , m_initialHeightMM(0)
+    , m_bulletChar("•")
     , m_isValid(false)
 {
 }
@@ -51,6 +52,12 @@ bool TicketLayout::loadFromJson(const QString& json)
         } else {
             m_errorMessage = "Falta especificación de tamaño (size)";
             return false;
+        }
+        
+        // Leer carácter de viñeta (opcional, por defecto •)
+        if (root.contains("bulletChar")) {
+            m_bulletChar = root["bulletChar"].toString("•");
+            qDebug() << "[TicketLayout] Carácter de viñeta:" << m_bulletChar;
         }
         
         // Leer elementos

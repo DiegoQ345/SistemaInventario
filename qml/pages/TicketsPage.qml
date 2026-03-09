@@ -1,347 +1,76 @@
-import QtQuick
+﻿import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
 import QtQuick.Effects
-import Qt.labs.platform as Platform
 import SistemaInventario
 
 Page {
     id: root
     title: qsTr("Diseñador de Tickets")
     
-    property real ticketWidth: 80  // mm
-    property real ticketHeight: 200  // mm
+    // ── UI-only state ─────────────────────────────────────────────────────────
     // NOTA: pixelsPerMM es solo para VISUALIZACIÓN en el diseñador (96 DPI pantalla)
     // La impresión usa DPI dinámico del dispositivo (300 DPI PDF, 203 DPI térmica, etc)
     // IMPORTANTE: fontSize usa unidad especial con factor /3 para legibilidad en diseñador
     property real pixelsPerMM: 11.811024  // 300 DPI / 25.4 para visualización base
-    
-    // Tipo de comprobante para el diseño
-    property string voucherDesignType: "Boleta"  // "Boleta" o "Factura"
-    
-    // Función para cargar modelo estándar según tipo de comprobante
-    function loadStandardTemplate(type) {
-        if (type === "Factura") {
-            // Modelo para facturas (incluye RUC, razón social, dirección del cliente)
-            ticketElements = [
-                { id: "logo", type: "image", label: "Logo", x: 10, y: 5, width: 60, height: 30, content: "", fontSize: 12, bold: false, align: "center" },
-                { id: "businessName", type: "text", label: "Nombre del Negocio", x: 10, y: 40, width: 60, height: 8, content: "{{businessName}}", fontSize: 14, bold: true, align: "center" },
-                { id: "ruc", type: "text", label: "RUC", x: 10, y: 50, width: 60, height: 6, content: "RUC: {{ruc}}", fontSize: 10, bold: false, align: "center" },
-                { id: "address", type: "text", label: "Dirección", x: 10, y: 58, width: 60, height: 10, content: "{{address}}", fontSize: 8, bold: false, align: "center" },
-                { id: "phone", type: "text", label: "Teléfono", x: 10, y: 70, width: 60, height: 6, content: "Tel: {{phone}}", fontSize: 8, bold: false, align: "center" },
-                { id: "separator1", type: "line", label: "Línea Separadora 1", x: 5, y: 80, width: 70, height: 1 },
-                { id: "invoiceNumber", type: "text", label: "Número de Comprobante", x: 10, y: 85, width: 60, height: 8, content: "{{voucherType}}: {{invoiceNumber}}", fontSize: 12, bold: true, align: "center" },
-                { id: "date", type: "text", label: "Fecha", x: 10, y: 95, width: 60, height: 6, content: "{{datetime}}", fontSize: 9, bold: false, align: "left" },
-                { id: "customer", type: "text", label: "Cliente", x: 10, y: 103, width: 60, height: 6, content: "Cliente: {{customerName}}", fontSize: 8, bold: false, align: "left" },
-                { id: "customerRuc", type: "text", label: "RUC Cliente", x: 10, y: 110, width: 60, height: 6, content: "RUC: {{customerRuc}}", fontSize: 8, bold: false, align: "left" },
-                { id: "customerBusinessName", type: "text", label: "Razón Social", x: 10, y: 117, width: 60, height: 6, content: "{{customerBusinessName}}", fontSize: 8, bold: false, align: "left" },
-                { id: "customerAddress", type: "text", label: "Dirección Cliente", x: 10, y: 124, width: 60, height: 8, content: "Dir: {{customerAddress}}", fontSize: 8, bold: false, align: "left" },
-                { id: "separator2", type: "line", label: "Línea Separadora 2", x: 5, y: 134, width: 70, height: 1 },
-                { id: "itemsHeader", type: "text", label: "[ITEMS]", x: 10, y: 138, width: 60, height: 6, content: "{{Productos}}", fontSize: 8, bold: false, align: "left" },
-                { id: "separator3", type: "line", label: "Línea Separadora 3", x: 5, y: 188, width: 70, height: 1 },
-                { id: "subtotal", type: "text", label: "Subtotal", x: 10, y: 193, width: 60, height: 6, content: "Subtotal: S/ {{subtotal}}", fontSize: 9, bold: false, align: "right" },
-                { id: "total", type: "text", label: "Total", x: 10, y: 201, width: 60, height: 8, content: "TOTAL: S/ {{total}}", fontSize: 12, bold: true, align: "right" },
-                { id: "separator4", type: "line", label: "Línea Separadora 4", x: 5, y: 211, width: 70, height: 1 },
-                { id: "footer", type: "text", label: "Pie de Página", x: 10, y: 215, width: 60, height: 6, content: "¡Gracias por su compra!", fontSize: 9, bold: false, align: "center" }
-            ]
-        } else {
-            // Modelo para boletas (solo nombre del cliente)
-            ticketElements = [
-                { id: "logo", type: "image", label: "Logo", x: 10, y: 5, width: 60, height: 30, content: "", fontSize: 12, bold: false, align: "center" },
-                { id: "businessName", type: "text", label: "Nombre del Negocio", x: 10, y: 40, width: 60, height: 8, content: "{{businessName}}", fontSize: 14, bold: true, align: "center" },
-                { id: "ruc", type: "text", label: "RUC", x: 10, y: 50, width: 60, height: 6, content: "RUC: {{ruc}}", fontSize: 10, bold: false, align: "center" },
-                { id: "address", type: "text", label: "Dirección", x: 10, y: 58, width: 60, height: 10, content: "{{address}}", fontSize: 8, bold: false, align: "center" },
-                { id: "phone", type: "text", label: "Teléfono", x: 10, y: 70, width: 60, height: 6, content: "Tel: {{phone}}", fontSize: 8, bold: false, align: "center" },
-                { id: "separator1", type: "line", label: "Línea Separadora 1", x: 5, y: 80, width: 70, height: 1 },
-                { id: "invoiceNumber", type: "text", label: "Número de Comprobante", x: 10, y: 85, width: 60, height: 8, content: "{{voucherType}}: {{invoiceNumber}}", fontSize: 12, bold: true, align: "center" },
-                { id: "date", type: "text", label: "Fecha", x: 10, y: 95, width: 60, height: 6, content: "{{datetime}}", fontSize: 9, bold: false, align: "left" },
-                { id: "customer", type: "text", label: "Cliente", x: 10, y: 103, width: 60, height: 6, content: "Cliente: {{customerName}}", fontSize: 8, bold: false, align: "left" },
-                { id: "separator2", type: "line", label: "Línea Separadora 2", x: 5, y: 111, width: 70, height: 1 },
-                { id: "itemsHeader", type: "text", label: "[ITEMS]", x: 10, y: 115, width: 60, height: 6, content: "{{Productos}}", fontSize: 8, bold: false, align: "left" },
-                { id: "separator3", type: "line", label: "Línea Separadora 3", x: 5, y: 165, width: 70, height: 1 },
-                { id: "subtotal", type: "text", label: "Subtotal", x: 10, y: 170, width: 60, height: 6, content: "Subtotal: S/ {{subtotal}}", fontSize: 9, bold: false, align: "right" },
-                { id: "total", type: "text", label: "Total", x: 10, y: 178, width: 60, height: 8, content: "TOTAL: S/ {{total}}", fontSize: 12, bold: true, align: "right" },
-                { id: "separator4", type: "line", label: "Línea Separadora 4", x: 5, y: 188, width: 70, height: 1 },
-                { id: "footer", type: "text", label: "Pie de Página", x: 10, y: 192, width: 60, height: 6, content: "¡Gracias por su compra!", fontSize: 9, bold: false, align: "center" }
-            ]
-        }
-        selectedElementIndex = -1
-    }
-    
-    // Tamaños predefinidos
-    property var ticketSizes: [
-        { name: "80mm x 200mm (Estándar)", width: 80, height: 200 },
-        { name: "80mm x 297mm (A4 Largo)", width: 80, height: 297 },
-        { name: "58mm x 200mm (Compacto)", width: 58, height: 200 },
-        { name: "58mm x 297mm (Compacto Largo)", width: 58, height: 297 },
-        { name: "80mm x 150mm (Corto)", width: 80, height: 150 }
-    ]
-    property int selectedSizeIndex: 0
-    
-    onSelectedSizeIndexChanged: {
-        if (selectedSizeIndex >= 0 && selectedSizeIndex < ticketSizes.length) {
-            ticketWidth = ticketSizes[selectedSizeIndex].width
-            ticketHeight = ticketSizes[selectedSizeIndex].height
-        }
-    }
-    
-    // Repositorio de diseños
-    TicketTemplateRepository {
-        id: templateRepository
-    }
-    
-    // Servicio de impresión
-    PrintService {
-        id: printService
-        onPrintCompleted: {
-            showMessage("Vista previa PDF generada correctamente", "success")
-        }
-        onPrintFailed: function(error) {
-            showMessage("Error generando PDF: " + error, "error")
-        }
-    }
-    
-    // Elementos del ticket con sus posiciones y propiedades
-    property var ticketElements: [
-        {
-            id: "logo",
-            type: "image",
-            label: "Logo",
-            x: 10,
-            y: 5,
-            width: 60,
-            height: 30,
-            content: "",
-            fontSize: 12,
-            bold: false,
-            align: "center"
-        },
-        {
-            id: "businessName",
-            type: "text",
-            label: "Nombre del Negocio",
-            x: 10,
-            y: 40,
-            width: 60,
-            height: 8,
-            content: "{{businessName}}",
-            fontSize: 14,
-            bold: true,
-            align: "center"
-        },
-        {
-            id: "ruc",
-            type: "text",
-            label: "RUC",
-            x: 10,
-            y: 50,
-            width: 60,
-            height: 6,
-            content: "RUC: {{ruc}}",
-            fontSize: 10,
-            bold: false,
-            align: "center"
-        },
-        {
-            id: "address",
-            type: "text",
-            label: "Dirección",
-            x: 10,
-            y: 58,
-            width: 60,
-            height: 10,
-            content: "{{address}}",
-            fontSize: 8,
-            bold: false,
-            align: "center"
-        },
-        {
-            id: "phone",
-            type: "text",
-            label: "Teléfono",
-            x: 10,
-            y: 70,
-            width: 60,
-            height: 6,
-            content: "Tel: (01) 123-4567",
-            fontSize: 8,
-            bold: false,
-            align: "center"
-        },
-        {
-            id: "separator1",
-            type: "line",
-            label: "Línea Separadora 1",
-            x: 5,
-            y: 80,
-            width: 70,
-            height: 1
-        },
-        {
-            id: "invoiceNumber",
-            type: "text",
-            label: "Número de Comprobante",
-            x: 10,
-            y: 85,
-            width: 60,
-            height: 8,
-            content: "{{voucherType}}: {{invoiceNumber}}",
-            fontSize: 12,
-            bold: true,
-            align: "center"
-        },
-        {
-            id: "date",
-            type: "text",
-            label: "Fecha",
-            x: 10,
-            y: 95,
-            width: 60,
-            height: 6,
-            content: "{{datetime}}",
-            fontSize: 9,
-            bold: false,
-            align: "left"
-        },
-        {
-            id: "customer",
-            type: "text",
-            label: "Cliente",
-            x: 10,
-            y: 103,
-            width: 60,
-            height: 6,
-            content: "Cliente: {{customerName}}",
-            fontSize: 8,
-            bold: false,
-            align: "left"
-        },
-        {
-            id: "customerRuc",
-            type: "text",
-            label: "RUC Cliente (Factura)",
-            x: 10,
-            y: 110,
-            width: 60,
-            height: 6,
-            content: "RUC: {{customerRuc}}",
-            fontSize: 8,
-            bold: false,
-            align: "left"
-        },
-        {
-            id: "customerBusinessName",
-            type: "text",
-            label: "Razón Social (Factura)",
-            x: 10,
-            y: 117,
-            width: 60,
-            height: 6,
-            content: "Razón Social: {{customerBusinessName}}",
-            fontSize: 8,
-            bold: false,
-            align: "left"
-        },
-        {
-            id: "customerAddress",
-            type: "text",
-            label: "Dirección Cliente (Factura)",
-            x: 10,
-            y: 124,
-            width: 60,
-            height: 8,
-            content: "Dirección: {{customerAddress}}",
-            fontSize: 8,
-            bold: false,
-            align: "left"
-        },
-        {
-            id: "separator2",
-            type: "line",
-            label: "Línea Separadora 2",
-            x: 5,
-            y: 134,
-            width: 70,
-            height: 1
-        },
-        {
-            id: "itemsHeader",
-            type: "text",
-            label: "[ITEMS - Auto]",
-            x: 10,
-            y: 138,
-            width: 60,
-            height: 6,
-            content: "[Los productos se agregan aquí automáticamente]",
-            fontSize: 7,
-            bold: false,
-            align: "center"
-        },
-        {
-            id: "separator3",
-            type: "line",
-            label: "Línea Separadora 3",
-            x: 5,
-            y: 188,
-            width: 70,
-            height: 1
-        },
-        {
-            id: "subtotal",
-            type: "text",
-            label: "Subtotal",
-            x: 10,
-            y: 193,
-            width: 60,
-            height: 6,
-            content: "Subtotal: S/ {{subtotal}}",
-            fontSize: 9,
-            bold: false,
-            align: "right"
-        },
-        {
-            id: "total",
-            type: "text",
-            label: "Total",
-            x: 10,
-            y: 201,
-            width: 60,
-            height: 8,
-            content: "TOTAL: S/ {{total}}",
-            fontSize: 12,
-            bold: true,
-            align: "right"
-        },
-        {
-            id: "separator4",
-            type: "line",
-            label: "Línea Separadora 4",
-            x: 5,
-            y: 211,
-            width: 70,
-            height: 1
-        },
-        {
-            id: "footer",
-            type: "text",
-            label: "Pie de Página",
-            x: 10,
-            y: 215,
-            width: 60,
-            height: 6,
-            content: "¡Gracias por su compra!",
-            fontSize: 9,
-            bold: false,
-            align: "center"
-        }
-    ]
-    
-    property int selectedElementIndex: -1
-    property var savedTemplates: []
+    property real canvasZoom: 1.0
+    property bool propertiesPanelCollapsed: false
     property bool isPanning: false
     property point lastMousePos: Qt.point(0, 0)
-    
+
+    // ── ViewModel ─────────────────────────────────────────────────────────────
+    TicketDesignerViewModel {
+        id: viewModel
+    }
+
+    // Bridge: forward status notifications from ViewModel to the message bar
+    Connections {
+        target: viewModel
+        function onShowStatus(message, isSuccess) {
+            messageLabel.text = message
+            messageBar.color = isSuccess ? Material.color(Material.Green)
+                                         : Material.color(Material.Red)
+            messageBar.visible = true
+            messageTimer.restart()
+        }
+    }
+
+    // Sincroniza todos los controles del panel de propiedades con el elemento seleccionado
+    function syncPropertiesPanel() {
+        var idx = viewModel.selectedElementIndex
+        if (idx < 0) return
+        var el = viewModel.ticketElements[idx]
+        if (!el) return
+        
+        // Sincronizar controles básicos (aplica a todos los tipos)
+        if (typeof labelTextField !== "undefined")
+            labelTextField.text = el.label !== undefined ? el.label : ""
+        if (typeof xSpinBox !== "undefined")
+            xSpinBox.value = Math.round(el.x !== undefined ? el.x : 0)
+        if (typeof ySpinBox !== "undefined")
+            ySpinBox.value = Math.round(el.y !== undefined ? el.y : 0)
+        if (typeof wSpinBox !== "undefined")
+            wSpinBox.value = Math.max(1, Math.round(el.width !== undefined ? el.width : 1))
+        if (typeof hSpinBox !== "undefined")
+            hSpinBox.value = Math.max(1, Math.round(el.height !== undefined ? el.height : 1))
+        
+        // Sincronizar controles de texto (solo para elementos tipo "text")
+        if (el.type === "text") {
+            var fs = el.fontSize !== undefined ? el.fontSize : 12
+            if (typeof fontSizeSlider !== "undefined")
+                fontSizeSlider.value = fs
+            if (typeof fontSizeSpinBox !== "undefined")
+                fontSizeSpinBox.value = fs
+            if (typeof boldCheckBox !== "undefined")
+                boldCheckBox.checked = el.bold === true
+            if (typeof alignComboBox !== "undefined")
+                alignComboBox.currentIndex = el.align === "right" ? 2 : el.align === "center" ? 1 : 0
+            if (typeof contentTextArea !== "undefined" && !contentTextArea.activeFocus)
+                contentTextArea.text = el.content !== undefined ? el.content : ""
+        }
+    }
+
     RowLayout {
         anchors.fill: parent
         spacing: 0
@@ -378,13 +107,11 @@ Page {
                             id: voucherTypeComboBox
                             Layout.preferredWidth: 120
                             model: ["Boleta", "Factura"]
-                            currentIndex: voucherDesignType === "Factura" ? 1 : 0
+                            currentIndex: viewModel.voucherDesignType === "Factura" ? 1 : 0
                             onCurrentIndexChanged: {
                                 var newType = currentIndex === 1 ? "Factura" : "Boleta"
-                                if (voucherDesignType !== newType) {
-                                    voucherDesignType = newType
-                                    // Cargar modelo estándar cuando cambie el tipo
-                                    loadStandardTemplate(newType)
+                                if (viewModel.voucherDesignType !== newType) {
+                                    viewModel.loadStandardTemplate(newType)
                                 }
                             }
                         }
@@ -403,10 +130,10 @@ Page {
                         ComboBox {
                             id: sizeComboBox
                             Layout.preferredWidth: 200
-                            model: ticketSizes.map(size => size.name)
-                            currentIndex: selectedSizeIndex
+                            model: viewModel.ticketSizes.map(size => size.name)
+                            currentIndex: viewModel.selectedSizeIndex
                             onCurrentIndexChanged: {
-                                selectedSizeIndex = currentIndex
+                                viewModel.setSelectedSizeIndex(currentIndex)
                             }
                         }
                         
@@ -426,13 +153,19 @@ Page {
                             text: "\uE74E  " + qsTr("Guardar")
                             font.family: "Segoe MDL2 Assets"
                             highlighted: true
-                            onClicked: saveDesign()
+                            onClicked: saveNameDialog.open()
                         }
                         
                         Button {
                             text: "\uE7C5  " + qsTr("Vista Previa")
                             font.family: "Segoe MDL2 Assets"
-                            onClicked: previewDialog.open()
+                            onClicked: {
+                                console.log("[TicketsPage] Opening preview dialog")
+                                console.log("  - pixelsPerMM value:", root.pixelsPerMM)
+                                console.log("  - Ticket size:", viewModel.ticketWidth, "x", viewModel.ticketHeight, "mm")
+                                console.log("  - Elements count:", viewModel.ticketElements.length)
+                                previewDialog.open()
+                            }
                         }
                     }
                 }
@@ -522,7 +255,7 @@ Page {
                                 Label {
                                     id: infoLabel
                                     anchors.centerIn: parent
-                                    text: ticketWidth + "mm × " + ticketHeight + "mm"
+                                    text: viewModel.ticketWidth + "mm × " + viewModel.ticketHeight + "mm"
                                     color: "white"
                                     font.pixelSize: 12
                                     font.bold: true
@@ -533,12 +266,14 @@ Page {
                             Rectangle {
                                 id: ticketCanvas
                                 anchors.centerIn: parent
-                                width: ticketWidth * pixelsPerMM
-                                height: ticketHeight * pixelsPerMM
+                                width: viewModel.ticketWidth * pixelsPerMM
+                                height: viewModel.ticketHeight * pixelsPerMM
                                 color: Material.theme === Material.Dark ? "#1a1a1a" : "white"
                                 border.width: 2
                                 border.color: Material.theme === Material.Dark ? "white" : Material.primary
                                 z: 10
+                                scale: canvasZoom
+                                transformOrigin: Item.Center
                         
                         // Cuadrícula de fondo
                         Canvas {
@@ -546,7 +281,7 @@ Page {
                             anchors.fill: parent
                             
                             Connections {
-                                target: root
+                                target: viewModel
                                 function onTicketWidthChanged() { gridCanvas.requestPaint() }
                                 function onTicketHeightChanged() { gridCanvas.requestPaint() }
                             }
@@ -577,7 +312,7 @@ Page {
                         
                         // Elementos del ticket
                         Repeater {
-                            model: ticketElements
+                            model: viewModel.ticketElements
                             
                             Rectangle {
                                 id: elementRect
@@ -586,17 +321,17 @@ Page {
                                 width: modelData.width * pixelsPerMM
                                 height: modelData.height * pixelsPerMM
                                 color: "transparent"
-                                border.width: selectedElementIndex === index ? 2 : 1
-                                border.color: selectedElementIndex === index ? Material.accent : "#90A4AE"
+                                border.width: viewModel.selectedElementIndex === index ? 2 : 1
+                                border.color: viewModel.selectedElementIndex === index ? Material.accent : "#90A4AE"
                                 z: 15
                                 
                                 // Contenido del elemento
                                 Label {
                                     anchors.fill: parent
                                     anchors.margins: 2
-                                    text: modelData.type === "line" ? "━━━━━━━━━━" : modelData.content
+                                    text: modelData.type === "line" ? "━━━━━━━━━━━━━━━━━━━━━━━━━━━━" : (modelData.content || "")
                                     font.pixelSize: modelData.fontSize * (pixelsPerMM / 3)
-                                    font.bold: modelData.bold
+                                    font.bold: modelData.bold || false
                                     horizontalAlignment: modelData.align === "center" ? Text.AlignHCenter : 
                                                         modelData.align === "right" ? Text.AlignRight : Text.AlignLeft
                                     verticalAlignment: Text.AlignVCenter
@@ -617,27 +352,7 @@ Page {
                                         
                                         onDropped: function(drop) {
                                             if (drop.hasUrls) {
-                                                var url = drop.urls[0]
-                                                var path = url.toString()
-                                                
-                                                // Remover file:/// del inicio
-                                                if (path.startsWith("file:///")) {
-                                                    path = path.substring(8)
-                                                }
-                                                
-                                                // Verificar si es una imagen
-                                                var validExtensions = [".png", ".jpg", ".jpeg", ".bmp", ".gif"]
-                                                var isValidImage = validExtensions.some(function(ext) {
-                                                    return path.toLowerCase().endsWith(ext)
-                                                })
-                                                
-                                                if (isValidImage) {
-                                                    ticketElements[index].content = url.toString()
-                                                    root.ticketElementsChanged()
-                                                    showMessage("Imagen cargada correctamente", "success")
-                                                } else {
-                                                    showMessage("Solo se permiten archivos de imagen", "error")
-                                                }
+                                                viewModel.setElementImageUrl(index, drop.urls[0].toString())
                                             }
                                         }
                                         
@@ -671,14 +386,15 @@ Page {
                                                     text: "\uEB9F"
                                                     font.family: "Segoe MDL2 Assets"
                                                     font.pixelSize: 24
-                                                    color: imageDropArea.containsDrag ? Material.accent : "#999"
+                                                    color: imageDropArea.containsDrag ? Material.accent : 
+                                                           (Material.theme === Material.Dark ? "#888" : "#999")
                                                 }
                                                 
                                                 Label {
                                                     Layout.alignment: Qt.AlignHCenter
                                                     text: imageDropArea.containsDrag ? "Suelta aquí" : "Arrastra imagen"
                                                     font.pixelSize: 8
-                                                    color: "#999"
+                                                    color: Material.theme === Material.Dark ? "#aaa" : "#999"
                                                 }
                                             }
                                         }
@@ -696,15 +412,14 @@ Page {
                                     propagateComposedEvents: false
                                     
                                     onClicked: {
-                                        selectedElementIndex = index
+                                        viewModel.setSelectedElementIndex(index)
                                     }
                                     
                                     onReleased: {
                                         // Actualizar posición en el modelo
-                                        var newX = parent.x / pixelsPerMM
-                                        var newY = parent.y / pixelsPerMM
-                                        ticketElements[index].x = Math.round(newX * 10) / 10
-                                        ticketElements[index].y = Math.round(newY * 10) / 10
+                                        var newX = Math.round((parent.x / pixelsPerMM) * 10) / 10
+                                        var newY = Math.round((parent.y / pixelsPerMM) * 10) / 10
+                                        viewModel.updateElementPosition(index, newX, newY)
                                     }
                                 }
                                 
@@ -719,7 +434,7 @@ Page {
                                     border.color: Material.accent
                                     border.width: 2
                                     radius: 4
-                                    visible: selectedElementIndex === index
+                                    visible: viewModel.selectedElementIndex === index
                                     z: 20
                                     
                                     MouseArea {
@@ -759,11 +474,13 @@ Page {
                                         }
                                         
                                         onReleased: {
-                                            ticketElements[index].width = Math.round((elementRect.width / pixelsPerMM) * 10) / 10
-                                            ticketElements[index].height = Math.round((elementRect.height / pixelsPerMM) * 10) / 10
-                                            ticketElements[index].x = Math.round((elementRect.x / pixelsPerMM) * 10) / 10
-                                            ticketElements[index].y = Math.round((elementRect.y / pixelsPerMM) * 10) / 10
-                                            root.ticketElementsChanged()
+                                            viewModel.updateElementGeometry(
+                                                index,
+                                                Math.round((elementRect.x / pixelsPerMM) * 10) / 10,
+                                                Math.round((elementRect.y / pixelsPerMM) * 10) / 10,
+                                                Math.round((elementRect.width / pixelsPerMM) * 10) / 10,
+                                                Math.round((elementRect.height / pixelsPerMM) * 10) / 10
+                                            )
                                         }
                                     }
                                 }
@@ -778,7 +495,7 @@ Page {
                                     border.color: Material.accent
                                     border.width: 2
                                     radius: 4
-                                    visible: selectedElementIndex === index
+                                    visible: viewModel.selectedElementIndex === index
                                     z: 20
                                     
                                     MouseArea {
@@ -815,10 +532,13 @@ Page {
                                         }
                                         
                                         onReleased: {
-                                            ticketElements[index].width = Math.round((elementRect.width / pixelsPerMM) * 10) / 10
-                                            ticketElements[index].height = Math.round((elementRect.height / pixelsPerMM) * 10) / 10
-                                            ticketElements[index].y = Math.round((elementRect.y / pixelsPerMM) * 10) / 10
-                                            root.ticketElementsChanged()
+                                            viewModel.updateElementGeometry(
+                                                index,
+                                                modelData.x,
+                                                Math.round((elementRect.y / pixelsPerMM) * 10) / 10,
+                                                Math.round((elementRect.width / pixelsPerMM) * 10) / 10,
+                                                Math.round((elementRect.height / pixelsPerMM) * 10) / 10
+                                            )
                                         }
                                     }
                                 }
@@ -833,7 +553,7 @@ Page {
                                     border.color: Material.accent
                                     border.width: 2
                                     radius: 4
-                                    visible: selectedElementIndex === index
+                                    visible: viewModel.selectedElementIndex === index
                                     z: 20
                                     
                                     MouseArea {
@@ -870,10 +590,13 @@ Page {
                                         }
                                         
                                         onReleased: {
-                                            ticketElements[index].width = Math.round((elementRect.width / pixelsPerMM) * 10) / 10
-                                            ticketElements[index].height = Math.round((elementRect.height / pixelsPerMM) * 10) / 10
-                                            ticketElements[index].x = Math.round((elementRect.x / pixelsPerMM) * 10) / 10
-                                            root.ticketElementsChanged()
+                                            viewModel.updateElementGeometry(
+                                                index,
+                                                Math.round((elementRect.x / pixelsPerMM) * 10) / 10,
+                                                modelData.y,
+                                                Math.round((elementRect.width / pixelsPerMM) * 10) / 10,
+                                                Math.round((elementRect.height / pixelsPerMM) * 10) / 10
+                                            )
                                         }
                                     }
                                 }
@@ -888,7 +611,7 @@ Page {
                                     border.color: Material.accent
                                     border.width: 2
                                     radius: 4
-                                    visible: selectedElementIndex === index
+                                    visible: viewModel.selectedElementIndex === index
                                     z: 20
                                     
                                     MouseArea {
@@ -922,60 +645,195 @@ Page {
                                         }
                                         
                                         onReleased: {
-                                            ticketElements[index].width = Math.round((elementRect.width / pixelsPerMM) * 10) / 10
-                                            ticketElements[index].height = Math.round((elementRect.height / pixelsPerMM) * 10) / 10
-                                            root.ticketElementsChanged()
+                                            viewModel.updateElementGeometry(
+                                                index,
+                                                modelData.x,
+                                                modelData.y,
+                                                Math.round((elementRect.width / pixelsPerMM) * 10) / 10,
+                                                Math.round((elementRect.height / pixelsPerMM) * 10) / 10
+                                            )
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }  // Fin Rectangle ticketCanvas
-            }  // Fin Item canvasContainer
-        }  // Fin ScrollView / Fin Item área de trabajo
-        }  // Fin ColumnLayout
+                }  // Fin Item canvasContainer
+        }  // Fin ScrollView
+    }  // Fin Item área de trabajo
+                
+                // Controles de zoom debajo del canvas
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 50
+                    color: Material.background
+                    border.width: 1
+                    border.color: Material.frameColor
+                    
+                    RowLayout {
+                        anchors.centerIn: parent
+                        spacing: 12
+                        
+                        Label {
+                            text: qsTr("Zoom:")
+                            font.pixelSize: 12
+                        }
+                        
+                        Button {
+                            text: "\uE71E"  // Minus icon
+                            font.family: "Segoe MDL2 Assets"
+                            font.pixelSize: 16
+                            flat: true
+                            enabled: canvasZoom > 0.5
+                            onClicked: canvasZoom = Math.max(0.5, canvasZoom - 0.1)
+                            ToolTip.visible: hovered
+                            ToolTip.text: qsTr("Alejar")
+                        }
+                        
+                        Slider {
+                            id: zoomSlider
+                            from: 0.5
+                            to: 2.0
+                            value: canvasZoom
+                            stepSize: 0.1
+                            Layout.preferredWidth: 150
+                            onValueChanged: {
+                                if (Math.abs(value - canvasZoom) > 0.01) {
+                                    canvasZoom = value
+                                }
+                            }
+                        }
+                        
+                        Label {
+                            text: Math.round(canvasZoom * 100) + "%"
+                            font.pixelSize: 12
+                            font.bold: true
+                            Layout.minimumWidth: 50
+                            horizontalAlignment: Text.AlignHCenter
+                        }
+                        
+                        Button {
+                            text: "\uE710"  // Plus icon
+                            font.family: "Segoe MDL2 Assets"
+                            font.pixelSize: 16
+                            flat: true
+                            enabled: canvasZoom < 2.0
+                            onClicked: canvasZoom = Math.min(2.0, canvasZoom + 0.1)
+                            ToolTip.visible: hovered
+                            ToolTip.text: qsTr("Acercar")
+                        }
+                        
+                        Button {
+                            text: "100%"
+                            flat: true
+                            onClicked: canvasZoom = 1.0
+                            ToolTip.visible: hovered
+                            ToolTip.text: qsTr("Restablecer zoom")
+                        }
+                    }
+                }
+            }  // Fin ColumnLayout
         }  // Fin Rectangle panel izquierdo
         
         // Panel derecho: Propiedades
         Rectangle {
-            Layout.preferredWidth: 320
+            Layout.preferredWidth: propertiesPanelCollapsed ? 50 : 320
             Layout.fillHeight: true
             color: Material.background
             border.width: 1
             border.color: Material.frameColor
             
+            Behavior on Layout.preferredWidth {
+                NumberAnimation { duration: 200; easing.type: Easing.InOutQuad }
+            }
+
+            // Clic en cualquier parte del panel colapsado para expandirlo
+            MouseArea {
+                anchors.fill: parent
+                enabled: propertiesPanelCollapsed
+                cursorShape: Qt.PointingHandCursor
+                z: 2
+                onClicked: propertiesPanelCollapsed = false
+            }
+
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 16
-                spacing: 16
+                anchors.margins: propertiesPanelCollapsed ? 8 : 16
+                spacing: propertiesPanelCollapsed ? 8 : 16
+                
+                // Botón para colapsar/expandir
+                Button {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.preferredWidth: propertiesPanelCollapsed ? 34 : 40
+                    Layout.preferredHeight: propertiesPanelCollapsed ? 34 : 40
+                    flat: true
+                    text: propertiesPanelCollapsed ? "\uE76C" : "\uE76B"  // Chevron derecha/izquierda
+                    font.family: "Segoe MDL2 Assets"
+                    font.pixelSize: 16
+                    onClicked: propertiesPanelCollapsed = !propertiesPanelCollapsed
+                    ToolTip.visible: hovered
+                    ToolTip.text: propertiesPanelCollapsed ? qsTr("Expandir panel") : qsTr("Contraer panel")
+                }
                 
                 Label {
                     text: qsTr("Propiedades")
                     font.pixelSize: 18
                     font.bold: true
+                    visible: !propertiesPanelCollapsed
                 }
                 
                 ScrollView {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
+                    visible: !propertiesPanelCollapsed
                     ScrollBar.vertical.policy: ScrollBar.AsNeeded
                     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                     
                     ColumnLayout {
                         width: parent.parent.width - 40  // Padding adicional para evitar sobreposición
                         spacing: 12
-                        
+
+                        // Sincroniza controles cada vez que cambia la selección O el modelo
+                        Connections {
+                            target: viewModel
+                            function onSelectedElementIndexChanged() { Qt.callLater(syncPropertiesPanel) }
+                            function onTicketElementsChanged()       { Qt.callLater(syncPropertiesPanel) }
+                        }
+
                         // Mostrar propiedades si hay elemento seleccionado
                         GroupBox {
                             Layout.fillWidth: true
-                            title: selectedElementIndex >= 0 ? ticketElements[selectedElementIndex].label : qsTr("Ningún elemento seleccionado")
-                            visible: selectedElementIndex >= 0
+                            title: viewModel.selectedElementIndex >= 0 ? viewModel.ticketElements[viewModel.selectedElementIndex].label : qsTr("Ningún elemento seleccionado")
+                            visible: viewModel.selectedElementIndex >= 0
                             
                             ColumnLayout {
                                 width: parent.width
                                 spacing: 12
+                                
+                                // Editar nombre del elemento
+                                Label {
+                                    text: qsTr("Nombre del Elemento")
+                                    font.bold: true
+                                    Layout.fillWidth: true
+                                }
+                                
+                                TextField {
+                                    id: labelTextField
+                                    Layout.fillWidth: true
+                                    placeholderText: qsTr("Nombre del elemento...")
+                                    onEditingFinished: {
+                                        if (viewModel.selectedElementIndex >= 0 && text.trim() !== "") {
+                                            viewModel.updateElementProperty(viewModel.selectedElementIndex, "label", text)
+                                        }
+                                    }
+                                }
+                                
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    height: 1
+                                    color: Material.dividerColor
+                                }
                                 
                                 Label {
                                     text: qsTr("Posición y Tamaño")
@@ -994,12 +852,10 @@ Page {
                                         id: xSpinBox
                                         Layout.fillWidth: true
                                         from: 0
-                                        to: ticketWidth
-                                        value: selectedElementIndex >= 0 ? ticketElements[selectedElementIndex].x : 0
+                                        to: viewModel.ticketWidth
                                         onValueModified: {
-                                            if (selectedElementIndex >= 0) {
-                                                ticketElements[selectedElementIndex].x = value
-                                                root.ticketElementsChanged()
+                                            if (viewModel.selectedElementIndex >= 0) {
+                                                viewModel.updateElementProperty(viewModel.selectedElementIndex, "x", value)
                                             }
                                         }
                                     }
@@ -1009,40 +865,36 @@ Page {
                                         id: ySpinBox
                                         Layout.fillWidth: true
                                         from: 0
-                                        to: ticketHeight
-                                        value: selectedElementIndex >= 0 ? ticketElements[selectedElementIndex].y : 0
+                                        to: viewModel.ticketHeight
                                         onValueModified: {
-                                            if (selectedElementIndex >= 0) {
-                                                ticketElements[selectedElementIndex].y = value
-                                                root.ticketElementsChanged()
+                                            if (viewModel.selectedElementIndex >= 0) {
+                                                viewModel.updateElementProperty(viewModel.selectedElementIndex, "y", value)
                                             }
                                         }
                                     }
                                     
                                     Label { text: "Ancho (mm):" }
                                     SpinBox {
+                                        id: wSpinBox
                                         Layout.fillWidth: true
                                         from: 1
-                                        to: ticketWidth
-                                        value: selectedElementIndex >= 0 ? ticketElements[selectedElementIndex].width : 0
+                                        to: viewModel.ticketWidth
                                         onValueModified: {
-                                            if (selectedElementIndex >= 0) {
-                                                ticketElements[selectedElementIndex].width = value
-                                                root.ticketElementsChanged()
+                                            if (viewModel.selectedElementIndex >= 0) {
+                                                viewModel.updateElementProperty(viewModel.selectedElementIndex, "width", value)
                                             }
                                         }
                                     }
                                     
                                     Label { text: "Alto (mm):" }
                                     SpinBox {
+                                        id: hSpinBox
                                         Layout.fillWidth: true
                                         from: 1
-                                        to: ticketHeight
-                                        value: selectedElementIndex >= 0 ? ticketElements[selectedElementIndex].height : 0
+                                        to: viewModel.ticketHeight
                                         onValueModified: {
-                                            if (selectedElementIndex >= 0) {
-                                                ticketElements[selectedElementIndex].height = value
-                                                root.ticketElementsChanged()
+                                            if (viewModel.selectedElementIndex >= 0) {
+                                                viewModel.updateElementProperty(viewModel.selectedElementIndex, "height", value)
                                             }
                                         }
                                     }
@@ -1053,7 +905,7 @@ Page {
                                     text: qsTr("Formato de Texto")
                                     font.bold: true
                                     Layout.fillWidth: true
-                                    visible: selectedElementIndex >= 0 && ticketElements[selectedElementIndex].type === "text"
+                                    visible: viewModel.selectedElementIndex >= 0 && viewModel.ticketElements[viewModel.selectedElementIndex].type === "text"
                                 }
                                 
                                 GridLayout {
@@ -1061,18 +913,28 @@ Page {
                                     columns: 2
                                     columnSpacing: 8
                                     rowSpacing: 8
-                                    visible: selectedElementIndex >= 0 && ticketElements[selectedElementIndex].type === "text"
+                                    visible: viewModel.selectedElementIndex >= 0 && viewModel.ticketElements[viewModel.selectedElementIndex].type === "text"
                                     
                                     Label { text: "Contenido:" }
                                     TextArea {
+                                        id: contentTextArea
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: 60
-                                        text: selectedElementIndex >= 0 ? ticketElements[selectedElementIndex].content : ""
                                         wrapMode: TextArea.WordWrap
+                                        
+                                        // Binding para mostrar el contenido actual del elemento seleccionado
+                                        text: {
+                                            if (viewModel.selectedElementIndex >= 0) {
+                                                var elem = viewModel.ticketElements[viewModel.selectedElementIndex]
+                                                return elem ? (elem.content || "") : ""
+                                            }
+                                            return ""
+                                        }
+                                        
+                                        // Actualización en tiempo real mientras se escribe
                                         onTextChanged: {
-                                            if (selectedElementIndex >= 0) {
-                                                ticketElements[selectedElementIndex].content = text
-                                                root.ticketElementsChanged()
+                                            if (viewModel.selectedElementIndex >= 0 && activeFocus) {
+                                                viewModel.updateElementProperty(viewModel.selectedElementIndex, "content", text)
                                             }
                                         }
                                     }
@@ -1122,9 +984,8 @@ Page {
                                             font.pixelSize: 10
                                             flat: true
                                             onClicked: {
-                                                if (selectedElementIndex >= 0) {
-                                                    ticketElements[selectedElementIndex].fontSize = 8
-                                                    root.ticketElementsChanged()
+                                                if (viewModel.selectedElementIndex >= 0) {
+                                                    viewModel.updateElementProperty(viewModel.selectedElementIndex, "fontSize", 8)
                                                 }
                                             }
                                         }
@@ -1134,9 +995,8 @@ Page {
                                             font.pixelSize: 11
                                             flat: true
                                             onClicked: {
-                                                if (selectedElementIndex >= 0) {
-                                                    ticketElements[selectedElementIndex].fontSize = 12
-                                                    root.ticketElementsChanged()
+                                                if (viewModel.selectedElementIndex >= 0) {
+                                                    viewModel.updateElementProperty(viewModel.selectedElementIndex, "fontSize", 12)
                                                 }
                                             }
                                         }
@@ -1146,9 +1006,8 @@ Page {
                                             font.pixelSize: 13
                                             flat: true
                                             onClicked: {
-                                                if (selectedElementIndex >= 0) {
-                                                    ticketElements[selectedElementIndex].fontSize = 16
-                                                    root.ticketElementsChanged()
+                                                if (viewModel.selectedElementIndex >= 0) {
+                                                    viewModel.updateElementProperty(viewModel.selectedElementIndex, "fontSize", 16)
                                                 }
                                             }
                                         }
@@ -1159,9 +1018,8 @@ Page {
                                             font.bold: true
                                             flat: true
                                             onClicked: {
-                                                if (selectedElementIndex >= 0) {
-                                                    ticketElements[selectedElementIndex].fontSize = 20
-                                                    root.ticketElementsChanged()
+                                                if (viewModel.selectedElementIndex >= 0) {
+                                                    viewModel.updateElementProperty(viewModel.selectedElementIndex, "fontSize", 20)
                                                 }
                                             }
                                         }
@@ -1179,11 +1037,9 @@ Page {
                                             from: 4
                                             to: 48
                                             stepSize: 1
-                                            value: selectedElementIndex >= 0 ? ticketElements[selectedElementIndex].fontSize : 12
                                             onMoved: {
-                                                if (selectedElementIndex >= 0) {
-                                                    ticketElements[selectedElementIndex].fontSize = Math.round(value)
-                                                    root.ticketElementsChanged()
+                                                if (viewModel.selectedElementIndex >= 0) {
+                                                    viewModel.updateElementProperty(viewModel.selectedElementIndex, "fontSize", Math.round(value))
                                                 }
                                             }
                                         }
@@ -1193,11 +1049,9 @@ Page {
                                             Layout.preferredWidth: 80
                                             from: 4
                                             to: 48
-                                            value: selectedElementIndex >= 0 ? ticketElements[selectedElementIndex].fontSize : 12
                                             onValueModified: {
-                                                if (selectedElementIndex >= 0) {
-                                                    ticketElements[selectedElementIndex].fontSize = value
-                                                    root.ticketElementsChanged()
+                                                if (viewModel.selectedElementIndex >= 0) {
+                                                    viewModel.updateElementProperty(viewModel.selectedElementIndex, "fontSize", value)
                                                 }
                                             }
                                         }
@@ -1209,8 +1063,8 @@ Page {
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: 40
                                         text: "Abc 123"
-                                        font.pixelSize: selectedElementIndex >= 0 ? ticketElements[selectedElementIndex].fontSize : 12
-                                        font.bold: selectedElementIndex >= 0 ? ticketElements[selectedElementIndex].bold : false
+                                        font.pixelSize: viewModel.selectedElementIndex >= 0 ? viewModel.ticketElements[viewModel.selectedElementIndex].fontSize : 12
+                                        font.bold: viewModel.selectedElementIndex >= 0 ? viewModel.ticketElements[viewModel.selectedElementIndex].bold : false
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
                                         background: Rectangle {
@@ -1227,12 +1081,11 @@ Page {
                                         spacing: 4
                                         
                                         CheckBox {
+                                            id: boldCheckBox
                                             text: "Negrita"
-                                            checked: selectedElementIndex >= 0 ? ticketElements[selectedElementIndex].bold : false
-                                            onCheckedChanged: {
-                                                if (selectedElementIndex >= 0) {
-                                                    ticketElements[selectedElementIndex].bold = checked
-                                                    root.ticketElementsChanged()
+                                            onToggled: {
+                                                if (viewModel.selectedElementIndex >= 0) {
+                                                    viewModel.updateElementProperty(viewModel.selectedElementIndex, "bold", checked)
                                                 }
                                             }
                                         }
@@ -1240,19 +1093,14 @@ Page {
                                     
                                     Label { text: "Alineación:" }
                                     ComboBox {
+                                        id: alignComboBox
                                         Layout.fillWidth: true
                                         model: ["left", "center", "right"]
                                         displayText: currentText === "left" ? "Izquierda" : 
                                                     currentText === "center" ? "Centro" : "Derecha"
-                                        currentIndex: {
-                                            if (selectedElementIndex < 0) return 0
-                                            var align = ticketElements[selectedElementIndex].align
-                                            return align === "right" ? 2 : align === "center" ? 1 : 0
-                                        }
-                                        onCurrentTextChanged: {
-                                            if (selectedElementIndex >= 0) {
-                                                ticketElements[selectedElementIndex].align = currentText
-                                                root.ticketElementsChanged()
+                                        onActivated: {
+                                            if (viewModel.selectedElementIndex >= 0) {
+                                                viewModel.updateElementProperty(viewModel.selectedElementIndex, "align", model[currentIndex])
                                             }
                                         }
                                     }
@@ -1269,16 +1117,113 @@ Page {
                                 width: parent.width
                                 spacing: 8
                                 
+                                // Configuración de viñetas para productos
+                                Label {
+                                    text: qsTr("Viñeta para Productos")
+                                    font.bold: true
+                                    font.pixelSize: 11
+                                }
+                                
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 8
+                                    
+                                    Label {
+                                        text: qsTr("Carácter:")
+                                        font.pixelSize: 10
+                                    }
+                                    
+                                    ComboBox {
+                                        id: bulletComboBox
+                                        Layout.fillWidth: true
+                                        model: ["•", "-", "*", "▪", "►", "○", "▸", "✓"]
+                                        currentIndex: model.indexOf(viewModel.bulletCharacter)
+                                        onCurrentTextChanged: {
+                                            viewModel.setBulletCharacter(currentText)
+                                        }
+                                        displayText: currentText + "  (" + currentText + ")"
+                                    }
+                                }
+                                
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    height: 1
+                                    color: Material.dividerColor
+                                    Layout.topMargin: 8
+                                    Layout.bottomMargin: 8
+                                }
+                                
+                                // Botones de gestión de elementos
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 4
+                                    
+                                    Button {
+                                        text: "\uE710"  // Add icon
+                                        font.family: "Segoe MDL2 Assets"
+                                        Layout.fillWidth: true
+                                        font.pixelSize: 14
+                                        onClicked: addElementMenu.open()
+                                        ToolTip.visible: hovered
+                                        ToolTip.text: qsTr("Agregar elemento")
+                                        
+                                        Menu {
+                                            id: addElementMenu
+                                            
+                                            MenuItem {
+                                                text: "\uE8D2  Texto"
+                                                font.family: "Segoe MDL2 Assets"
+                                                onTriggered: viewModel.addTextElement()
+                                            }
+                                            
+                                            MenuItem {
+                                                text: "\uE81C  Separador Sólido"
+                                                font.family: "Segoe MDL2 Assets"
+                                                onTriggered: viewModel.addSeparatorElement("solid")
+                                            }
+                                            
+                                            MenuItem {
+                                                text: "\uE81C  Separador Punteado"
+                                                font.family: "Segoe MDL2 Assets"
+                                                onTriggered: viewModel.addSeparatorElement("dotted")
+                                            }
+                                            
+                                            MenuItem {
+                                                text: "\uE81C  Separador Discontinuo"
+                                                font.family: "Segoe MDL2 Assets"
+                                                onTriggered: viewModel.addSeparatorElement("dashed")
+                                            }
+                                            
+                                            MenuItem {
+                                                text: "\uEB9F  Imagen"
+                                                font.family: "Segoe MDL2 Assets"
+                                                onTriggered: viewModel.addImageElement()
+                                            }
+                                        }
+                                    }
+                                    
+                                    Button {
+                                        text: "\uE74D"  // Delete icon
+                                        font.family: "Segoe MDL2 Assets"
+                                        Layout.fillWidth: true
+                                        font.pixelSize: 14
+                                        enabled: viewModel.selectedElementIndex >= 0
+                                        onClicked: viewModel.deleteSelectedElement()
+                                        ToolTip.visible: hovered
+                                        ToolTip.text: qsTr("Eliminar elemento seleccionado")
+                                    }
+                                }
+                                
                                 Repeater {
-                                    model: ticketElements
+                                    model: viewModel.ticketElements
                                     
                                     ItemDelegate {
                                         Layout.fillWidth: true
                                         text: modelData.label
-                                        highlighted: selectedElementIndex === index
+                                        highlighted: viewModel.selectedElementIndex === index
                                         
                                         onClicked: {
-                                            selectedElementIndex = index
+                                            viewModel.setSelectedElementIndex(index)
                                         }
                                         
                                         contentItem: RowLayout {
@@ -1299,1074 +1244,35 @@ Page {
                                 }
                             }
                         }
-                    }
-                }
-            }
-        }
+                    }  // Fin ColumnLayout del ScrollView
+                }  // Fin ScrollView
+            }  // Fin ColumnLayout del panel derecho
+        }  // Fin Rectangle panel derecho
     }  // Fin RowLayout principal
     
     // Diálogo de vista previa
-    Dialog {
+    TicketPreviewDialog {
         id: previewDialog
-        title: qsTr("Vista Previa del Ticket")
-        modal: true
-        anchors.centerIn: parent
-        width: Math.min(parent.width * 0.7, 900)
-        height: Math.min(parent.height * 0.85, 1000)
-        
-        // Factor de escala para la vista previa (ajustable por el usuario)
-        property real previewScale: 0.6
-        
-        // Función para reemplazar variables con valores de ejemplo
-        function replacePreviewVariables(text) {
-            if (!text) return text
-            
-            var result = text
-            result = result.replace(/{{businessName}}/g, "Mi Negocio E.I.R.L.")
-            result = result.replace(/{{ruc}>/g, "20123456789")
-            result = result.replace(/{{address}}/g, "Av. Principal 123, Lima")
-            result = result.replace(/{{phone}}/g, "01-234-5678")
-            result = result.replace(/{{email}}/g, "ventas@minegocio.com")
-            result = result.replace(/{{invoiceNumber}}/g, "B001-00123")
-            result = result.replace(/{{date}}/g, new Date().toLocaleDateString())
-            result = result.replace(/{{time}}/g, new Date().toLocaleTimeString())
-            result = result.replace(/{{datetime}}/g, new Date().toLocaleString())
-            result = result.replace(/{{customerName}}/g, "Cliente Ejemplo")
-            result = result.replace(/{{customerRuc}}/g, "10987654321")
-            result = result.replace(/{{customerBusinessName}}/g, "EMPRESA EJEMPLO S.A.C.")
-            result = result.replace(/{{customerRazonSocial}}/g, "EMPRESA EJEMPLO S.A.C.")
-            result = result.replace(/{{customerAddress}}/g, "Jr. Ejemplo 456, Lima")
-            result = result.replace(/{{subtotal}}/g, "100.00")
-            result = result.replace(/{{discount}}/g, "10.00")
-            result = result.replace(/{{tax}}/g, "16.20")
-            result = result.replace(/{{total}}/g, "106.20")
-            result = result.replace(/{{voucherType}}/g, voucherDesignType.toUpperCase())
-            result = result.replace(/{{Productos}}/g, "Producto A x2 S/50.00\nProducto B x1 S/30.00\nProducto C x3 S/20.00")
-            
-            return result
-        }
-        
-        contentItem: ColumnLayout {
-            spacing: 16
-            
-            // Barra superior con información y controles de zoom
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 12
-                
-                Label {
-                    Layout.fillWidth: true
-                    text: qsTr("Previsualización con datos de ejemplo • Tamaño: %1x%2mm").arg(ticketWidth).arg(ticketHeight)
-                    font.pixelSize: 12
-                    opacity: 0.7
-                    horizontalAlignment: Text.AlignLeft
-                }
-                
-                Label {
-                    text: qsTr("Zoom:")
-                    font.pixelSize: 11
-                    opacity: 0.7
-                }
-                
-                Button {
-                    text: "-"
-                    font.pixelSize: 16
-                    font.bold: true
-                    flat: true
-                    implicitWidth: 36
-                    implicitHeight: 36
-                    enabled: previewDialog.previewScale > 0.3
-                    onClicked: previewDialog.previewScale = Math.max(0.3, previewDialog.previewScale - 0.1)
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Alejar")
-                }
-                
-                Label {
-                    text: Math.round(previewDialog.previewScale * 100) + "%"
-                    font.pixelSize: 12
-                    font.bold: true
-                    Layout.minimumWidth: 50
-                    horizontalAlignment: Text.AlignHCenter
-                }
-                
-                Button {
-                    text: "+"
-                    font.pixelSize: 16
-                    font.bold: true
-                    flat: true
-                    implicitWidth: 36
-                    implicitHeight: 36
-                    enabled: previewDialog.previewScale < 1.5
-                    onClicked: previewDialog.previewScale = Math.min(1.5, previewDialog.previewScale + 0.1)
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Acercar")
-                }
-                
-                Button {
-                    text: "⟲"
-                    font.pixelSize: 16
-                    flat: true
-                    implicitWidth: 36
-                    implicitHeight: 36
-                    onClicked: previewDialog.previewScale = 0.6
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Restablecer zoom (60%)")
-                }
-            }
-            
-            // Separador
-            Rectangle {
-                Layout.fillWidth: true
-                height: 1
-                color: Material.theme === Material.Dark ? "#3a3a3a" : "#e0e0e0"
-            }
-            
-            ScrollView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                ScrollBar.horizontal.policy: ScrollBar.AsNeeded
-                ScrollBar.vertical.policy: ScrollBar.AsNeeded
-                
-                Item {
-                    width: Math.max(previewContainer.width, previewDialog.width - 80)
-                    height: Math.max(previewContainer.height, previewDialog.height - 250)
-                    
-                    Rectangle {
-                        id: previewContainer
-                        anchors.centerIn: parent
-                        width: (ticketWidth * pixelsPerMM) * previewDialog.previewScale
-                        height: (ticketHeight * pixelsPerMM) * previewDialog.previewScale
-                        color: Material.theme === Material.Dark ? "#1a1a1a" : "white"
-                        border.width: 2
-                        border.color: Material.theme === Material.Dark ? "#555555" : "#cccccc"
-                        
-                        Repeater {
-                            model: ticketElements
-                            
-                            Loader {
-                                x: modelData.x * pixelsPerMM * previewDialog.previewScale
-                                y: modelData.y * pixelsPerMM * previewDialog.previewScale
-                                
-                                sourceComponent: modelData.type === "text" ? textComponent : 
-                                                modelData.type === "line" ? lineComponent : imageComponent
-                                
-                                property var elementData: modelData
-                            }
-                        }
-                        
-                        Component {
-                            id: textComponent
-                            Item {
-                                width: elementData.width * pixelsPerMM * previewDialog.previewScale
-                                height: elementData.height * pixelsPerMM * previewDialog.previewScale
-                                
-                                // Si es el marcador de items, mostrar productos de ejemplo
-                                Column {
-                                    anchors.fill: parent
-                                    spacing: 2 * previewDialog.previewScale
-                                    visible: elementData.content === "[ITEMS - Auto]"
-                                    
-                                    Repeater {
-                                        model: [
-                                            {name: "Producto 1", qty: 2, price: 25.00},
-                                            {name: "Producto 2", qty: 1, price: 50.00}
-                                        ]
-                                        
-                                        Label {
-                                            width: parent.width
-                                            text: modelData.qty + "x " + modelData.name + " - S/ " + modelData.price.toFixed(2)
-                                            font.pixelSize: 8 * (pixelsPerMM / 3) * previewDialog.previewScale
-                                            wrapMode: Text.WordWrap
-                                            color: Material.theme === Material.Dark ? "white" : "black"
-                                        }
-                                    }
-                                }
-                                
-                                // Para texto normal
-                                Label {
-                                    anchors.fill: parent
-                                    text: previewDialog.replacePreviewVariables(elementData.content)
-                                    font.pixelSize: elementData.fontSize * (pixelsPerMM / 3) * previewDialog.previewScale
-                                    font.bold: elementData.bold
-                                    horizontalAlignment: elementData.align === "center" ? Text.AlignHCenter : 
-                                                        elementData.align === "right" ? Text.AlignRight : Text.AlignLeft
-                                    verticalAlignment: Text.AlignVCenter
-                                    wrapMode: Text.WordWrap
-                                    color: Material.theme === Material.Dark ? "white" : "black"
-                                    visible: elementData.content !== "[ITEMS - Auto]"
-                                }
-                            }
-                        }
-                        
-                        Component {
-                            id: lineComponent
-                            Rectangle {
-                                width: elementData.width * pixelsPerMM * previewDialog.previewScale
-                                height: 1 * previewDialog.previewScale
-                                color: Material.theme === Material.Dark ? "white" : "black"
-                            }
-                        }
-                        
-                        Component {
-                            id: imageComponent
-                            Item {
-                                width: elementData.width * pixelsPerMM * previewDialog.previewScale
-                                height: elementData.height * pixelsPerMM * previewDialog.previewScale
-                                
-                                Image {
-                                    anchors.fill: parent
-                                    source: elementData.content || ""
-                                    fillMode: Image.PreserveAspectFit
-                                    visible: elementData.content && elementData.content !== ""
-                                    smooth: true
-                                    asynchronous: true
-                                }
-                                
-                                // Placeholder si no hay imagen
-                                Rectangle {
-                                    anchors.fill: parent
-                                    color: "#f0f0f0"
-                                    border.color: "#ccc"
-                                    visible: !elementData.content || elementData.content === ""
-                                    
-                                    Label {
-                                        anchors.centerIn: parent
-                                        text: "\uEB9F"
-                                        font.family: "Segoe MDL2 Assets"
-                                        font.pixelSize: 24 * previewDialog.previewScale
-                                        color: "#999"
-                                    }
-                                }
-                            }
-                        }
-                    } // Fin Rectangle previewContainer
-                } // Fin Item contenedor scroll
-            } // Fin ScrollView
-        } // Fin ColumnLayout
-        
-        footer: DialogButtonBox {
-            Button {
-                text: "\uE8AA  " + qsTr("Generar PDF")
-                font.family: "Segoe MDL2 Assets"
-                DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
-                highlighted: true
-                onClicked: {
-                    generatePreviewPdf()
-                }
-            }
-            
-            Button {
-                text: qsTr("Cerrar")
-                DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
-            }
-        }
+        viewModel: viewModel
+        pixelsPerMM: root.pixelsPerMM
     }
-    
-    function saveDesign() {
-        saveNameDialog.open()
-    }
-    
-    function performSave(name) {
-        var layoutData = {
-            size: {
-                width: ticketWidth,
-                height: ticketHeight
-            },
-            elements: ticketElements
-        }
-        var layoutJson = JSON.stringify(layoutData)
-        var id = templateRepository.saveTemplate(name, layoutJson)
-        
-        if (id > 0) {
-            showMessage("Diseño guardado correctamente", "success")
-            savedTemplates = templateRepository.getAllTemplates() // Actualizar lista
-            // Establecer como activo automáticamente si es el primero
-            var templates = templateRepository.getAllTemplates()
-            if (templates.length === 1) {
-                templateRepository.setActiveTemplate(id)
-            }
-        } else {
-            showMessage("Error al guardar el diseño", "error")
-        }
-    }
-    
-    function showMessage(message, type) {
-        messageLabel.text = message
-        messageBar.color = type === "success" ? Material.color(Material.Green) : Material.color(Material.Red)
-        messageBar.visible = true
-        messageTimer.start()
-    }
-    
-    function generatePreviewPdf() {
-        // Crear JSON del layout actual
-        var layoutData = {
-            size: {
-                width: ticketWidth,
-                height: ticketHeight
-            },
-            elements: ticketElements
-        }
-        var layoutJson = JSON.stringify(layoutData)
-        
-        // Generar nombre de archivo con timestamp
-        var timestamp = new Date().toISOString().replace(/[:.]/g, "-").substring(0, 19)
-        var downloadsPath = Platform.StandardPaths.writableLocation(Platform.StandardPaths.DownloadLocation)
-        
-        // Convertir URI a ruta nativa de Windows
-        var downloadsPathStr = String(downloadsPath).replace('file:///', '')
-        var outputPath = downloadsPathStr + "/ticket_preview_" + timestamp + ".pdf"
-        
-        console.log("Generando PDF preview en:", outputPath)
-        
-        // Generar PDF
-        var success = printService.generatePreviewPdf(layoutJson, outputPath)
-        
-        if (success) {
-            showMessage("PDF generado en Descargas: ticket_preview_" + timestamp + ".pdf", "success")
-        } else {
-            showMessage("Error al generar el PDF", "error")
-        }
-    }
-    
-    function loadDesign(templateId) {
-        var template = templateRepository.getTemplate(templateId)
-        if (!template || !template.id) {
-            showMessage("Error al cargar el diseño", "error")
-            return
-        }
-        
-        try {
-            var layoutData = JSON.parse(template.layoutJson)
-            
-            // Cargar tamaño si existe
-            if (layoutData.size) {
-                ticketWidth = layoutData.size.width
-                ticketHeight = layoutData.size.height
-                
-                // Actualizar selector de tamaño
-                for (var i = 0; i < ticketSizes.length; i++) {
-                    if (ticketSizes[i].width === ticketWidth && ticketSizes[i].height === ticketHeight) {
-                        selectedSizeIndex = i
-                        break
-                    }
-                }
-            }
-            
-            // Cargar elementos
-            if (layoutData.elements) {
-                ticketElements = layoutData.elements
-            } else {
-                // Formato antiguo (solo elementos)
-                ticketElements = layoutData
-            }
-            
-            showMessage("Diseño cargado: " + template.name, "success")
-        } catch (e) {
-            showMessage("Error al parsear el diseño: " + e.message, "error")
-        }
-    }
-    
     // Diálogo para cargar diseño guardado
-    Dialog {
+    TicketLoadDialog {
         id: loadDialog
-        title: qsTr("Cargar Diseño")
-        modal: true
-        anchors.centerIn: parent
-        width: 450
-        height: 500
-        
-        onOpened: {
-            savedTemplates = templateRepository.getAllTemplates()
-        }
-        
-        contentItem: ColumnLayout {
-            spacing: 16
-            
-            Label {
-                text: qsTr("Selecciona un diseño guardado:")
-                Layout.fillWidth: true
-                font.bold: true
-            }
-            
-            ScrollView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                visible: savedTemplates.length > 0
-                
-                ColumnLayout {
-                    width: parent.width
-                    spacing: 8
-                    
-                    Repeater {
-                        model: savedTemplates
-                        
-                        ItemDelegate {
-                            Layout.fillWidth: true
-                            
-                            contentItem: RowLayout {
-                                spacing: 12
-                                
-                                Rectangle {
-                                    width: 40
-                                    height: 40
-                                    color: modelData.isActive ? Material.accent : Material.frameColor
-                                    radius: 4
-                                    
-                                    Label {
-                                        anchors.centerIn: parent
-                                        text: "\uE8A1"
-                                        font.family: "Segoe MDL2 Assets"
-                                        font.pixelSize: 24
-                                        color: modelData.isActive ? "white" : Material.foreground
-                                    }
-                                }
-                                
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 4
-                                    
-                                    Label {
-                                        text: modelData.name
-                                        font.bold: true
-                                        Layout.fillWidth: true
-                                    }
-                                    
-                                    Label {
-                                        text: modelData.isActive ? "✓ Activo" : "Guardado: " + modelData.createdAt
-                                        font.pixelSize: 10
-                                        color: modelData.isActive ? Material.accent : Material.hintTextColor
-                                    }
-                                }
-                                
-                                Button {
-                                    text: "Cargar"
-                                    onClicked: {
-                                        loadDesign(modelData.id)
-                                        loadDialog.close()
-                                    }
-                                }
-                                
-                                Button {
-                                    text: modelData.isActive ? "Activo" : "Activar"
-                                    flat: true
-                                    enabled: !modelData.isActive
-                                    onClicked: {
-                                        if (templateRepository.setActiveTemplate(modelData.id)) {
-                                            showMessage("Diseño activado para impresión", "success")
-                                            savedTemplates = templateRepository.getAllTemplates() // Actualizar lista
-                                            loadDialog.close()
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Mensaje cuando no hay diseños guardados
-            ColumnLayout {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                Layout.alignment: Qt.AlignCenter
-                spacing: 16
-                visible: savedTemplates.length === 0
-                
-                Label {
-                    text: "\uE8A1"
-                    font.family: "Segoe MDL2 Assets"
-                    font.pixelSize: 64
-                    color: Material.hintTextColor
-                    Layout.alignment: Qt.AlignHCenter
-                }
-                
-                Label {
-                    text: qsTr("No hay diseños guardados")
-                    font.pixelSize: 16
-                    font.bold: true
-                    Layout.alignment: Qt.AlignHCenter
-                }
-                
-                Label {
-                    text: qsTr("Crea y guarda tu primer diseño de ticket")
-                    font.pixelSize: 12
-                    color: Material.hintTextColor
-                    Layout.alignment: Qt.AlignHCenter
-                }
-            }
-            
-            RowLayout {
-                Layout.alignment: Qt.AlignRight
-                spacing: 8
-                
-                Button {
-                    text: qsTr("Cerrar")
-                    onClicked: loadDialog.close()
-                }
-            }
-        }
+        viewModel: viewModel
     }
-    
+
     // Diálogo para ingresar nombre del diseño
-    Dialog {
+    TicketSaveNameDialog {
         id: saveNameDialog
-        title: qsTr("Guardar Diseño")
-        modal: true
-        anchors.centerIn: parent
-        width: 400
-        
-        contentItem: ColumnLayout {
-            spacing: 16
-            
-            Label {
-                text: qsTr("Ingrese un nombre para el diseño:")
-                Layout.fillWidth: true
-            }
-            
-            TextField {
-                id: designNameField
-                Layout.fillWidth: true
-                placeholderText: qsTr("Ej: Diseño predeterminado")
-                
-                Keys.onReturnPressed: {
-                    if (text.trim() !== "") {
-                        saveNameDialog.accept()
-                    }
-                }
-            }
-            
-            RowLayout {
-                Layout.alignment: Qt.AlignRight
-                spacing: 8
-                
-                Button {
-                    text: qsTr("Cancelar")
-                    onClicked: saveNameDialog.reject()
-                }
-                
-                Button {
-                    text: qsTr("Guardar")
-                    highlighted: true
-                    enabled: designNameField.text.trim() !== ""
-                    onClicked: saveNameDialog.accept()
-                }
-            }
-        }
-        
-        onAccepted: {
-            var name = designNameField.text.trim()
-            if (templateRepository.templateNameExists(name)) {
-                showMessage("Ya existe un diseño con ese nombre", "error")
-            } else {
-                performSave(name)
-                designNameField.text = ""
-            }
-        }
-        
-        onRejected: {
-            designNameField.text = ""
-        }
+        viewModel: viewModel
     }
-    
+
     // Diálogo de referencias de variables
-    Dialog {
+    VariablesReferenceDialog {
         id: variablesReferenceDialog
-        title: qsTr("Referencias de Variables")
-        modal: true
-        anchors.centerIn: parent
-        width: Math.min(700, parent.width * 0.95)
-        height: Math.min(650, parent.height * 0.9)
-        
-        background: Rectangle {
-            color: Material.dialogColor
-            radius: 8
-            border.width: 1
-            border.color: Material.theme === Material.Dark ? 
-                Qt.lighter(Material.backgroundColor, 1.3) :
-                Qt.darker(Material.backgroundColor, 1.1)
-        }
-        
-        ColumnLayout {
-            anchors.fill: parent
-            spacing: 12
-            
-            Label {
-                Layout.fillWidth: true
-                text: qsTr("Utiliza estas variables en el contenido de texto para mostrar información dinámica en tus tickets")
-                wrapMode: Text.WordWrap
-                font.pixelSize: 12
-                opacity: 0.9
-            }
-            
-            ScrollView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                
-                ColumnLayout {
-                    width: variablesReferenceDialog.availableWidth - 40
-                    spacing: 16
-                    
-                    // Información del Negocio
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: businessGroup.implicitHeight + 24
-                        color: Material.theme === Material.Dark ? 
-                            Qt.lighter(Material.background, 1.2) : 
-                            Qt.darker(Material.background, 1.05)
-                        radius: 6
-                        
-                        ColumnLayout {
-                            id: businessGroup
-                            anchors.fill: parent
-                            anchors.margins: 12
-                            spacing: 8
-                            
-                            Label {
-                                text: "Información del Negocio"
-                                font.bold: true
-                                font.pixelSize: 13
-                                color: Material.accent
-                            }
-                            
-                            GridLayout {
-                                Layout.fillWidth: true
-                                columns: variablesReferenceDialog.width > 600 ? 2 : 1
-                                columnSpacing: 12
-                                rowSpacing: 6
-                                
-                                Label { 
-                                    text: "{{businessName}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Nombre del negocio"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                                
-                                Label { 
-                                    text: "{{ruc}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "RUC/Número de identificación tributaria"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                                
-                                Label { 
-                                    text: "{{address}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Dirección del negocio"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                                
-                                Label { 
-                                    text: "{{phone}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Teléfono de contacto"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                                
-                                Label { 
-                                    text: "{{email}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Correo electrónico"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Información de la Venta
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: saleGroup.implicitHeight + 24
-                        color: Material.theme === Material.Dark ? 
-                            Qt.lighter(Material.background, 1.2) : 
-                            Qt.darker(Material.background, 1.05)
-                        radius: 6
-                        
-                        ColumnLayout {
-                            id: saleGroup
-                            anchors.fill: parent
-                            anchors.margins: 12
-                            spacing: 8
-                            
-                            Label {
-                                text: "Información de la Venta"
-                                font.bold: true
-                                font.pixelSize: 13
-                                color: Material.accent
-                            }
-                            
-                            GridLayout {
-                                Layout.fillWidth: true
-                                columns: variablesReferenceDialog.width > 600 ? 2 : 1
-                                columnSpacing: 12
-                                rowSpacing: 6
-                                
-                                Label { 
-                                    text: "{{invoiceNumber}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Número de factura o boleta"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                                
-                                Label { 
-                                    text: "{{voucherType}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Tipo de comprobante (FACTURA/BOLETA)"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                                
-                                Label { 
-                                    text: "{{customerName}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Nombre del cliente"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                                
-                                Label { 
-                                    text: "{{customerRuc}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "RUC del cliente (para facturas)"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                                
-                                Label { 
-                                    text: "{{customerBusinessName}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Razón Social del cliente (para facturas)"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                                
-                                Label { 
-                                    text: "{{customerAddress}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Dirección del cliente (para facturas)"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Información de Fecha y Hora
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: dateGroup.implicitHeight + 24
-                        color: Material.theme === Material.Dark ? 
-                            Qt.lighter(Material.background, 1.2) : 
-                            Qt.darker(Material.background, 1.05)
-                        radius: 6
-                        
-                        ColumnLayout {
-                            id: dateGroup
-                            anchors.fill: parent
-                            anchors.margins: 12
-                            spacing: 8
-                            
-                            Label {
-                                text: "Fecha y Hora"
-                                font.bold: true
-                                font.pixelSize: 13
-                                color: Material.accent
-                            }
-                            
-                            GridLayout {
-                                Layout.fillWidth: true
-                                columns: variablesReferenceDialog.width > 600 ? 2 : 1
-                                columnSpacing: 12
-                                rowSpacing: 6
-                                
-                                Label { 
-                                    text: "{{date}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Fecha de la venta (ej: 19/02/2026)"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                                
-                                Label { 
-                                    text: "{{time}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Hora de la venta (ej: 14:30:00)"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                                
-                                Label { 
-                                    text: "{{datetime}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Fecha y hora completas"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Productos
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: productsGroup.implicitHeight + 24
-                        color: Material.theme === Material.Dark ? 
-                            Qt.lighter(Material.background, 1.2) : 
-                            Qt.darker(Material.background, 1.05)
-                        radius: 6
-                        
-                        ColumnLayout {
-                            id: productsGroup
-                            anchors.fill: parent
-                            anchors.margins: 12
-                            spacing: 8
-                            
-                            Label {
-                                text: "Lista de Productos"
-                                font.bold: true
-                                font.pixelSize: 13
-                                color: Material.accent
-                            }
-                            
-                            GridLayout {
-                                Layout.fillWidth: true
-                                columns: variablesReferenceDialog.width > 600 ? 2 : 1
-                                columnSpacing: 12
-                                rowSpacing: 6
-                                
-                                Label { 
-                                    text: "{{Productos}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 4
-                                    Label { 
-                                        text: "Lista completa de productos con cantidades y subtotales"
-                                        opacity: 0.8
-                                        wrapMode: Text.WordWrap
-                                        Layout.fillWidth: true
-                                    }
-                                    Label {
-                                        text: "Formato: Producto x Cantidad S/ Subtotal"
-                                        font.pixelSize: 10
-                                        opacity: 0.6
-                                        font.italic: true
-                                        wrapMode: Text.WordWrap
-                                        Layout.fillWidth: true
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Totales y Montos
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: totalsGroup.implicitHeight + 24
-                        color: Material.theme === Material.Dark ? 
-                            Qt.lighter(Material.background, 1.2) : 
-                            Qt.darker(Material.background, 1.05)
-                        radius: 6
-                        
-                        ColumnLayout {
-                            id: totalsGroup
-                            anchors.fill: parent
-                            anchors.margins: 12
-                            spacing: 8
-                            
-                            Label {
-                                text: "Totales y Montos"
-                                font.bold: true
-                                font.pixelSize: 13
-                                color: Material.accent
-                            }
-                            
-                            GridLayout {
-                                Layout.fillWidth: true
-                                columns: variablesReferenceDialog.width > 600 ? 2 : 1
-                                columnSpacing: 12
-                                rowSpacing: 6
-                                
-                                Label { 
-                                    text: "{{subtotal}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Subtotal de la venta (sin impuestos)"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                                
-                                Label { 
-                                    text: "{{discount}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Descuento aplicado"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                                
-                                Label { 
-                                    text: "{{tax}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Impuestos (IGV u otros)"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                                
-                                Label { 
-                                    text: "{{total}}"
-                                    font.family: "Consolas"
-                                    color: Material.accent
-                                }
-                                Label { 
-                                    text: "Total final a pagar"
-                                    opacity: 0.8
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Ejemplo de uso
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: exampleGroup.implicitHeight + 24
-                        color: Material.color(Material.Blue, Material.Shade900)
-                        radius: 6
-                        
-                        ColumnLayout {
-                            id: exampleGroup
-                            anchors.fill: parent
-                            anchors.margins: 12
-                            spacing: 8
-                            
-                            Label {
-                                text: "Ejemplo de Uso"
-                                font.bold: true
-                                font.pixelSize: 13
-                                color: "#4FC3F7"
-                            }
-                            
-                            ScrollView {
-                                Layout.fillWidth: true
-                                implicitHeight: Math.min(exampleText.implicitHeight + 20, 300)
-                                clip: true
-                                
-                                Label {
-                                    id: exampleText
-                                    width: exampleGroup.width - 24
-                                    text: "{{businessName}}\n" +
-                                          "RUC: {{ruc}}\n" +
-                                          "Dirección: {{address}}\n" +
-                                          "Tel: {{phone}}\n" +
-                                          "----------------------------\n" +
-                                          "Boleta: {{invoiceNumber}}\n" +
-                                          "Fecha: {{date}} - {{time}}\n" +
-                                          "----------------------------\n" +
-                                          "{{Productos}}\n" +
-                                          "----------------------------\n" +
-                                          "Subtotal: S/ {{subtotal}}\n" +
-                                          "Descuento: S/ {{discount}}\n" +
-                                          "Total: S/ {{total}}\n" +
-                                          "----------------------------\n" +
-                                          "Gracias por su compra!"
-                                    font.family: "Consolas"
-                                    font.pixelSize: 10
-                                    wrapMode: Text.Wrap
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            Button {
-                text: qsTr("Cerrar")
-                Layout.alignment: Qt.AlignRight
-                Layout.preferredWidth: 120
-                onClicked: variablesReferenceDialog.close()
-            }
-        }
     }
-    
+
     // Barra de mensajes
     Rectangle {
         id: messageBar
@@ -2391,3 +1297,4 @@ Page {
         onTriggered: messageBar.visible = false
     }
 }
+

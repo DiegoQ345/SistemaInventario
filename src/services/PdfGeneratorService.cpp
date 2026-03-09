@@ -372,7 +372,7 @@ bool PdfGeneratorService::generateCustomerPurchaseHistory(const Customer& custom
     printer.setOutputFormat(QPrinter::PdfFormat);
     printer.setOutputFileName(outputPath);
     printer.setPageSize(QPageSize(QPageSize::A4));
-    printer.setPageMargins(QMarginsF(8, 8, 8, 8), QPageLayout::Millimeter);
+    printer.setPageMargins(QMarginsF(6, 6, 6, 6), QPageLayout::Millimeter);
 
     emit generationProgress(30);
 
@@ -407,47 +407,53 @@ QString PdfGeneratorService::generatePurchaseHistoryHtml(const Customer& custome
             <style>
                 body {
                     font-family: Arial, sans-serif;
-                    margin: 10px;
-                    font-size: 8pt;
+                    margin: 8px;
+                    font-size: 7pt;
                 }
                 .header {
                     text-align: center;
-                    margin-bottom: 12px;
+                    margin-bottom: 10px;
                     border-bottom: 2px solid #2196F3;
-                    padding-bottom: 8px;
+                    padding-bottom: 6px;
                 }
                 .header h1 {
                     color: #2196F3;
                     margin: 0;
-                    font-size: 16pt;
+                    font-size: 14pt;
                 }
                 .header h2 {
                     color: #666;
-                    margin: 4px 0 0 0;
-                    font-size: 11pt;
+                    margin: 3px 0 0 0;
+                    font-size: 10pt;
                     font-weight: normal;
+                }
+                .header .report-date {
+                    color: #999;
+                    font-size: 7pt;
+                    margin: 4px 0 0 0;
+                    font-style: italic;
                 }
                 .customer-info {
                     background-color: #f5f5f5;
-                    padding: 8px 12px;
-                    border-radius: 4px;
-                    margin-bottom: 12px;
+                    padding: 6px 10px;
+                    border-radius: 3px;
+                    margin-bottom: 10px;
                     border-left: 3px solid #2196F3;
                 }
                 .customer-info h3 {
-                    margin: 0 0 6px 0;
+                    margin: 0 0 5px 0;
                     color: #2196F3;
-                    font-size: 10pt;
+                    font-size: 9pt;
                 }
                 .customer-info p {
-                    margin: 3px 0;
-                    font-size: 8pt;
+                    margin: 2px 0;
+                    font-size: 7pt;
                     line-height: 1.3;
                 }
                 .stats-box {
-                    margin-bottom: 12px;
+                    margin-bottom: 10px;
                     border: 1px solid #e0e0e0;
-                    border-radius: 4px;
+                    border-radius: 3px;
                     overflow: hidden;
                 }
                 .stats-table {
@@ -455,11 +461,11 @@ QString PdfGeneratorService::generatePurchaseHistoryHtml(const Customer& custome
                     border-collapse: collapse;
                 }
                 .stats-table td {
-                    padding: 6px 8px;
+                    padding: 5px 7px;
                     text-align: left;
                     border-bottom: 1px solid #e0e0e0;
                     border-right: 1px solid #e0e0e0;
-                    font-size: 7pt;
+                    font-size: 6pt;
                     background-color: #f5f5f5;
                 }
                 .stats-table td:last-child {
@@ -471,20 +477,20 @@ QString PdfGeneratorService::generatePurchaseHistoryHtml(const Customer& custome
                 }
                 .stats-table .value {
                     font-weight: bold;
-                    font-size: 10pt;
+                    font-size: 9pt;
                     color: #1976D2;
                 }
                 .credit-box {
                     background-color: #fff3e0;
-                    padding: 8px 12px;
-                    border-radius: 4px;
-                    margin-bottom: 12px;
+                    padding: 6px 10px;
+                    border-radius: 3px;
+                    margin-bottom: 10px;
                     border-left: 3px solid #ff9800;
                 }
                 .credit-box h3 {
-                    margin: 0 0 6px 0;
+                    margin: 0 0 5px 0;
                     color: #ff9800;
-                    font-size: 10pt;
+                    font-size: 9pt;
                 }
                 .credit-stats {
                     display: flex;
@@ -495,39 +501,39 @@ QString PdfGeneratorService::generatePurchaseHistoryHtml(const Customer& custome
                 }
                 .credit-stats p {
                     margin: 0;
-                    font-size: 7pt;
+                    font-size: 6pt;
                     color: #000000;
                 }
                 .credit-stats .value {
                     margin: 2px 0;
-                    font-size: 11pt;
+                    font-size: 10pt;
                     font-weight: bold;
                 }
                 h3.section-title {
                     color: #2196F3;
-                    margin: 12px 0 6px 0;
-                    font-size: 10pt;
+                    margin: 10px 0 5px 0;
+                    font-size: 9pt;
                 }
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    font-size: 7pt;
+                    font-size: 6pt;
                 }
                 thead {
                     background-color: #1976D2;
                 }
                 th {
-                    padding: 6px 8px;
+                    padding: 5px 6px;
                     text-align: left;
                     font-weight: 600;
-                    font-size: 8pt;
+                    font-size: 7pt;
                     color: #FFFFFF;
                     background-color: #1976D2;
                 }
                 td {
-                    padding: 5px 8px;
+                    padding: 4px 6px;
                     border-bottom: 1px solid #e0e0e0;
-                    font-size: 7pt;
+                    font-size: 6pt;
                     line-height: 1.2;
                 }
                 tbody tr:nth-child(even) {
@@ -536,20 +542,20 @@ QString PdfGeneratorService::generatePurchaseHistoryHtml(const Customer& custome
                 .total-row {
                     font-weight: bold;
                     background-color: #e3f2fd !important;
-                    font-size: 8pt;
+                    font-size: 7pt;
                 }
                 .pending-row {
                     background-color: #ffebee !important;
                     font-weight: bold;
-                    font-size: 7pt;
+                    font-size: 6pt;
                 }
                 .footer {
                     text-align: center;
-                    margin-top: 15px;
-                    padding-top: 8px;
+                    margin-top: 12px;
+                    padding-top: 6px;
                     border-top: 1px solid #e0e0e0;
                     color: #666;
-                    font-size: 7pt;
+                    font-size: 6pt;
                 }
                 .footer p {
                     margin: 2px 0;
@@ -562,23 +568,24 @@ QString PdfGeneratorService::generatePurchaseHistoryHtml(const Customer& custome
     
     if (!m_businessInfo.taxId.isEmpty()) {
         html += R"(
-                <p style="margin: 0; font-size: 8pt; color: #666;">RUC: )" + m_businessInfo.taxId + R"(</p>)";
+                <p style="margin: 0; font-size: 7pt; color: #666;">RUC: )" + m_businessInfo.taxId + R"(</p>)";
     }
     if (!m_businessInfo.address.isEmpty()) {
         html += R"(
-                <p style="margin: 0; font-size: 7pt; color: #666;">)" + m_businessInfo.address + R"(</p>)";
+                <p style="margin: 0; font-size: 6pt; color: #666;">)" + m_businessInfo.address + R"(</p>)";
     }
     if (!m_businessInfo.phone.isEmpty()) {
         html += R"(
-                <p style="margin: 0; font-size: 7pt; color: #666;">Tel: )" + m_businessInfo.phone + R"(</p>)";
+                <p style="margin: 0; font-size: 6pt; color: #666;">Tel: )" + m_businessInfo.phone + R"(</p>)";
     }
     if (!m_businessInfo.email.isEmpty()) {
         html += R"(
-                <p style="margin: 0; font-size: 7pt; color: #666;">)" + m_businessInfo.email + R"(</p>)";
+                <p style="margin: 0; font-size: 6pt; color: #666;">)" + m_businessInfo.email + R"(</p>)";
     }
     
     html += R"(
                 <h2>Historial de Compras del Cliente</h2>
+                <p class="report-date">Reporte generado el )" + QDateTime::currentDateTime().toString("dd/MM/yyyy hh:mm") + R"(</p>
             </div>
             
             <div class="customer-info">
@@ -659,7 +666,7 @@ QString PdfGeneratorService::generatePurchaseHistoryHtml(const Customer& custome
                 </thead>
                 <tbody>)";
     
-    // Agregar cada venta
+    // Agregar cada venta con detalle de productos
     double totalGeneral = 0.0;
     double totalPendiente = 0.0;
     for (const Sale& sale : sales) {
@@ -698,6 +705,35 @@ QString PdfGeneratorService::generatePurchaseHistoryHtml(const Customer& custome
                         <td><span style="color: )" + statusColor + R"(; font-weight: bold;">)" + statusDisplay + R"(</span></td>
                         <td style="text-align: right;">S/ )" + QString::number(sale.total, 'f', 2) + R"(</td>
                     </tr>)";
+        
+        // Agregar fila de detalle de productos
+        if (!sale.items.isEmpty()) {
+            html += R"(
+                    <tr style="background-color: #f5f5f5;">
+                        <td colspan="7" style="padding: 6px 16px;">
+                            <div style="font-size: 5.5pt; color: #555;">
+                                <strong style="color: #1976D2;">Productos:</strong> )";
+            
+            for (int i = 0; i < sale.items.size(); ++i) {
+                const SaleItem& item = sale.items[i];
+                html += R"(<span style="display: inline-block; margin-right: 12px;">• <strong>)" 
+                        + QString::number(item.quantity, 'f', 0)
+                        + R"(</strong> )" 
+                        + item.productName 
+                        + R"( - S/ )" + QString::number(item.subtotal, 'f', 2) 
+                        + R"(</span>)";
+                
+                // Agregar salto de línea cada 3 productos para mejor lectura
+                if ((i + 1) % 3 == 0 && i + 1 < sale.items.size()) {
+                    html += R"(<br/>                                )";
+                }
+            }
+            
+            html += R"(
+                            </div>
+                        </td>
+                    </tr>)";
+        }
         
         totalGeneral += sale.total;
     }

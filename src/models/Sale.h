@@ -46,6 +46,10 @@ struct Sale
     int paymentMethodId = 0;
     QString paymentMethodName;  // Para joins
     
+    // Campos de pago y vuelto
+    double amountPaid = 0.0;     // Monto con el que pagó el cliente
+    double changeGiven = 0.0;    // Vuelto dado al cliente
+    
     // Sistema de créditos
     QString paymentType = "CONTADO";  // CONTADO o CREDITO
     QString paymentStatus = "PAID";   // PAID, PENDING, PARTIAL
@@ -54,6 +58,10 @@ struct Sale
     QString notes;
     QDateTime createdAt;
     QString createdBy;
+
+    // Resumen de productos (calculado automáticamente al guardar)
+    int storedItemCount = 0;  // Cantidad total de items (item_count de BD)
+    QString productNames;      // Lista de nombres de productos (product_names de BD)
 
     QList<SaleItem> items;  // Items de la venta
 

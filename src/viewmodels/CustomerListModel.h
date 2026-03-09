@@ -6,6 +6,7 @@
 #include "../models/Customer.h"
 
 class CustomerRepository;
+class Sale;
 
 /**
  * @brief Modelo de lista de clientes para QML
@@ -46,8 +47,10 @@ public:
     Q_INVOKABLE QVariantMap get(int index) const;
     Q_INVOKABLE bool remove(int customerId);
     Q_INVOKABLE bool generatePurchaseHistoryPdf(int customerId, const QString& outputPath);
+    Q_INVOKABLE bool generateCustomerReport(int customerId, const QString& format, const QString& reportType);
     Q_INVOKABLE QVariantList getCustomerSales(int customerId, const QDate& fromDate = QDate(), const QDate& toDate = QDate());
     Q_INVOKABLE int payCustomerDebts(int customerId);
+    Q_INVOKABLE bool paySingleDebt(int saleId);
 
 signals:
     void countChanged();
@@ -58,6 +61,8 @@ private:
     QList<Customer> m_customers;
 
     void setCustomers(const QList<Customer>& customers);
+    bool generateExcelReport(const Customer& customer, const QList<Sale>& sales, 
+                            const QString& outputPath, const QString& reportType);
 };
 
 #endif // CUSTOMERLISTMODEL_H

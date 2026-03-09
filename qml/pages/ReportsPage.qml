@@ -712,7 +712,7 @@ Page {
                             spacing: 0
 
                             Label {
-                                width: 120
+                                width: 110
                                 height: parent.height
                                 text: qsTr("Factura")
                                 font.weight: Font.Bold
@@ -721,7 +721,7 @@ Page {
                             }
 
                             Label {
-                                width: 150
+                                width: 130
                                 height: parent.height
                                 text: qsTr("Fecha")
                                 font.weight: Font.Bold
@@ -730,7 +730,7 @@ Page {
                             }
 
                             Label {
-                                width: 180
+                                width: 150
                                 height: parent.height
                                 text: qsTr("Cliente")
                                 font.weight: Font.Bold
@@ -748,7 +748,7 @@ Page {
                             }
 
                             Label {
-                                width: 120
+                                width: 100
                                 height: parent.height
                                 text: qsTr("Pago")
                                 font.weight: Font.Bold
@@ -757,9 +757,18 @@ Page {
                             }
 
                             Label {
-                                width: 80
+                                width: 60
                                 height: parent.height
                                 text: qsTr("Items")
+                                font.weight: Font.Bold
+                                verticalAlignment: Text.AlignVCenter
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+                            
+                            Label {
+                                width: 100
+                                height: parent.height
+                                text: qsTr("Detalles")
                                 font.weight: Font.Bold
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
@@ -781,7 +790,7 @@ Page {
                             spacing: 0
 
                             Label {
-                                width: 120
+                                width: 110
                                 height: parent.height
                                 text: modelData.invoiceNumber
                                 verticalAlignment: Text.AlignVCenter
@@ -790,7 +799,7 @@ Page {
                             }
 
                             Label {
-                                width: 150
+                                width: 130
                                 height: parent.height
                                 text: modelData.date
                                 verticalAlignment: Text.AlignVCenter
@@ -799,7 +808,7 @@ Page {
                             }
 
                             Label {
-                                width: 180
+                                width: 150
                                 height: parent.height
                                 text: modelData.customerName
                                 verticalAlignment: Text.AlignVCenter
@@ -818,7 +827,7 @@ Page {
                             }
 
                             Label {
-                                width: 120
+                                width: 100
                                 height: parent.height
                                 text: modelData.paymentMethod
                                 verticalAlignment: Text.AlignVCenter
@@ -827,17 +836,217 @@ Page {
                             }
 
                             Label {
-                                width: 80
+                                width: 60
                                 height: parent.height
                                 text: modelData.itemCount
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                                 opacity: 0.7
                             }
+                            
+                            Button {
+                                width: 100
+                                height: parent.height
+                                text: "\uE8A5"
+                                font.family: "Segoe MDL2 Assets"
+                                flat: true
+                                Material.foreground: Material.accent
+                                
+                                onClicked: {
+                                    saleDetailsDialog.saleData = modelData
+                                    saleDetailsDialog.open()
+                                }
+                            }
                         }
                     }
 
                     ScrollBar.vertical: ScrollBar {}
+                }
+            }
+        }
+    }
+    
+    // Diálogo de detalles de venta
+    Dialog {
+        id: saleDetailsDialog
+        title: qsTr("Detalles de Venta - %1").arg(saleData.invoiceNumber || "")
+        modal: true
+        anchors.centerIn: parent
+        
+        property var saleData: ({})
+        
+        width: Math.min(550, root.width * 0.9)
+        height: Math.min(root.height * 0.9, 700)
+        
+        standardButtons: Dialog.Close
+        
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 12
+            
+            // Información de la venta
+            Rectangle {
+                Layout.fillWidth: true
+                height: 100
+                radius: 6
+                color: Material.theme === Material.Dark ?
+                    Qt.lighter(Material.background, 1.2) :
+                    Material.color(Material.Grey, Material.Shade100)
+                
+                GridLayout {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    columns: 2
+                    rowSpacing: 6
+                    columnSpacing: 12
+                    
+                    Label { 
+                        text: qsTr("Cliente:")
+                        font.weight: Font.Medium
+                    }
+                    Label { 
+                        text: saleDetailsDialog.saleData.customerName || ""
+                        Layout.fillWidth: true
+                    }
+                    
+                    Label { 
+                        text: qsTr("Tipo de Pago:")
+                        font.weight: Font.Medium
+                    }
+                    Label { text: saleDetailsDialog.saleData.paymentMethod || "" }
+                    
+                    Label { 
+                        text: qsTr("Fecha:")
+                        font.weight: Font.Medium
+                    }
+                    Label { text: saleDetailsDialog.saleData.date || "" }
+                }
+            }
+            
+            // Título de productos
+            Label {
+                text: qsTr("Productos Vendidos:")
+                font.weight: Font.Bold
+                font.pixelSize: 14
+            }
+            
+            // Lista de productos
+            ScrollView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                
+                ColumnLayout {
+                    width: saleDetailsDialog.availableWidth
+                    spacing: 6
+                    
+                    Repeater {
+                        model: saleDetailsDialog.saleData.items || []
+                        
+                        delegate: Rectangle {
+                            Layout.fillWidth: true
+                            height: 60
+                            radius: 6
+                            color: Material.theme === Material.Dark ?
+                                Qt.lighter(Material.background, 1.15) :
+                                Material.background
+                            border.width: 1
+                            border.color: Material.frameColor
+                            
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 12
+                                
+                                // Cantidad
+                                Rectangle {
+                                    Layout.preferredWidth: 50
+                                    Layout.preferredHeight: 40
+                                    radius: 6
+                                    color: Material.accent
+                                    
+                                    ColumnLayout {
+                                        anchors.centerIn: parent
+                                        spacing: 0
+                                        
+                                        Label {
+                                            text: modelData.quantity || 0
+                                            font.weight: Font.Bold
+                                            font.pixelSize: 16
+                                            color: "white"
+                                            Layout.alignment: Qt.AlignHCenter
+                                        }
+                                        
+                                        Label {
+                                            text: "cant."
+                                            font.pixelSize: 9
+                                            color: "white"
+                                            opacity: 0.9
+                                            Layout.alignment: Qt.AlignHCenter
+                                        }
+                                    }
+                                }
+                                
+                                // Nombre del producto
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 2
+                                    
+                                    Label {
+                                        text: modelData.productName || ""
+                                        font.weight: Font.Medium
+                                        font.pixelSize: 13
+                                        Layout.fillWidth: true
+                                        elide: Text.ElideRight
+                                    }
+                                    
+                                    Label {
+                                        text: "S/ " + (modelData.unitPrice || 0).toFixed(2) + " c/u"
+                                        font.pixelSize: 11
+                                        opacity: 0.7
+                                    }
+                                }
+                                
+                                // Subtotal
+                                Label {
+                                    text: "S/ " + (modelData.subtotal || 0).toFixed(2)
+                                    font.weight: Font.Bold
+                                    font.pixelSize: 16
+                                    color: Material.color(Material.Green)
+                                    Layout.preferredWidth: 100
+                                    horizontalAlignment: Text.AlignRight
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Total
+            Rectangle {
+                Layout.fillWidth: true
+                height: 50
+                radius: 6
+                color: Material.color(Material.Green)
+                
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    
+                    Label {
+                        text: qsTr("TOTAL:")
+                        font.weight: Font.Bold
+                        font.pixelSize: 16
+                        color: "white"
+                        Layout.fillWidth: true
+                    }
+                    
+                    Label {
+                        text: "S/ " + (saleDetailsDialog.saleData.total || 0).toFixed(2)
+                        font.weight: Font.Bold
+                        font.pixelSize: 20
+                        color: "white"
+                    }
                 }
             }
         }

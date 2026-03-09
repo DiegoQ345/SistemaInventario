@@ -105,6 +105,11 @@ public:
     double getInitialHeightMM() const { return m_initialHeightMM; }
     
     /**
+     * @brief Obtener carácter de viñeta para productos
+     */
+    QString getBulletChar() const { return m_bulletChar; }
+    
+    /**
      * @brief Verificar si el diseño es válido
      */
     bool isValid() const { return m_isValid; }
@@ -118,6 +123,7 @@ private:
     QList<TicketElement> m_elements;
     double m_widthMM;  // Ancho en milímetros
     double m_initialHeightMM;  // Altura en milímetros
+    QString m_bulletChar;  // Carácter de viñeta
     bool m_isValid;
     QString m_errorMessage;
     

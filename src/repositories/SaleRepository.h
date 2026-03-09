@@ -65,6 +65,13 @@ public:
     int markCustomerDebtsAsPaid(int customerId);
 
     /**
+     * @brief Marcar una venta individual como pagada
+     * @param saleId ID de la venta
+     * @return true si se actualizó exitosamente, false en caso contrario
+     */
+    bool markSaleAsPaid(int saleId);
+
+    /**
      * @brief Generar siguiente número de factura
      */
     QString generateNextInvoiceNumber();

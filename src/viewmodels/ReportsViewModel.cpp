@@ -186,6 +186,18 @@ void ReportsViewModel::loadSalesHistory()
         saleMap["date"] = sale.createdAt.toString("dd/MM/yyyy hh:mm");
         saleMap["itemCount"] = sale.items.count();
         
+        // Agregar items con sus detalles
+        QVariantList itemsList;
+        for (const auto& item : sale.items) {
+            QVariantMap itemMap;
+            itemMap["productName"] = item.productName;
+            itemMap["quantity"] = item.quantity;
+            itemMap["unitPrice"] = item.unitPrice;
+            itemMap["subtotal"] = item.subtotal;
+            itemsList.append(itemMap);
+        }
+        saleMap["items"] = itemsList;
+        
         m_salesHistory.append(saleMap);
     }
     

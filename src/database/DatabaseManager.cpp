@@ -479,6 +479,125 @@ bool DatabaseManager::runMigrations()
         qDebug() << "Migración 8 completada";
     }
 
+    // Migración 9: Agregar campos de resumen de productos en ventas
+    if (currentVersion < 9) {
+        qDebug() << "Aplicando migración 9: Campos de resumen de productos";
+        
+        query.exec("PRAGMA table_info(sales)");
+        QStringList salesColumns;
+        while (query.next()) {
+            salesColumns << query.value(1).toString();
+        }
+        
+        // Agregar item_count si no existe (cantidad total de productos vendidos)
+        if (!salesColumns.contains("item_count")) {
+            if (!query.exec("ALTER TABLE sales ADD COLUMN item_count INTEGER DEFAULT 0")) {
+                qWarning() << "Error agregando item_count:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna item_count agregada";
+            }
+        }
+        
+        // Agregar product_names si no existe (lista de nombres de productos)
+        if (!salesColumns.contains("product_names")) {
+            if (!query.exec("ALTER TABLE sales ADD COLUMN product_names TEXT")) {
+                qWarning() << "Error agregando product_names:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna product_names agregada";
+            }
+        }
+        
+        // Actualizar ventas existentes con información de sus items
+        qDebug() << "Actualizando ventas existentes con información de productos...";
+        QSqlQuery selectSales(m_database);
+        selectSales.exec("SELECT id FROM sales");
+        
+        while (selectSales.next()) {
+            int saleId = selectSales.value(0).toInt();
+            
+            // Obtener items de esta venta
+            QSqlQuery selectItems(m_database);
+            selectItems.prepare("SELECT product_name, quantity FROM sale_items WHERE sale_id = :sale_id");
+            selectItems.bindValue(":sale_id", saleId);
+            
+            if (selectItems.exec()) {
+                int totalItems = 0;
+                QStringList productNames;
+                
+                while (selectItems.next()) {
+                    QString productName = selectItems.value(0).toString();
+                    double quantity = selectItems.value(1).toDouble();
+                    totalItems += static_cast<int>(quantity);
+                    
+                    if (!productNames.contains(productName)) {
+                        productNames << productName;
+                    }
+                }
+                
+                // Actualizar la venta con esta información
+                QSqlQuery updateSale(m_database);
+                updateSale.prepare("UPDATE sales SET item_count = :item_count, product_names = :product_names WHERE id = :sale_id");
+                updateSale.bindValue(":item_count", totalItems);
+                updateSale.bindValue(":product_names", productNames.join(", "));
+                updateSale.bindValue(":sale_id", saleId);
+                
+                if (!updateSale.exec()) {
+                    qWarning() << "Error actualizando venta" << saleId << ":" << updateSale.lastError().text();
+                }
+            }
+        }
+        
+        qDebug() << "Ventas existentes actualizadas con información de productos";
+        
+        if (!setSchemaVersion(9)) {
+            qCritical() << "Error estableciendo versión de esquema 9";
+            return false;
+        }
+        qDebug() << "Migración 9 completada";
+    }
+
+    if (currentVersion < 10) {
+        qDebug() << "Aplicando migración 10: Campos de pago y vuelto";
+        
+        query.exec("PRAGMA table_info(sales)");
+        QStringList salesColumns;
+        while (query.next()) {
+            salesColumns << query.value(1).toString();
+        }
+        
+        // Agregar amount_paid si no existe (monto con el que pagó el cliente)
+        if (!salesColumns.contains("amount_paid")) {
+            if (!query.exec("ALTER TABLE sales ADD COLUMN amount_paid REAL DEFAULT 0")) {
+                qWarning() << "Error agregando amount_paid:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna amount_paid agregada";
+            }
+        }
+        
+        // Agregar change_given si no existe (vuelto dado al cliente)
+        if (!salesColumns.contains("change_given")) {
+            if (!query.exec("ALTER TABLE sales ADD COLUMN change_given REAL DEFAULT 0")) {
+                qWarning() << "Error agregando change_given:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna change_given agregada";
+            }
+        }
+        
+        // Actualizar ventas existentes: amount_paid = total (sin vuelto registrado)
+        qDebug() << "Actualizando ventas existentes con valores por defecto...";
+        if (!query.exec("UPDATE sales SET amount_paid = total, change_given = 0 WHERE amount_paid = 0")) {
+            qWarning() << "Error actualizando ventas existentes:" << query.lastError().text();
+        } else {
+            qDebug() << "Ventas existentes actualizadas";
+        }
+        
+        if (!setSchemaVersion(10)) {
+            qCritical() << "Error estableciendo versión de esquema 10";
+            return false;
+        }
+        qDebug() << "Migración 10 completada";
+    }
+
     qDebug() << "=== MIGRACIONES COMPLETADAS ===";
     return true;
 }

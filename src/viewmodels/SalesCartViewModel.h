@@ -88,6 +88,8 @@ class SalesCartViewModel : public QObject
     Q_PROPERTY(double totalWithDiscount READ totalWithDiscount NOTIFY totalWithDiscountChanged)
     Q_PROPERTY(bool canProcessSale READ canProcessSale NOTIFY canProcessSaleChanged)
     Q_PROPERTY(QString cashierName READ cashierName WRITE setCashierName NOTIFY cashierNameChanged)
+    Q_PROPERTY(double amountPaid READ amountPaid WRITE setAmountPaid NOTIFY amountPaidChanged)
+    Q_PROPERTY(double changeGiven READ changeGiven NOTIFY changeGivenChanged)
 
 public:
     explicit SalesCartViewModel(QObject *parent = nullptr);
@@ -100,9 +102,12 @@ public:
     double totalWithDiscount() const;
     bool canProcessSale() const;
     QString cashierName() const { return m_cashierName; }
+    double amountPaid() const { return m_amountPaid; }
+    double changeGiven() const { return m_changeGiven; }
     
     void setDiscount(double discount);
     void setCashierName(const QString& name);
+    void setAmountPaid(double amount);
 
 public slots:
     /**
@@ -173,8 +178,11 @@ signals:
     void totalWithDiscountChanged();
     void canProcessSaleChanged();
     void cashierNameChanged();
+    void amountPaidChanged();
+    void changeGivenChanged();
     void saleCompleted(const QString& invoiceNumber, double total, const QString& voucherType,
-                      const QVariantList& items, double subtotal, double discount, const QString& customerName);
+                      const QVariantList& items, double subtotal, double discount, const QString& customerName,
+                      double amountPaid, double changeGiven);
     void saleFailed(const QString& errorMessage);
     void productAdded(const QString& productName, double quantity);
     void productNotFound(const QString& code);
@@ -187,6 +195,8 @@ private:
     bool m_isProcessing = false;
     QString m_lastInvoiceNumber;
     double m_discount = 0.0;
+    double m_amountPaid = 0.0;
+    double m_changeGiven = 0.0;
     QString m_cashierName;
 
     void setIsProcessing(bool processing);

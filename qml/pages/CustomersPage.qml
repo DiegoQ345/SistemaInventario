@@ -8,6 +8,11 @@ Page {
     id: root
     title: qsTr("Clientes")
 
+    // Refrescar lista cuando la página se activa (para mostrar deudas nuevas de ventas)
+    StackView.onActivated: {
+        customerListModel.refresh()
+    }
+
     // ViewModels
     CustomerListModel {
         id: customerListModel
@@ -319,22 +324,10 @@ Page {
                                     Layout.preferredHeight: 40
 
                                     onClicked: {
-                                        // Generar nombre de archivo
-                                        var timestamp = new Date().getTime()
-                                        var customerName = model.customerName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
-                                        var fileName = "historial_" + customerName + "_" + timestamp + ".pdf"
-                                        var outputPath = "C:/Users/Public/Documents/" + fileName
-                                        
-                                        // Intentar generar el PDF
-                                        var success = customerListModel.generatePurchaseHistoryPdf(model.customerId, outputPath)
-                                        
-                                        if (success) {
-                                            // Abrir el PDF automáticamente con la aplicación predeterminada
-                                            Qt.openUrlExternally("file:///" + outputPath.replace(/\\/g, "/"))
-                                            globalNotification.show("PDF generado y abierto: " + fileName, "success")
-                                        } else {
-                                            globalNotification.show("Error: El cliente no tiene historial de compras", "error")
-                                        }
+                                        // Abrir diálogo de opciones de reporte
+                                        reportOptionsDialog.customerId = model.customerId
+                                        reportOptionsDialog.customerName = model.customerName
+                                        reportOptionsDialog.open()
                                     }
                                 }
 
@@ -631,8 +624,8 @@ Page {
     Dialog {
         id: customerDetailsDialog
         title: qsTr("Detalles de Ventas - %1").arg(customerName)
-        width: Math.min(900, root.width * 0.95)
-        height: Math.min(700, root.height * 0.9)
+        width: Math.min(1150, root.width * 0.95)
+        height: Math.min(750, root.height * 0.9)
         modal: true
         anchors.centerIn: parent
         standardButtons: Dialog.Close
@@ -642,8 +635,18 @@ Page {
         property var salesData: []
 
         function loadSales() {
-            var fromDate = fromDateField.text ? new Date(fromDateField.text) : new Date(1970, 0, 1)
-            var toDate = toDateField.text ? new Date(toDateField.text) : new Date()
+            // Parsear fechas desde los TextField
+            var fromDate = parseDateFromString(fromDateField.text)
+            var toDate = parseDateFromString(toDateField.text)
+            
+            // Si no hay fecha válida, usar valores por defecto
+            if (!fromDate || isNaN(fromDate.getTime())) {
+                fromDate = new Date(1970, 0, 1)
+            }
+            if (!toDate || isNaN(toDate.getTime())) {
+                toDate = new Date()
+            }
+            
             salesData = customerListModel.getCustomerSales(customerId, fromDate, toDate)
             salesListModel.clear()
             
@@ -661,6 +664,43 @@ Page {
             salesCountLabel.text = salesData.length.toString()
             totalPendingLabel.text = "S/ " + totalPending.toFixed(2)
             totalSalesLabel.text = "S/ " + totalAmount.toFixed(2)
+        }
+        
+        function parseDateFromString(dateStr) {
+            if (!dateStr || dateStr.trim() === "") return null
+            
+            // Formato esperado: dd/MM/yyyy
+            var parts = dateStr.split("/")
+            if (parts.length !== 3) return null
+            
+            var day = parseInt(parts[0])
+            var month = parseInt(parts[1]) - 1  // Mes en JS es 0-11
+            var year = parseInt(parts[2])
+            
+            if (isNaN(day) || isNaN(month) || isNaN(year)) return null
+            if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900) return null
+            
+            return new Date(year, month, day)
+        }
+        
+        function formatDate(date) {
+            if (!date) return ""
+            var day = ("0" + date.getDate()).slice(-2)
+            var month = ("0" + (date.getMonth() + 1)).slice(-2)
+            var year = date.getFullYear()
+            return day + "/" + month + "/" + year
+        }
+        
+        onAboutToShow: {
+            // Inicializar fechas: últimos 30 días por defecto
+            var today = new Date()
+            var thirtyDaysAgo = new Date()
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+            
+            fromDateField.text = formatDate(thirtyDaysAgo)
+            toDateField.text = formatDate(today)
+            
+            loadSales()
         }
 
         ColumnLayout {
@@ -689,6 +729,7 @@ Page {
                             placeholderText: "dd/MM/yyyy"
                             inputMask: "99/99/9999"
                             Layout.preferredWidth: 120
+                            font.pixelSize: 13
                         }
                     }
 
@@ -705,6 +746,7 @@ Page {
                             placeholderText: "dd/MM/yyyy"
                             inputMask: "99/99/9999"
                             Layout.preferredWidth: 120
+                            font.pixelSize: 13
                         }
                     }
 
@@ -716,6 +758,71 @@ Page {
 
                     Button {
                         text: qsTr("Limpiar")
+                        onClicked: {
+                            fromDateField.text = ""
+                            toDateField.text = ""
+                            customerDetailsDialog.loadSales()
+                        }
+                    }
+                    
+                    Rectangle {
+                        width: 1
+                        height: 30
+                        color: Material.dividerColor
+                    }
+                    
+                    // Botones de rango rápido
+                    Label {
+                        text: qsTr("Rápido:")
+                        font.pixelSize: 11
+                        opacity: 0.7
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+                    
+                    Button {
+                        text: qsTr("Hoy")
+                        flat: true
+                        font.pixelSize: 11
+                        onClicked: {
+                            var today = new Date()
+                            fromDateField.text = customerDetailsDialog.formatDate(today)
+                            toDateField.text = customerDetailsDialog.formatDate(today)
+                            customerDetailsDialog.loadSales()
+                        }
+                    }
+                    
+                    Button {
+                        text: qsTr("Semana")
+                        flat: true
+                        font.pixelSize: 11
+                        onClicked: {
+                            var today = new Date()
+                            var weekAgo = new Date()
+                            weekAgo.setDate(weekAgo.getDate() - 7)
+                            fromDateField.text = customerDetailsDialog.formatDate(weekAgo)
+                            toDateField.text = customerDetailsDialog.formatDate(today)
+                            customerDetailsDialog.loadSales()
+                        }
+                    }
+                    
+                    Button {
+                        text: qsTr("Mes")
+                        flat: true
+                        font.pixelSize: 11
+                        onClicked: {
+                            var today = new Date()
+                            var monthAgo = new Date()
+                            monthAgo.setDate(monthAgo.getDate() - 30)
+                            fromDateField.text = customerDetailsDialog.formatDate(monthAgo)
+                            toDateField.text = customerDetailsDialog.formatDate(today)
+                            customerDetailsDialog.loadSales()
+                        }
+                    }
+                    
+                    Button {
+                        text: qsTr("Todo")
+                        flat: true
+                        font.pixelSize: 11
                         onClicked: {
                             fromDateField.text = ""
                             toDateField.text = ""
@@ -873,6 +980,13 @@ Page {
                             }
 
                             Label {
+                                Layout.preferredWidth: 150
+                                text: qsTr("Productos")
+                                font.weight: Font.Medium
+                                font.pixelSize: 12
+                            }
+
+                            Label {
                                 Layout.preferredWidth: 100
                                 text: qsTr("Método")
                                 font.weight: Font.Medium
@@ -887,11 +1001,19 @@ Page {
                             }
 
                             Label {
-                                Layout.fillWidth: true
+                                Layout.preferredWidth: 100
                                 text: qsTr("Total")
                                 font.weight: Font.Medium
                                 font.pixelSize: 12
                                 horizontalAlignment: Text.AlignRight
+                            }
+                            
+                            Label {
+                                Layout.preferredWidth: 80
+                                text: qsTr("Acción")
+                                font.weight: Font.Medium
+                                font.pixelSize: 12
+                                horizontalAlignment: Text.AlignCenter
                             }
                         }
                     }
@@ -949,6 +1071,25 @@ Page {
                                 }
 
                                 Label {
+                                    Layout.preferredWidth: 150
+                                    text: model.productNames || "-"
+                                    font.pixelSize: 11
+                                    opacity: 0.7
+                                    elide: Text.ElideRight
+                                    
+                                    ToolTip.visible: productNamesMouseArea.containsMouse && model.productNames
+                                    ToolTip.text: model.productNames || ""
+                                    ToolTip.delay: 500
+                                    
+                                    MouseArea {
+                                        id: productNamesMouseArea
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        acceptedButtons: Qt.NoButton
+                                    }
+                                }
+
+                                Label {
                                     Layout.preferredWidth: 100
                                     text: model.paymentMethod || "-"
                                     font.pixelSize: 12
@@ -974,12 +1115,34 @@ Page {
                                 }
 
                                 Label {
-                                    Layout.fillWidth: true
+                                    Layout.preferredWidth: 100
                                     text: "S/ " + (model.total ? model.total.toFixed(2) : "0.00")
                                     font.pixelSize: 14
                                     font.weight: Font.Medium
                                     font.family: "monospace"
                                     horizontalAlignment: Text.AlignRight
+                                }
+                                
+                                Button {
+                                    Layout.preferredWidth: 80
+                                    Layout.preferredHeight: 32
+                                    visible: model.paymentStatus === "PENDING" || model.paymentStatus === "PARTIAL"
+                                    text: qsTr("Pagar")
+                                    font.pixelSize: 11
+                                    Material.background: Material.color(Material.Green)
+                                    Material.foreground: "white"
+                                    
+                                    onClicked: {
+                                        paySingleDebtDialog.saleId = model.saleId
+                                        paySingleDebtDialog.invoiceNumber = model.invoiceNumber
+                                        paySingleDebtDialog.amount = model.total
+                                        paySingleDebtDialog.open()
+                                    }
+                                }
+                                
+                                Item {
+                                    Layout.preferredWidth: 80
+                                    visible: model.paymentStatus === "PAID"
                                 }
                             }
 
@@ -1008,6 +1171,333 @@ Page {
         onOpened: {
             fromDateField.text = ""
             toDateField.text = ""
+            // Cargar las ventas actualizadas al abrir el diálogo
+            customerDetailsDialog.loadSales()
+        }
+        
+        onClosed: {
+            // Refrescar la lista principal de clientes al cerrar el diálogo
+            // para actualizar las deudas y estadísticas
+            customerListModel.refresh()
+        }
+    }
+    
+    // Diálogo de confirmación para pagar deuda individual
+    Dialog {
+        id: paySingleDebtDialog
+        title: qsTr("Confirmar Pago de Venta")
+        width: Math.min(450, root.width * 0.9)
+        modal: true
+        anchors.centerIn: parent
+        standardButtons: Dialog.Yes | Dialog.No
+        
+        property int saleId: 0
+        property string invoiceNumber: ""
+        property real amount: 0
+        
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 16
+            
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("¿Está seguro que desea marcar esta venta como pagada?")
+                wrapMode: Text.WordWrap
+                font.pixelSize: 14
+            }
+            
+            Rectangle {
+                Layout.fillWidth: true
+                height: 80
+                color: Material.color(Material.Green, Material.Shade100)
+                radius: 4
+                border.color: Material.color(Material.Green)
+                border.width: 1
+                
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    spacing: 6
+                    
+                    Label {
+                        text: qsTr("Factura: %1").arg(paySingleDebtDialog.invoiceNumber)
+                        font.pixelSize: 13
+                        font.weight: Font.Medium
+                    }
+                    
+                    Label {
+                        text: qsTr("Monto a pagar:")
+                        font.pixelSize: 12
+                        opacity: 0.8
+                    }
+                    
+                    Label {
+                        text: "S/ " + paySingleDebtDialog.amount.toFixed(2)
+                        font.pixelSize: 20
+                        font.weight: Font.Bold
+                        color: Material.color(Material.Green)
+                    }
+                }
+            }
+            
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("Esta acción cambiará el estado de esta venta a 'PAGADO' en la base de datos.")
+                wrapMode: Text.WordWrap
+                font.pixelSize: 12
+                opacity: 0.7
+            }
+        }
+        
+        onAccepted: {
+            console.log("=== PAGANDO VENTA INDIVIDUAL ===")
+            console.log("Venta ID:", saleId)
+            console.log("Factura:", invoiceNumber)
+            console.log("Monto:", amount)
+            
+            var success = customerListModel.paySingleDebt(saleId)
+            
+            if (success) {
+                // Usar Timer para actualizar la UI
+                updateSingleDebtTimer.saleAmount = amount
+                updateSingleDebtTimer.saleInvoice = invoiceNumber
+                updateSingleDebtTimer.start()
+            } else {
+                snackbar.show(qsTr("Error al procesar el pago"), "error")
+            }
+        }
+        
+        Timer {
+            id: updateSingleDebtTimer
+            interval: 100
+            repeat: false
+            
+            property real saleAmount: 0
+            property string saleInvoice: ""
+            
+            onTriggered: {
+                console.log("=== ACTUALIZANDO UI DESPUÉS DEL PAGO INDIVIDUAL ===")
+                
+                // Limpiar y recargar las ventas
+                salesListModel.clear()
+                customerDetailsDialog.loadSales()
+                
+                // Actualizar lista principal
+                customerListModel.refresh()
+                
+                console.log("=== PAGO INDIVIDUAL COMPLETADO ===")
+                
+                // Mostrar mensaje de éxito
+                snackbar.show(qsTr("✓ ¡Pago exitoso! Venta %1 marcada como PAGADA. Total: S/ %2").arg(saleInvoice).arg(saleAmount.toFixed(2)), "success")
+            }
+        }
+    }
+
+    // Diálogo de opciones de reporte
+    Dialog {
+        id: reportOptionsDialog
+        title: qsTr("Opciones de Reporte - %1").arg(customerName)
+        width: Math.min(550, root.width * 0.9)
+        height: Math.min(650, root.height * 0.85)
+        modal: true
+        anchors.centerIn: parent
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        property int customerId: 0
+        property string customerName: ""
+
+        // ButtonGroups para opciones mutuamente excluyentes
+        ButtonGroup {
+            id: reportTypeGroup
+            buttons: [reportTypeCompleteRadio, reportTypeDebtsRadio]
+        }
+
+        ButtonGroup {
+            id: formatGroup
+            buttons: [formatPdfRadio, formatExcelRadio]
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 20
+
+            // Icono y descripción
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Label {
+                    text: "\uE8A5"  // Icono de documento
+                    font.family: "Segoe MDL2 Assets"
+                    font.pixelSize: 48
+                    color: Material.color(Material.Blue)
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+
+                    Label {
+                        text: qsTr("Generar Reporte de Cliente")
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                    }
+
+                    Label {
+                        text: qsTr("Selecciona las opciones para generar el reporte")
+                        font.pixelSize: 13
+                        opacity: 0.7
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 1
+                color: Material.dividerColor
+            }
+
+            // Tipo de reporte
+            GroupBox {
+                Layout.fillWidth: true
+                title: qsTr("Tipo de Reporte")
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 8
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 0
+
+                        RadioButton {
+                            id: reportTypeCompleteRadio
+                            text: qsTr("Historial Completo")
+                            checked: true
+                            font.pixelSize: 13
+                            ButtonGroup.group: reportTypeGroup
+                            bottomPadding: 4
+                        }
+
+                        Label {
+                            Layout.leftMargin: 32
+                            Layout.topMargin: -4
+                            text: qsTr("Incluye todas las ventas (pagadas y pendientes)")
+                            font.pixelSize: 11
+                            opacity: 0.6
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 0
+
+                        RadioButton {
+                            id: reportTypeDebtsRadio
+                            text: qsTr("Solo Deudas Pendientes")
+                            font.pixelSize: 13
+                            ButtonGroup.group: reportTypeGroup
+                            bottomPadding: 4
+                        }
+
+                        Label {
+                            Layout.leftMargin: 32
+                            Layout.topMargin: -4
+                            text: qsTr("Solo ventas con estado pendiente o parcial")
+                            font.pixelSize: 11
+                            opacity: 0.6
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
+                        }
+                    }
+                }
+            }
+
+            // Formato de salida
+            GroupBox {
+                Layout.fillWidth: true
+                title: qsTr("Formato de Salida")
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 8
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 0
+
+                        RadioButton {
+                            id: formatPdfRadio
+                            text: qsTr("PDF")
+                            checked: true
+                            font.pixelSize: 13
+                            ButtonGroup.group: formatGroup
+                            bottomPadding: 4
+                        }
+
+                        Label {
+                            Layout.leftMargin: 32
+                            Layout.topMargin: -4
+                            text: qsTr("Documento PDF con formato profesional")
+                            font.pixelSize: 11
+                            opacity: 0.6
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 0
+
+                        RadioButton {
+                            id: formatExcelRadio
+                            text: qsTr("Excel (.xlsx)")
+                            font.pixelSize: 13
+                            ButtonGroup.group: formatGroup
+                            bottomPadding: 4
+                        }
+
+                        Label {
+                            Layout.leftMargin: 32
+                            Layout.topMargin: -4
+                            text: qsTr("Hoja de cálculo editable")
+                            font.pixelSize: 11
+                            opacity: 0.6
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
+                        }
+                    }
+                }
+            }
+
+            Item {
+                Layout.fillHeight: true
+            }
+        }
+
+        onAccepted: {
+            // Determinar tipo de reporte
+            var reportType = reportTypeCompleteRadio.checked ? "completo" : "deudas"
+            
+            // Determinar formato
+            var format = formatPdfRadio.checked ? "pdf" : "excel"
+            
+            console.log("Generando reporte - Tipo:", reportType, "Formato:", format)
+            
+            // Generar reporte
+            var success = customerListModel.generateCustomerReport(customerId, format, reportType)
+            
+            if (success) {
+                var formatName = format === "pdf" ? "PDF" : "Excel"
+                globalNotification.show("Reporte " + formatName + " generado y abierto exitosamente", "success")
+            } else {
+                globalNotification.show("Error al generar el reporte", "error")
+            }
         }
     }
 
@@ -1078,20 +1568,44 @@ Page {
             console.log("Ventas actualizadas:", updatedCount)
             
             if (updatedCount > 0) {
-                // Mostrar mensaje de éxito con el monto pagado
+                // Guardar el monto pagado antes de actualizar
                 var paidAmount = totalPendingLabel.text
-                snackbar.show(qsTr("✓ ¡Pago exitoso! %1 venta(s) marcadas como PAGADAS. Total: %2").arg(updatedCount).arg(paidAmount), "success")
                 
-                // Recargar las ventas del cliente (esto actualizará los estados a PAID)
+                // Usar un Timer para asegurar que la actualización de la base de datos se complete
+                // y la UI tenga tiempo de refrescarse
+                updateDebtsTimer.paidAmount = paidAmount
+                updateDebtsTimer.updatedCount = updatedCount
+                updateDebtsTimer.start()
+            } else {
+                snackbar.show(qsTr("No se encontraron deudas pendientes para pagar"), "info")
+            }
+        }
+        
+        Timer {
+            id: updateDebtsTimer
+            interval: 100
+            repeat: false
+            
+            property string paidAmount: ""
+            property int updatedCount: 0
+            
+            onTriggered: {
+                console.log("=== ACTUALIZANDO UI DESPUÉS DEL PAGO ===")
+                
+                // Limpiar el modelo de ventas
+                salesListModel.clear()
+                
+                // Recargar las ventas del cliente con estado actualizado
                 customerDetailsDialog.loadSales()
                 
                 // Forzar actualización de la lista principal de clientes
                 customerListModel.refresh()
                 
-                console.log("Monto pendiente después:", totalPendingLabel.text)
+                console.log("Monto pendiente después de actualizar:", totalPendingLabel.text)
                 console.log("=== PAGO COMPLETADO ===")
-            } else {
-                snackbar.show(qsTr("No se encontraron deudas pendientes para pagar"), "info")
+                
+                // Mostrar mensaje de éxito
+                snackbar.show(qsTr("✓ ¡Pago exitoso! %1 venta(s) marcadas como PAGADAS. Total: %2").arg(updatedCount).arg(paidAmount), "success")
             }
         }
     }

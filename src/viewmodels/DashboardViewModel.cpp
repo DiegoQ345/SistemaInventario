@@ -164,6 +164,34 @@ QString DashboardViewModel::closeDayShift()
     }
     report["topProducts"] = topProducts;
     
+    // Lista de todas las ventas con sus items
+    QJsonArray salesArray;
+    for (const auto& sale : todaySales) {
+        QJsonObject saleObj;
+        saleObj["id"] = sale.id;
+        saleObj["invoiceNumber"] = sale.invoiceNumber;
+        saleObj["voucherType"] = sale.voucherType.isEmpty() ? "TICKET" : sale.voucherType;
+        saleObj["paymentType"] = sale.paymentType;
+        saleObj["total"] = sale.total;
+        saleObj["createdAt"] = sale.createdAt.toString("dd/MM/yyyy hh:mm");
+        saleObj["itemCount"] = sale.items.size();
+        
+        // Agregar items de la venta
+        QJsonArray itemsArray;
+        for (const auto& item : sale.items) {
+            QJsonObject itemObj;
+            itemObj["productName"] = item.productName;
+            itemObj["quantity"] = item.quantity;
+            itemObj["unitPrice"] = item.unitPrice;
+            itemObj["subtotal"] = item.subtotal;
+            itemsArray.append(itemObj);
+        }
+        saleObj["items"] = itemsArray;
+        
+        salesArray.append(saleObj);
+    }
+    report["sales"] = salesArray;
+    
     QJsonDocument doc(report);
     QString jsonString = doc.toJson(QJsonDocument::Indented);
     

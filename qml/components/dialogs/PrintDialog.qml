@@ -39,6 +39,8 @@ Dialog {
     property real subtotal: 0
     property real discount: 0
     property real total: 0
+    property real amountPaid: 0
+    property real changeGiven: 0
     property int voucherType: PrintViewModel.Boleta
     property string ruc: ""
     property string businessName: ""
@@ -178,6 +180,8 @@ Dialog {
         result = result.replace(/{{discount}}/g, root.discount.toFixed(2))
         result = result.replace(/{{tax}}/g, (root.total - root.subtotal).toFixed(2))
         result = result.replace(/{{total}}/g, root.total.toFixed(2))
+        result = result.replace(/{{amountPaid}}/g, root.amountPaid.toFixed(2))
+        result = result.replace(/{{changeGiven}}/g, root.changeGiven.toFixed(2))
         result = result.replace(/{{voucherType}}/g, root.voucherType === PrintViewModel.Factura ? "FACTURA" : "BOLETA")
         result = result.replace(/{{Productos}}/g, formatProductsList())
         
@@ -488,7 +492,9 @@ Dialog {
                             root.activeTemplate.layoutJson,
                             root.ruc,
                             root.businessName,
-                            root.address
+                            root.address,
+                            root.amountPaid,
+                            root.changeGiven
                         )
                     } else {
                         // Usar impresion estandar
@@ -503,7 +509,9 @@ Dialog {
                             root.voucherType,
                             root.ruc,
                             root.businessName,
-                            root.address
+                            root.address,
+                            root.amountPaid,
+                            root.changeGiven
                         )
                     }
                     
@@ -526,7 +534,7 @@ Dialog {
                 contentItem: Label {
                     text: parent.text
                     font: parent.font
-                    color: "white"
+                    color: Material.theme === Material.Dark ? "white" : "white"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -924,8 +932,8 @@ Dialog {
             
             Rectangle {
                 anchors.fill: parent
-                color: "#f0f0f0"
-                border.color: "#ccc"
+                color: Material.theme === Material.Dark ? "#2a2a2a" : "#f0f0f0"
+                border.color: Material.theme === Material.Dark ? "#555" : "#ccc"
                 visible: !elementData.content || elementData.content === ""
                 
                 Label {
@@ -933,7 +941,7 @@ Dialog {
                     text: "\uEB9F"
                     font.family: "Segoe MDL2 Assets"
                     font.pixelSize: 16
-                    color: "#999"
+                    color: Material.theme === Material.Dark ? "#888" : "#999"
                 }
             }
         }

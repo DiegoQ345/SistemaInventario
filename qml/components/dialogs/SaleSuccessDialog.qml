@@ -37,6 +37,8 @@ Dialog {
     property string customerName: "Cliente General"
     property real subtotal: 0.0
     property real discount: 0.0
+    property real amountPaid: 0.0
+    property real changeGiven: 0.0
     property var items: []
 
     signal printRequested()
@@ -81,13 +83,167 @@ Dialog {
                     font.weight: Font.Bold
                     Layout.alignment: Qt.AlignHCenter
                 }
-
+            }
+        }
+        
+        // Resumen de pago - Destacado
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: paymentSummaryLayout.implicitHeight + 32
+            color: Material.theme === Material.Dark ?
+                Qt.rgba(0.2, 0.5, 1.0, 0.15) :
+                Material.color(Material.Blue, Material.Shade50)
+            radius: 6
+            border.width: 2
+            border.color: ApplicationWindow.window?.currentColors?.primary ?? Material.primary
+            
+            ColumnLayout {
+                id: paymentSummaryLayout
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 16
+                spacing: 10
+                
                 Label {
-                    text: qsTr("Total: S/") + root.total.toFixed(2)
-                    font.pixelSize: 18
+                    text: "\uE8C0  RESUMEN DE PAGO"  // Calculator/Money icon
+                    font.family: "Segoe MDL2 Assets"
+                    font.pixelSize: 13
                     font.weight: Font.Bold
                     Layout.alignment: Qt.AlignHCenter
-                    color: Material.primary
+                    color: ApplicationWindow.window?.currentColors?.primary ?? Material.primary
+                }
+                
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 1
+                    color: Material.frameColor
+                }
+                
+                // Subtotal
+                RowLayout {
+                    Layout.fillWidth: true
+                    
+                    Label {
+                        text: qsTr("Subtotal:")
+                        font.pixelSize: 13
+                        Layout.fillWidth: true
+                    }
+                    
+                    Label {
+                        text: "S/ " + root.subtotal.toFixed(2)
+                        font.pixelSize: 13
+                        font.weight: Font.Medium
+                    }
+                }
+                
+                // Descuento
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: root.discount > 0
+                    Layout.preferredHeight: root.discount > 0 ? implicitHeight : 0
+                    
+                    Label {
+                        text: qsTr("Descuento:")
+                        font.pixelSize: 13
+                        color: Material.color(Material.Orange)
+                        Layout.fillWidth: true
+                    }
+                    
+                    Label {
+                        text: "- S/ " + root.discount.toFixed(2)
+                        font.pixelSize: 13
+                        font.weight: Font.Medium
+                        color: Material.color(Material.Orange)
+                    }
+                }
+                
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 2
+                    color: Material.frameColor
+                }
+                
+                // Total
+                RowLayout {
+                    Layout.fillWidth: true
+                    
+                    Label {
+                        text: qsTr("TOTAL:")
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                        Layout.fillWidth: true
+                    }
+                    
+                    Label {
+                        text: "S/ " + root.total.toFixed(2)
+                        font.pixelSize: 18
+                        font.weight: Font.Bold
+                        color: ApplicationWindow.window?.currentColors?.primary ?? Material.primary
+                    }
+                }
+                
+                // Separador antes de información de pago
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 1
+                    color: Material.frameColor
+                }
+                
+                // Monto pagado - SIEMPRE VISIBLE
+                RowLayout {
+                    Layout.fillWidth: true
+                    
+                    Label {
+                        text: "\uE8CB  " + qsTr("Pagado con:")  // Money icon
+                        font.family: "Segoe MDL2 Assets"
+                        font.pixelSize: 14
+                        font.weight: Font.Medium
+                        Layout.fillWidth: true
+                    }
+                    
+                    Label {
+                        text: "S/ " + root.amountPaid.toFixed(2)
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                        color: Material.theme === Material.Dark ?
+                            Material.color(Material.Blue, Material.Shade300) :
+                            Material.color(Material.Blue, Material.Shade700)
+                    }
+                }
+                
+                // Vuelto - Solo visible si hay vuelto
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: root.changeGiven > 0 ? 50 : 0
+                    visible: root.changeGiven > 0
+                    color: Material.theme === Material.Dark ?
+                        Qt.rgba(0.2, 0.8, 0.4, 0.2) :
+                        Material.color(Material.Green, Material.Shade50)
+                    radius: 4
+                    border.width: 2
+                    border.color: Material.color(Material.Green)
+                    
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        
+                        Label {
+                            text: "\uE8C0  VUELTO:"  // Calculator/Money icon
+                            font.family: "Segoe MDL2 Assets"
+                            font.pixelSize: 15
+                            font.weight: Font.Bold
+                            Layout.fillWidth: true
+                            color: Material.color(Material.Green)
+                        }
+                        
+                        Label {
+                            text: "S/ " + root.changeGiven.toFixed(2)
+                            font.pixelSize: 20
+                            font.weight: Font.Bold
+                            color: Material.color(Material.Green)
+                        }
+                    }
                 }
             }
         }
@@ -140,7 +296,7 @@ Dialog {
                 contentItem: Label {
                     text: parent.text
                     font: parent.font
-                    color: "white"
+                    color: Material.theme === Material.Dark ? "white" : "white"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }

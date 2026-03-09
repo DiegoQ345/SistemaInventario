@@ -106,7 +106,9 @@ public slots:
                      VoucherType voucherType,
                      const QString& ruc = "",
                      const QString& businessName = "",
-                     const QString& address = "");
+                     const QString& address = "",
+                     double amountPaid = 0.0,
+                     double changeGiven = 0.0);
 
     /**
      * @brief Imprimir comprobante con diseño personalizado
@@ -121,7 +123,9 @@ public slots:
                           const QString& layoutJson,
                           const QString& ruc = "",
                           const QString& businessName = "",
-                          const QString& address = "");
+                          const QString& address = "",
+                          double amountPaid = 0.0,
+                          double changeGiven = 0.0);
 
     /**
      * @brief Mostrar diálogo de configuración de impresora

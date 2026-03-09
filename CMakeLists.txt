@@ -57,17 +57,26 @@ set(QML_FILES
     qml/components/QuantitySpinBox.qml
     qml/components/ConfirmDialog.qml
     qml/components/ErrorDialog.qml
+    qml/components/VariablesReferenceDialog.qml
     qml/components/SuccessDialog.qml
     qml/components/StyledGroupBox.qml
     qml/components/StatCard.qml
     qml/components/Badge.qml
     qml/components/LoadingSpinner.qml
+    qml/components/NumPad.qml
+    qml/components/TicketRenderer.qml
     
     # Diálogos de ventas
     qml/components/dialogs/SaleSuccessDialog.qml
     qml/components/dialogs/SaleErrorDialog.qml
     qml/components/dialogs/PrintDialog.qml
     qml/components/dialogs/PrinterSettingsDialog.qml
+    qml/components/dialogs/PaymentAmountDialog.qml
+
+    # Diálogos del diseñador de tickets
+    qml/components/dialogs/TicketPreviewDialog.qml
+    qml/components/dialogs/TicketLoadDialog.qml
+    qml/components/dialogs/TicketSaveNameDialog.qml
 )
 
 # ============================================
@@ -96,6 +105,7 @@ set(HEADER_FILES
     src/printing/TicketRenderer.h
     src/printing/TicketDynamicSection.h
     src/viewmodels/DashboardViewModel.h
+    src/viewmodels/TicketDesignerViewModel.h
     src/viewmodels/ProductListModel.h
     src/viewmodels/SalesCartViewModel.h
     src/viewmodels/CustomerListModel.h
@@ -124,6 +134,7 @@ set(SOURCE_FILES
     src/printing/TicketRenderer.cpp
     src/printing/TicketDynamicSection.cpp
     src/viewmodels/DashboardViewModel.cpp
+    src/viewmodels/TicketDesignerViewModel.cpp
     src/viewmodels/ProductListModel.cpp
     src/viewmodels/SalesCartViewModel.cpp
     src/viewmodels/CustomerListModel.cpp

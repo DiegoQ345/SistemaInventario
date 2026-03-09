@@ -19,10 +19,12 @@ int SaleRepository::create(Sale& sale)
         "INSERT INTO sales (invoice_number, voucher_type, customer_id, customer_name, "
         "customer_ruc, customer_business_name, customer_address, "
         "subtotal, tax, discount, total, payment_method_id, payment_type, payment_status, "
+        "amount_paid, change_given, "
         "status, notes, created_by) "
         "VALUES (:invoice_number, :voucher_type, :customer_id, :customer_name, "
         ":customer_ruc, :customer_business_name, :customer_address, "
         ":subtotal, :tax, :discount, :total, :payment_method_id, :payment_type, :payment_status, "
+        ":amount_paid, :change_given, "
         ":status, :notes, :created_by)"
     );
 
@@ -40,6 +42,8 @@ int SaleRepository::create(Sale& sale)
     query.bindValue(":payment_method_id", sale.paymentMethodId > 0 ? sale.paymentMethodId : QVariant());
     query.bindValue(":payment_type", sale.paymentType);
     query.bindValue(":payment_status", sale.paymentStatus);
+    query.bindValue(":amount_paid", sale.amountPaid);
+    query.bindValue(":change_given", sale.changeGiven);
     query.bindValue(":status", sale.status);
     query.bindValue(":notes", sale.notes);
     query.bindValue(":created_by", sale.createdBy);
@@ -64,6 +68,9 @@ int SaleRepository::create(Sale& sale)
         "VALUES (:sale_id, :product_id, :product_name, :quantity, :unit_price, :subtotal)"
     );
 
+    int totalItemCount = 0;
+    QStringList productNames;
+
     for (auto& item : sale.items) {
         query.bindValue(":sale_id", saleId);
         query.bindValue(":product_id", item.productId);
@@ -81,9 +88,30 @@ int SaleRepository::create(Sale& sale)
 
         item.id = query.lastInsertId().toInt();
         item.saleId = saleId;
+        
+        // Acumular información para el resumen
+        totalItemCount += static_cast<int>(item.quantity);
+        if (!productNames.contains(item.productName)) {
+            productNames << item.productName;
+        }
     }
     
     qDebug() << "  " << sale.items.count() << "items inserted";
+
+    // Actualizar la venta con el resumen de productos
+    query.prepare(
+        "UPDATE sales SET item_count = :item_count, product_names = :product_names WHERE id = :sale_id"
+    );
+    query.bindValue(":item_count", totalItemCount);
+    query.bindValue(":product_names", productNames.join(", "));
+    query.bindValue(":sale_id", saleId);
+
+    if (!query.exec()) {
+        qWarning() << "Error actualizando resumen de productos de venta:" << query.lastError().text();
+        // No es crítico, continuamos
+    } else {
+        qDebug() << "  Sale summary updated: " << totalItemCount << " items, products: " << productNames.join(", ");
+    }
 
     // NO confirmar transacción aquí - la maneja SalesService
     return saleId;
@@ -183,9 +211,12 @@ QList<Sale> SaleRepository::findByCustomerId(int customerId)
     QSqlQuery query(DatabaseManager::instance().database());
     
     query.prepare(
-        "SELECT * FROM sales "
-        "WHERE customer_id = :customer_id AND status = 'COMPLETED' "
-        "ORDER BY created_at DESC"
+        "SELECT s.*, c.name as customer_name, pm.name as payment_method_name "
+        "FROM sales s "
+        "LEFT JOIN customers c ON s.customer_id = c.id "
+        "LEFT JOIN payment_methods pm ON s.payment_method_id = pm.id "
+        "WHERE s.customer_id = :customer_id AND s.status = 'COMPLETED' "
+        "ORDER BY s.created_at DESC"
     );
     query.bindValue(":customer_id", customerId);
     
@@ -249,7 +280,7 @@ int SaleRepository::markCustomerDebtsAsPaid(int customerId)
         "UPDATE sales SET payment_status = 'PAID' "
         "WHERE customer_id = :customer_id "
         "AND payment_status IN ('PENDING', 'PARTIAL') "
-        "AND status = 'ACTIVE'"
+        "AND status = 'COMPLETED'"
     );
     query.bindValue(":customer_id", customerId);
     
@@ -287,6 +318,97 @@ int SaleRepository::markCustomerDebtsAsPaid(int customerId)
     qDebug() << "Transacción de pago completada exitosamente";
     
     return rowsUpdated;
+}
+
+bool SaleRepository::markSaleAsPaid(int saleId)
+{
+    auto& db = DatabaseManager::instance();
+    QSqlDatabase database = db.database();
+    
+    qDebug() << "[SaleRepository] Iniciando pago de venta ID:" << saleId;
+    
+    // Iniciar transacción
+    if (!database.transaction()) {
+        qCritical() << "[SaleRepository] Error iniciando transacción para pagar venta";
+        return false;
+    }
+    
+    QSqlQuery query(database);
+    
+    // 1. Obtener información de la venta antes de actualizar
+    query.prepare("SELECT customer_id, total, payment_status FROM sales WHERE id = :sale_id AND status = 'COMPLETED'");
+    query.bindValue(":sale_id", saleId);
+    
+    if (!query.exec()) {
+        qCritical() << "[SaleRepository] Error ejecutando query:" << query.lastError().text();
+        qCritical() << "[SaleRepository] Query fue:" << query.lastQuery();
+        database.rollback();
+        return false;
+    }
+    
+    if (!query.next()) {
+        qCritical() << "[SaleRepository] No se encontró la venta con ID:" << saleId;
+        database.rollback();
+        return false;
+    }
+    
+    int customerId = query.value(0).toInt();
+    double total = query.value(1).toDouble();
+    QString currentStatus = query.value(2).toString();
+    
+    qDebug() << "[SaleRepository] Venta encontrada - Cliente:" << customerId << "Total:" << total << "Estado actual:" << currentStatus;
+    
+    // Si ya está pagada, no hacer nada
+    if (currentStatus == "PAID") {
+        qDebug() << "[SaleRepository] Venta" << saleId << "ya está pagada";
+        database.rollback();
+        return true;
+    }
+    
+    // 2. Actualizar estado de la venta a PAID
+    QSqlQuery updateQuery(database);
+    updateQuery.prepare(
+        "UPDATE sales SET payment_status = 'PAID' "
+        "WHERE id = :sale_id "
+        "AND status = 'COMPLETED'"
+    );
+    updateQuery.bindValue(":sale_id", saleId);
+    
+    if (!updateQuery.exec()) {
+        qCritical() << "[SaleRepository] Error marcando venta como pagada:" << updateQuery.lastError().text();
+        database.rollback();
+        return false;
+    }
+    
+    int rowsAffected = updateQuery.numRowsAffected();
+    qDebug() << "[SaleRepository] Venta" << saleId << "marcada como PAID. Filas afectadas:" << rowsAffected << "Monto:" << total;
+    
+    // 3. Actualizar current_debt del cliente
+    QSqlQuery updateCustomerQuery(database);
+    updateCustomerQuery.prepare(
+        "UPDATE customers SET current_debt = COALESCE(current_debt, 0) - :amount WHERE id = :customer_id"
+    );
+    updateCustomerQuery.bindValue(":amount", total);
+    updateCustomerQuery.bindValue(":customer_id", customerId);
+    
+    if (!updateCustomerQuery.exec()) {
+        qCritical() << "[SaleRepository] Error actualizando deuda del cliente:" << updateCustomerQuery.lastError().text();
+        database.rollback();
+        return false;
+    }
+    
+    qDebug() << "[SaleRepository] Deuda del cliente" << customerId << "reducida en" << total;
+    
+    // Confirmar transacción
+    if (!database.commit()) {
+        qCritical() << "[SaleRepository] Error confirmando transacción de pago individual";
+        database.rollback();
+        return false;
+    }
+    
+    qDebug() << "[SaleRepository] Transacción de pago individual completada exitosamente";
+    
+    return true;
 }
 
 QString SaleRepository::generateNextInvoiceNumber()
@@ -460,10 +582,17 @@ Sale SaleRepository::mapFromQuery(const QSqlQuery& query)
     sale.paymentMethodName = query.value("payment_method_name").toString();
     sale.paymentType = query.value("payment_type").toString();
     sale.paymentStatus = query.value("payment_status").toString();
+    sale.amountPaid = query.value("amount_paid").toDouble();
+    sale.changeGiven = query.value("change_given").toDouble();
     sale.status = query.value("status").toString();
     sale.notes = query.value("notes").toString();
     sale.createdAt = QDateTime::fromString(query.value("created_at").toString(), Qt::ISODate);
     sale.createdBy = query.value("created_by").toString();
+    
+    // Nuevos campos de resumen de productos
+    sale.storedItemCount = query.value("item_count").toInt();
+    sale.productNames = query.value("product_names").toString();
+    
     return sale;
 }
 

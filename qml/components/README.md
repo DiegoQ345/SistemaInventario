@@ -12,6 +12,7 @@ Este directorio contiene componentes QML reutilizables para la aplicación Siste
 ### Inputs
 - [SearchField](#searchfield) - Campo de búsqueda con icono y botón de limpiar
 - [QuantitySpinBox](#quantityspinbox) - SpinBox para cantidades con decimales
+- [NumPad](#numpad) - Teclado numérico para pantallas táctiles
 
 ### Diálogos
 - [ConfirmDialog](#confirmdialog) - Diálogo de confirmación genérico
@@ -433,6 +434,77 @@ ListView {
 - ✅ SpinBox para ajustar cantidad
 - ✅ Botón de eliminación con confirmación visual
 - ✅ Responsive a cambios de tema (claro/oscuro)
+
+---
+
+### NumPad
+
+Teclado numérico estilo calculadora para ingreso de montos en pantallas táctiles.
+
+**Propiedades:**
+```qml
+property TextField targetField: null  // Campo de texto vinculado
+```
+
+**Ejemplo de uso:**
+```qml
+import "qml/components"
+
+RowLayout {
+    TextField {
+        id: amountField
+        placeholderText: "Ingrese monto"
+    }
+    
+    Button {
+        text: "🔢"
+        onClicked: numPadPopup.open()
+    }
+}
+
+Popup {
+    id: numPadPopup
+    anchors.centerIn: parent
+    modal: true
+    
+    NumPad {
+        targetField: amountField
+    }
+}
+```
+
+**Funcionalidades:**
+- ✅ Teclas numéricas 0-9
+- ✅ Punto decimal (solo uno permitido)
+- ✅ Botón Clear (C) para limpiar
+- ✅ Botón Backspace (←) para borrar último dígito
+- ✅ Botón OK para cerrar el teclado
+- ✅ Display en tiempo real del valor
+- ✅ Validación automática de entrada
+- ✅ Límite de 10 caracteres
+- ✅ Diseño Material Design con sombra
+- ✅ Responsive a tema claro/oscuro
+
+**Teclas disponibles:**
+```
+┌─────┬─────┬─────┐
+│  7  │  8  │  9  │
+├─────┼─────┼─────┤
+│  4  │  5  │  6  │
+├─────┼─────┼─────┤
+│  1  │  2  │  3  │
+├─────┼─────┼─────┤
+│  C  │  0  │  .  │
+└─────┴─────┴─────┘
+┌──────────┬────────┐
+│    ←     │   OK   │
+└──────────┴────────┘
+```
+
+**Integración en SalesPage:**
+- Se activa con el botón de calculadora (🔢) junto al campo "Monto Pagado"
+- Solo visible cuando el método de pago es "Efectivo"
+- Facilita el ingreso rápido en pantallas táctiles y tablets
 
 ---
 

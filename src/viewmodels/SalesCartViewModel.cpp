@@ -390,6 +390,12 @@ bool SalesCartViewModel::processSale(int customerId, const QString& customerName
     sale.paymentType = paymentType;
     sale.paymentStatus = (paymentType == "CREDITO") ? "PENDING" : "PAID";
     
+    // Asignar monto pagado y vuelto
+    sale.amountPaid = m_amountPaid;
+    sale.changeGiven = m_changeGiven;
+    
+    qDebug() << "  Sale Amount Paid:" << sale.amountPaid << "Change Given:" << sale.changeGiven;
+    
     sale.calculateTotals();
 
     qDebug() << "  Sale created - Items:" << sale.items.count();
@@ -420,6 +426,10 @@ bool SalesCartViewModel::processSale(int customerId, const QString& customerName
 void SalesCartViewModel::cancelSale()
 {
     m_cart->clear();
+    m_amountPaid = 0.0;
+    m_changeGiven = 0.0;
+    emit amountPaidChanged();
+    emit changeGivenChanged();
 }
 
 QVariantMap SalesCartViewModel::getProductInfo(int productId)
@@ -483,6 +493,24 @@ void SalesCartViewModel::setCashierName(const QString& name)
     }
 }
 
+void SalesCartViewModel::setAmountPaid(double amount)
+{
+    // No permitir valores negativos
+    double validAmount = qMax(0.0, amount);
+    
+    if (qFuzzyCompare(m_amountPaid, validAmount))
+        return;
+    
+    m_amountPaid = validAmount;
+    
+    // Calcular vuelto: solo si el monto pagado es mayor o igual al total
+    double total = totalWithDiscount();
+    m_changeGiven = (m_amountPaid >= total) ? (m_amountPaid - total) : 0.0;
+    
+    emit amountPaidChanged();
+    emit changeGivenChanged();
+}
+
 double SalesCartViewModel::totalWithDiscount() const
 {
     return qMax(0.0, m_cart->subtotal() - m_discount);
@@ -516,6 +544,8 @@ bool SalesCartViewModel::processSaleWithInvoiceData(
     qDebug() << "  Items count:" << m_cart->rowCount();
     qDebug() << "  Subtotal:" << m_cart->subtotal();
     qDebug() << "  Discount:" << m_discount;
+    qDebug() << "  Amount Paid:" << m_amountPaid;
+    qDebug() << "  Change Given:" << m_changeGiven;
     
     // Validar que haya items en el carrito
     if (m_cart->items().isEmpty()) {
@@ -540,6 +570,12 @@ bool SalesCartViewModel::processSaleWithInvoiceData(
         notes += QString(" - RUC: %1 - %2").arg(ruc, businessName);
     }
     
+    // Capturar valores de pago ANTES de resetear
+    double capturedAmountPaid = m_amountPaid;
+    double capturedChangeGiven = m_changeGiven;
+    
+    qDebug() << "  Captured payment values - Amount Paid:" << capturedAmountPaid << "Change Given:" << capturedChangeGiven;
+    
     // Procesar la venta con los datos de facturación y tipo de pago
     qDebug() << "  Calling processSale with invoice data...";
     bool success = processSale(customerId, customerName, paymentMethodId, 
@@ -554,9 +590,16 @@ bool SalesCartViewModel::processSaleWithInvoiceData(
         // Limpiar el carrito DESPUÉS de procesar
         m_cart->clear();
         
-        // Emitir señal con todos los datos capturados para que QML los use
+        // Emitir señal con todos los datos capturados (incluyendo datos de pago)
         emit saleCompleted(m_lastInvoiceNumber, total, voucherType, 
-                          items, subtotal, discountAmount, capturedCustomerName);
+                          items, subtotal, discountAmount, capturedCustomerName,
+                          capturedAmountPaid, capturedChangeGiven);
+        
+        // Resetear valores de pago DESPUÉS de emitir la señal
+        m_amountPaid = 0.0;
+        m_changeGiven = 0.0;
+        emit amountPaidChanged();
+        emit changeGivenChanged();
         
         qDebug() << "  saleCompleted signal emitted with customer:" << capturedCustomerName;
     } else {
