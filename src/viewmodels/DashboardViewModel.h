@@ -75,6 +75,11 @@ public slots:
     Q_INVOKABLE void generateDailyReportPDF();
     
     /**
+     * @brief Generar Excel del reporte del día actual
+     */
+    Q_INVOKABLE void generateDailyReportExcel();
+    
+    /**
      * @brief Obtener ventas por tipo de comprobante (hoy)
      * @return QVariantList con {label, value, count} para cada tipo
      */

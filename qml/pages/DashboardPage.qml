@@ -920,11 +920,57 @@ Page {
                     }
                     
                     RowLayout {
-                        spacing: 12
+                        Layout.fillWidth: true
+                        spacing: 20
                         
-                        OutlinedButton {
-                            text: qsTr("Ver Reporte del Día")
-                            iconText: "\uE8A5"
+                        // Espaciador izquierdo para centrar
+                        Item {
+                            Layout.fillWidth: true
+                        }
+                        
+                        // Botón para ver reporte en tabla
+                        ToolButton {
+                            id: viewReportButton
+                            implicitWidth: 64
+                            implicitHeight: 64
+                            
+                            ToolTip.visible: hovered
+                            ToolTip.text: qsTr("Ver Reporte del Día")
+                            ToolTip.delay: 500
+                            
+                            contentItem: Label {
+                                text: "\uE8F3"  // Table icon
+                                font.family: "Segoe MDL2 Assets"
+                                font.pixelSize: 28
+                                color: Material.theme === Material.Dark 
+                                    ? Material.foreground 
+                                    : Material.primary
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            
+                            background: Rectangle {
+                                radius: 6
+                                color: parent.down 
+                                    ? (Material.theme === Material.Dark 
+                                        ? Qt.lighter(Material.background, 1.4) 
+                                        : Material.color(Material.Grey, Material.Shade300))
+                                    : parent.hovered 
+                                        ? (Material.theme === Material.Dark 
+                                            ? Qt.lighter(Material.background, 1.2) 
+                                            : Material.color(Material.Grey, Material.Shade200))
+                                        : (Material.theme === Material.Dark 
+                                            ? Qt.lighter(Material.background, 1.1) 
+                                            : Material.background)
+                                border.width: 1
+                                border.color: parent.hovered || parent.down
+                                    ? Material.primary 
+                                    : Material.frameColor
+                                
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                                Behavior on border.color { ColorAnimation { duration: 150 } }
+                            }
+                            
                             onClicked: {
                                 var report = viewModel.getDailyReport()
                                 closingReportDialog.reportData = JSON.parse(report)
@@ -932,9 +978,97 @@ Page {
                             }
                         }
                         
-                        PrimaryButton {
-                            text: qsTr("Generar PDF del Reporte")
-                            iconText: "\uE8A5"
+                        // Botón para exportar a Excel
+                        ToolButton {
+                            id: exportExcelButton
+                            implicitWidth: 64
+                            implicitHeight: 64
+                            
+                            ToolTip.visible: hovered
+                            ToolTip.text: qsTr("Exportar a Excel")
+                            ToolTip.delay: 500
+                            
+                            contentItem: Label {
+                                text: "\uE9F9"  // Excel/Table icon
+                                font.family: "Segoe MDL2 Assets"
+                                font.pixelSize: 28
+                                color: Material.theme === Material.Dark 
+                                    ? Material.foreground 
+                                    : Material.color(Material.Green)
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            
+                            background: Rectangle {
+                                radius: 6
+                                color: parent.down 
+                                    ? (Material.theme === Material.Dark 
+                                        ? Qt.lighter(Material.background, 1.4) 
+                                        : Material.color(Material.Grey, Material.Shade300))
+                                    : parent.hovered 
+                                        ? (Material.theme === Material.Dark 
+                                            ? Qt.lighter(Material.background, 1.2) 
+                                            : Material.color(Material.Grey, Material.Shade200))
+                                        : (Material.theme === Material.Dark 
+                                            ? Qt.lighter(Material.background, 1.1) 
+                                            : Material.background)
+                                border.width: 1
+                                border.color: parent.hovered || parent.down
+                                    ? Material.color(Material.Green)
+                                    : Material.frameColor
+                                
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                                Behavior on border.color { ColorAnimation { duration: 150 } }
+                            }
+                            
+                            onClicked: {
+                                viewModel.generateDailyReportExcel()
+                            }
+                        }
+                        
+                        // Botón para exportar a PDF
+                        ToolButton {
+                            id: exportPdfButton
+                            implicitWidth: 64
+                            implicitHeight: 64
+                            
+                            ToolTip.visible: hovered
+                            ToolTip.text: qsTr("Exportar a PDF")
+                            ToolTip.delay: 500
+                            
+                            contentItem: Label {
+                                text: "\uE8E0"  // PDF/Download icon
+                                font.family: "Segoe MDL2 Assets"
+                                font.pixelSize: 28
+                                color: Material.theme === Material.Dark 
+                                    ? Material.foreground 
+                                    : Material.color(Material.Red)
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            
+                            background: Rectangle {
+                                radius: 6
+                                color: parent.down 
+                                    ? (Material.theme === Material.Dark 
+                                        ? Qt.lighter(Material.background, 1.4) 
+                                        : Material.color(Material.Grey, Material.Shade300))
+                                    : parent.hovered 
+                                        ? (Material.theme === Material.Dark 
+                                            ? Qt.lighter(Material.background, 1.2) 
+                                            : Material.color(Material.Grey, Material.Shade200))
+                                        : (Material.theme === Material.Dark 
+                                            ? Qt.lighter(Material.background, 1.1) 
+                                            : Material.background)
+                                border.width: 1
+                                border.color: parent.hovered || parent.down
+                                    ? Material.color(Material.Red)
+                                    : Material.frameColor
+                                
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                                Behavior on border.color { ColorAnimation { duration: 150 } }
+                            }
+                            
                             onClicked: {
                                 var report = viewModel.getDailyReport()
                                 closingReportDialog.reportData = JSON.parse(report)
@@ -942,27 +1076,9 @@ Page {
                             }
                         }
                         
-                        Button {
-                            text: qsTr("Cerrar Día")
-                            Material.background: Material.color(Material.Green)
-                            font.weight: Font.Medium
-                            contentItem: RowLayout {
-                                spacing: 8
-                                Label {
-                                    text: "\uE72E"
-                                    font.family: "Segoe MDL2 Assets"
-                                    font.pixelSize: 14
-                                    color: "white"
-                                }
-                                Label {
-                                    text: parent.parent.text
-                                    font: parent.parent.font
-                                    color: "white"
-                                }
-                            }
-                            onClicked: {
-                                closeDayConfirmDialog.open()
-                            }
+                        // Espaciador derecho para centrar
+                        Item {
+                            Layout.fillWidth: true
                         }
                     }
                 }

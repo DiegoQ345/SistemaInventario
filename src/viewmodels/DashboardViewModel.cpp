@@ -2,6 +2,8 @@
 #include "../services/SalesService.h"
 #include "../services/AuthenticationService.h"
 #include "../database/DatabaseManager.h"
+#include "xlsxdocument.h"
+#include "xlsxformat.h"
 #include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -9,6 +11,11 @@
 #include <QDateTime>
 #include <QSqlQuery>
 #include <QSqlError>
+#include <QFileDialog>
+#include <QStandardPaths>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QSettings>
 
 DashboardViewModel::DashboardViewModel(QObject *parent)
     : QObject(parent)
@@ -219,6 +226,239 @@ void DashboardViewModel::generateDailyReportPDF()
     
     // Aquí se podría integrar con PdfGeneratorService
     // para crear un PDF del reporte completo
+}
+
+void DashboardViewModel::generateDailyReportExcel()
+{
+    using namespace QXlsx;
+    
+    // Obtener información del negocio
+    QSettings settings("SistemaInventario", "Config");
+    QString businessName = settings.value("businessName", "Mi Negocio").toString();
+    
+    // Obtener datos de ventas
+    SalesService salesService;
+    auto todaySales = salesService.getTodaySales();
+    
+    if (todaySales.isEmpty()) {
+        qDebug() << "No hay ventas para exportar hoy";
+        return;
+    }
+    
+    // Directorio de documentos del usuario
+    QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    QString fileName = QString("Reporte_Diario_%1.xlsx")
+        .arg(QDate::currentDate().toString("yyyy-MM-dd"));
+    QString defaultPath = documentsPath + "/" + fileName;
+    
+    // Crear documento Excel
+    Document xlsx;
+    
+    // Configurar formatos
+    Format headerFormat;
+    headerFormat.setFontBold(true);
+    headerFormat.setFontSize(12);
+    headerFormat.setFontColor(Qt::white);
+    headerFormat.setPatternBackgroundColor(QColor(25, 118, 210));
+    headerFormat.setHorizontalAlignment(Format::AlignHCenter);
+    headerFormat.setVerticalAlignment(Format::AlignVCenter);
+    
+    Format titleFormat;
+    titleFormat.setFontBold(true);
+    titleFormat.setFontSize(16);
+    titleFormat.setFontColor(QColor(33, 150, 243));
+    
+    Format subtitleFormat;
+    subtitleFormat.setFontBold(true);
+    subtitleFormat.setFontSize(11);
+    
+    Format moneyFormat;
+    moneyFormat.setNumberFormat("S/ #,##0.00");
+    
+    Format moneyBoldFormat;
+    moneyBoldFormat.setNumberFormat("S/ #,##0.00");
+    moneyBoldFormat.setFontBold(true);
+    moneyBoldFormat.setFontSize(11);
+    
+    Format detailFormat;
+    detailFormat.setFontSize(9);
+    detailFormat.setFontColor(QColor(85, 85, 85));
+    detailFormat.setVerticalAlignment(Format::AlignTop);
+    
+    // Título del reporte
+    int row = 1;
+    xlsx.write(row, 1, businessName, titleFormat);
+    row++;
+    
+    xlsx.write(row, 1, "REPORTE DE VENTAS DEL DÍA", subtitleFormat);
+    row++;
+    
+    xlsx.write(row, 1, QDate::currentDate().toString("dd/MM/yyyy"));
+    row++;
+    
+    QString cashierName = m_currentCashier.isEmpty() ? "Todos los cajeros" : m_currentCashier;
+    xlsx.write(row, 1, "Cajero: " + cashierName);
+    row++;
+    
+    xlsx.write(row, 1, "Fecha de generación:", subtitleFormat);
+    xlsx.write(row, 2, QDateTime::currentDateTime().toString("dd/MM/yyyy hh:mm"));
+    row += 2;
+    
+    // Estadísticas generales
+    xlsx.write(row, 1, "RESUMEN", subtitleFormat);
+    row++;
+    
+    xlsx.write(row, 1, "Total Ventas:");
+    xlsx.write(row, 2, m_todaySales, moneyBoldFormat);
+    row++;
+    
+    xlsx.write(row, 1, "Total Transacciones:");
+    xlsx.write(row, 2, m_todayTransactions);
+    row++;
+    
+    xlsx.write(row, 1, "Ticket Promedio:");
+    xlsx.write(row, 2, m_averageTicket, moneyFormat);
+    row += 2;
+    
+    // Ventas por tipo de comprobante
+    xlsx.write(row, 1, "VENTAS POR TIPO DE COMPROBANTE", subtitleFormat);
+    row++;
+    
+    double boletas = 0.0, facturas = 0.0, tickets = 0.0;
+    int boletasCount = 0, facturasCount = 0, ticketsCount = 0;
+    
+    for (const auto& sale : todaySales) {
+        if (sale.voucherType == "BOLETA") {
+            boletas += sale.total;
+            boletasCount++;
+        } else if (sale.voucherType == "FACTURA") {
+            facturas += sale.total;
+            facturasCount++;
+        } else {
+            tickets += sale.total;
+            ticketsCount++;
+        }
+    }
+    
+    xlsx.write(row, 1, "Tipo", headerFormat);
+    xlsx.write(row, 2, "Cantidad", headerFormat);
+    xlsx.write(row, 3, "Total", headerFormat);
+    row++;
+    
+    xlsx.write(row, 1, "Boletas");
+    xlsx.write(row, 2, boletasCount);
+    xlsx.write(row, 3, boletas, moneyFormat);
+    row++;
+    
+    xlsx.write(row, 1, "Facturas");
+    xlsx.write(row, 2, facturasCount);
+    xlsx.write(row, 3, facturas, moneyFormat);
+    row++;
+    
+    xlsx.write(row, 1, "Tickets");
+    xlsx.write(row, 2, ticketsCount);
+    xlsx.write(row, 3, tickets, moneyFormat);
+    row += 2;
+    
+    // Productos más vendidos
+    QMap<QString, QPair<int, double>> productStats; // nombre -> (cantidad, revenue)
+    for (const auto& sale : todaySales) {
+        for (const auto& item : sale.items) {
+            auto& stats = productStats[item.productName];
+            stats.first += item.quantity;
+            stats.second += item.subtotal;
+        }
+    }
+    
+    QList<QPair<QString, QPair<int, double>>> productList;
+    for (auto it = productStats.begin(); it != productStats.end(); ++it) {
+        productList.append(qMakePair(it.key(), it.value()));
+    }
+    std::sort(productList.begin(), productList.end(), 
+              [](const QPair<QString, QPair<int, double>>& a, 
+                 const QPair<QString, QPair<int, double>>& b) {
+                  return a.second.first > b.second.first; // Ordenar por cantidad
+              });
+    
+    xlsx.write(row, 1, "PRODUCTOS MÁS VENDIDOS", subtitleFormat);
+    row++;
+    
+    xlsx.write(row, 1, "#", headerFormat);
+    xlsx.write(row, 2, "Producto", headerFormat);
+    xlsx.write(row, 3, "Cantidad", headerFormat);
+    xlsx.write(row, 4, "Total Vendido", headerFormat);
+    row++;
+    
+    int maxProducts = qMin(10, productList.size());
+    for (int i = 0; i < maxProducts; ++i) {
+        xlsx.write(row, 1, i + 1);
+        xlsx.write(row, 2, productList[i].first);
+        xlsx.write(row, 3, productList[i].second.first);
+        xlsx.write(row, 4, productList[i].second.second, moneyFormat);
+        row++;
+    }
+    row += 2;
+    
+    // Detalle de ventas
+    xlsx.write(row, 1, "DETALLE DE VENTAS", subtitleFormat);
+    row++;
+    
+    xlsx.write(row, 1, "Hora", headerFormat);
+    xlsx.write(row, 2, "Factura", headerFormat);
+    xlsx.write(row, 3, "Tipo", headerFormat);
+    xlsx.write(row, 4, "Items", headerFormat);
+    xlsx.write(row, 5, "Productos", headerFormat);
+    xlsx.write(row, 6, "Pago", headerFormat);
+    xlsx.write(row, 7, "Total", headerFormat);
+    row++;
+    
+    for (const auto& sale : todaySales) {
+        xlsx.write(row, 1, sale.createdAt.toString("hh:mm"));
+        xlsx.write(row, 2, sale.invoiceNumber);
+        xlsx.write(row, 3, sale.voucherType.isEmpty() ? "TICKET" : sale.voucherType);
+        xlsx.write(row, 4, sale.items.size());
+        xlsx.write(row, 5, sale.productNames.isEmpty() ? 
+            QString("%1 productos").arg(sale.items.size()) : sale.productNames);
+        xlsx.write(row, 6, sale.paymentType.isEmpty() ? "CONTADO" : sale.paymentType);
+        xlsx.write(row, 7, sale.total, moneyFormat);
+        row++;
+        
+        // Detalle de productos
+        if (!sale.items.isEmpty()) {
+            QString productsDetail = "  Productos:\n";
+            for (const SaleItem& item : sale.items) {
+                productsDetail += QString("    • %1 %2 - S/ %3\n")
+                    .arg(QString::number(item.quantity, 'f', 0))
+                    .arg(item.productName)
+                    .arg(QString::number(item.subtotal, 'f', 2));
+            }
+            
+            xlsx.mergeCells(CellRange(row, 2, row, 7));
+            xlsx.write(row, 2, productsDetail, detailFormat);
+            xlsx.setRowHeight(row, 15.0 * (sale.items.size() + 1));
+            
+            row++;
+        }
+    }
+    
+    // Ajustar anchos de columna
+    xlsx.setColumnWidth(1, 12);  // Hora
+    xlsx.setColumnWidth(2, 20);  // Factura/Producto
+    xlsx.setColumnWidth(3, 12);  // Tipo
+    xlsx.setColumnWidth(4, 10);  // Items/Cantidad
+    xlsx.setColumnWidth(5, 35);  // Productos
+    xlsx.setColumnWidth(6, 12);  // Pago
+    xlsx.setColumnWidth(7, 15);  // Total
+    
+    // Guardar archivo
+    if (xlsx.saveAs(defaultPath)) {
+        qDebug() << "Reporte Excel guardado en:" << defaultPath;
+        
+        // Abrir el archivo automáticamente
+        QDesktopServices::openUrl(QUrl::fromLocalFile(defaultPath));
+    } else {
+        qWarning() << "Error al guardar reporte Excel en:" << defaultPath;
+    }
 }
 
 void DashboardViewModel::loadAvailableCashiers()
