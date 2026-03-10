@@ -215,15 +215,31 @@ bool CustomerListModel::generatePurchaseHistoryPdf(int customerId, const QString
     
     pdfService.setBusinessInfo(businessInfo);
     
+    qDebug() << "Generando PDF de historial de compras...";
     if (!pdfService.generateCustomerPurchaseHistory(customer, sales, finalPath)) {
+        qCritical() << "Error al generar el PDF";
         emit errorOccurred("Error al generar el PDF");
         return false;
     }
     
-    qDebug() << "PDF de historial generado exitosamente:" << finalPath;
+    // Verificar que el archivo se creó correctamente
+    QFileInfo fileInfo(finalPath);
+    if (!fileInfo.exists() || fileInfo.size() == 0) {
+        qCritical() << "El PDF no existe o está vacío:" << finalPath;
+        emit errorOccurred("El PDF generado no es válido");
+        return false;
+    }
     
-    // Abrir el PDF automáticamente
-    QDesktopServices::openUrl(QUrl::fromLocalFile(finalPath));
+    qDebug() << "PDF de historial generado exitosamente:";
+    qDebug() << "  Ruta:" << finalPath;
+    qDebug() << "  Tamaño:" << fileInfo.size() << "bytes";
+    
+    // Abrir el PDF automáticamente usando el visor del sistema
+    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(finalPath))) {
+        qWarning() << "No se pudo abrir el PDF automáticamente";
+        emit errorOccurred("PDF generado pero no se pudo abrir automáticamente");
+        // Aún es exitoso, solo no se abrió
+    }
     
     return true;
 }
@@ -319,22 +335,40 @@ bool CustomerListModel::generateCustomerReport(int customerId, const QString& fo
         
         pdfService.setBusinessInfo(businessInfo);
         
+        qDebug() << "Generando PDF usando PdfGeneratorService...";
         success = pdfService.generateCustomerPurchaseHistory(customer, filteredSales, finalPath);
         
     } else if (format == "excel") {
         // Generar Excel
+        qDebug() << "Generando Excel usando QXlsx...";
         success = generateExcelReport(customer, filteredSales, finalPath, reportType);
     }
     
     if (!success) {
-        emit errorOccurred("Error al generar el reporte");
+        qCritical() << "Error al generar el reporte - Success: false";
+        emit errorOccurred("Error al generar el reporte " + format.toUpper());
         return false;
     }
     
-    qDebug() << "Reporte generado exitosamente:" << finalPath;
+    // Verificar que el archivo realmente existe antes de intentar abrirlo
+    QFileInfo fileInfo(finalPath);
+    if (!fileInfo.exists() || fileInfo.size() == 0) {
+        qCritical() << "El archivo no existe o está vacío:" << finalPath;
+        qCritical() << "  Exists:" << fileInfo.exists() << "Size:" << fileInfo.size();
+        emit errorOccurred("El archivo generado no es válido");
+        return false;
+    }
     
-    // Abrir el archivo automáticamente
-    QDesktopServices::openUrl(QUrl::fromLocalFile(finalPath));
+    qDebug() << "Reporte generado exitosamente:";
+    qDebug() << "  Ruta:" << finalPath;
+    qDebug() << "  Tamaño:" << fileInfo.size() << "bytes";
+    
+    // Abrir el archivo automáticamente usando el programa asociado del sistema
+    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(finalPath))) {
+        qWarning() << "No se pudo abrir el archivo automáticamente. Ruta:" << finalPath;
+        emit errorOccurred("Reporte generado pero no se pudo abrir automáticamente");
+        // Aún es exitoso, solo no se abrió
+    }
     
     return true;
 }
@@ -507,7 +541,35 @@ bool CustomerListModel::generateExcelReport(const Customer& customer, const QLis
     xlsx.setColumnWidth(7, 12);  // Estado
     xlsx.setColumnWidth(8, 12);  // Total
     
-    return xlsx.saveAs(outputPath);
+    qDebug() << "Intentando guardar Excel en:" << outputPath;
+    
+    // Guardar el archivo Excel
+    bool saved = xlsx.saveAs(outputPath);
+    
+    if (!saved) {
+        qCritical() << "Error: xlsx.saveAs() retornó false";
+        qCritical() << "  Ruta intentada:" << outputPath;
+        qCritical() << "  Directorio existe:" << QFileInfo(outputPath).dir().exists();
+        return false;
+    }
+    
+    qDebug() << "Excel guardado exitosamente";
+    
+    // Verificar que el archivo realmente se creó
+    QFileInfo fi(outputPath);
+    if (!fi.exists()) {
+        qCritical() << "Error: El archivo no existe después de saveAs()";
+        return false;
+    }
+    
+    if (fi.size() == 0) {
+        qCritical() << "Error: El archivo está vacío (0 bytes)";
+        return false;
+    }
+    
+    qDebug() << "Archivo Excel verificado - Tamaño:" << fi.size() << "bytes";
+    
+    return true;
 }
 
 QVariantList CustomerListModel::getCustomerSales(int customerId, const QDate& fromDate, const QDate& toDate)

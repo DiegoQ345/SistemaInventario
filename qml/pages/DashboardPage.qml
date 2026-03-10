@@ -1070,9 +1070,7 @@ Page {
                             }
                             
                             onClicked: {
-                                var report = viewModel.getDailyReport()
-                                closingReportDialog.reportData = JSON.parse(report)
-                                closingReportDialog.generatePDF()
+                                viewModel.generateDailyReportPDF()
                             }
                         }
                         

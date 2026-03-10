@@ -16,6 +16,13 @@
 #include <QDesktopServices>
 #include <QUrl>
 #include <QSettings>
+#include <QPrinter>
+#include <QTextDocument>
+#include <QPageSize>
+#include <QPageLayout>
+#include <QDir>
+#include <QFileInfo>
+#include <QRegularExpression>
 
 DashboardViewModel::DashboardViewModel(QObject *parent)
     : QObject(parent)
@@ -216,16 +223,398 @@ QString DashboardViewModel::getDailyReport()
 
 void DashboardViewModel::generateDailyReportPDF()
 {
-    // Obtener el reporte del día
-    QString reportJson = getDailyReport();
+    // Obtener información del negocio
+    QSettings settings("SistemaInventario", "Config");
+    QString businessName = settings.value("businessName", "Mi Negocio").toString();
+    QString businessRuc = settings.value("businessRuc", "").toString();
+    QString businessAddress = settings.value("businessAddress", "").toString();
+    QString businessPhone = settings.value("businessPhone", "").toString();
     
-    // TODO: Implementar generación de PDF del reporte diario
-    // Por ahora, solo mostramos un mensaje
-    qDebug() << "Generando PDF del reporte diario...";
-    qDebug() << "Reporte:" << reportJson;
+    // Sanitizar nombre del negocio para carpetas
+    QString sanitizedBusinessName = businessName;
+    sanitizedBusinessName.replace(QRegularExpression("[^a-zA-Z0-9_]"), "_");
+    sanitizedBusinessName.replace(QRegularExpression("_+"), "_");
     
-    // Aquí se podría integrar con PdfGeneratorService
-    // para crear un PDF del reporte completo
+    // Construir estructura de carpetas: C:/Reportes_{NombreNegocio}/Reportes_Diarios/
+    QString baseDir = "C:/Reportes_" + sanitizedBusinessName;
+    QString reportsDir = baseDir + "/Reportes_Diarios";
+    
+    // Crear directorios si no existen
+    QDir dir;
+    if (!dir.exists(reportsDir)) {
+        qDebug() << "Creando estructura de directorios:" << reportsDir;
+        if (!dir.mkpath(reportsDir)) {
+            qCritical() << "Error al crear directorio de reportes:" << reportsDir;
+            return;
+        }
+    }
+    
+    // Generar nombre de archivo
+    QString dateStr = QDate::currentDate().toString("yyyy-MM-dd");
+    QString fileName = "Reporte_" + dateStr + ".pdf";
+    QString outputPath = reportsDir + "/" + fileName;
+    
+    qDebug() << "Generando PDF del reporte diario en:" << outputPath;
+    
+    // Obtener datos de ventas
+    SalesService salesService;
+    auto todaySales = salesService.getTodaySales();
+    
+    if (todaySales.isEmpty()) {
+        qDebug() << "No hay ventas para generar reporte hoy";
+        return;
+    }
+    
+    // Calcular estadísticas
+    double boletas = 0.0, facturas = 0.0, tickets = 0.0;
+    int boletasCount = 0, facturasCount = 0, ticketsCount = 0;
+    
+    for (const auto& sale : todaySales) {
+        if (sale.voucherType == "BOLETA") {
+            boletas += sale.total;
+            boletasCount++;
+        } else if (sale.voucherType == "FACTURA") {
+            facturas += sale.total;
+            facturasCount++;
+        } else {
+            tickets += sale.total;
+            ticketsCount++;
+        }
+    }
+    
+    // Crear HTML del reporte siguiendo el patrón de PdfGeneratorService
+    QString html = R"(
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 8px;
+                    font-size: 7pt;
+                    color: #000000;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 10px;
+                    border-bottom: 2px solid #2196F3;
+                    padding-bottom: 6px;
+                }
+                .header h1 {
+                    color: #2196F3;
+                    margin: 0;
+                    font-size: 14pt;
+                }
+                .header h2 {
+                    color: #666;
+                    margin: 3px 0 0 0;
+                    font-size: 10pt;
+                    font-weight: normal;
+                }
+                .header p {
+                    margin: 0;
+                    font-size: 6pt;
+                    color: #666;
+                }
+                .header .report-date {
+                    color: #999;
+                    font-size: 7pt;
+                    margin: 4px 0 0 0;
+                    font-style: italic;
+                }
+                .stats-box {
+                    margin-bottom: 10px;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 3px;
+                    overflow: hidden;
+                }
+                .stats-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                .stats-table td {
+                    padding: 5px 7px;
+                    text-align: center;
+                    border-bottom: 1px solid #e0e0e0;
+                    border-right: 1px solid #e0e0e0;
+                    font-size: 6pt;
+                    background-color: #f5f5f5;
+                }
+                .stats-table td:last-child {
+                    border-right: none;
+                }
+                .stats-table .label {
+                    font-weight: 600;
+                    color: #000000;
+                }
+                .stats-table .value {
+                    font-weight: bold;
+                    font-size: 9pt;
+                    color: #1976D2;
+                }
+                h3.section-title {
+                    color: #2196F3;
+                    margin: 10px 0 5px 0;
+                    font-size: 9pt;
+                    border-bottom: 1px solid #2196F3;
+                    padding-bottom: 3px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 6pt;
+                }
+                thead {
+                    background-color: #1976D2;
+                }
+                th {
+                    padding: 5px 6px;
+                    text-align: left;
+                    font-weight: 600;
+                    font-size: 7pt;
+                    color: #FFFFFF;
+                    background-color: #1976D2;
+                }
+                td {
+                    padding: 4px 6px;
+                    border-bottom: 1px solid #e0e0e0;
+                    font-size: 6pt;
+                    line-height: 1.2;
+                    color: #000000;
+                }
+                tbody tr:nth-child(even) {
+                    background-color: #f9f9f9;
+                }
+                .total-row {
+                    font-weight: bold;
+                    background-color: #e3f2fd !important;
+                    font-size: 7pt;
+                }
+                .money {
+                    text-align: right;
+                }
+                .sale-header {
+                    background-color: #f5f5f5;
+                    font-weight: bold;
+                }
+                .products-row {
+                    background-color: #fafafa !important;
+                }
+                .products-table {
+                    width: 100%;
+                    margin: 5px 0;
+                    border-collapse: collapse;
+                    font-size: 6pt;
+                }
+                .products-table th {
+                    background-color: #e0e0e0;
+                    padding: 3px 5px;
+                    font-size: 6pt;
+                    color: #000000;
+                }
+                .products-table td {
+                    padding: 2px 5px;
+                    border-bottom: 1px solid #f0f0f0;
+                    font-size: 6pt;
+                }
+                .footer {
+                    text-align: center;
+                    margin-top: 12px;
+                    padding-top: 6px;
+                    border-top: 1px solid #e0e0e0;
+                    color: #666;
+                    font-size: 6pt;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>)" + businessName + R"(</h1>)";
+    
+    if (!businessRuc.isEmpty()) {
+        html += R"(
+                <p>RUC: )" + businessRuc + R"(</p>)";
+    }
+    if (!businessAddress.isEmpty()) {
+        html += R"(
+                <p>)" + businessAddress + R"(</p>)";
+    }
+    if (!businessPhone.isEmpty()) {
+        html += R"(
+                <p>Tel: )" + businessPhone + R"(</p>)";
+    }
+    
+    html += R"(
+                <h2>REPORTE DE VENTAS DEL DÍA</h2>
+                <p class="report-date">)" + QDate::currentDate().toString("dddd, dd 'de' MMMM 'de' yyyy") + R"(</p>
+                <p class="report-date">Generado: )" + QDateTime::currentDateTime().toString("dd/MM/yyyy hh:mm") + R"(</p>)";
+    
+    QString cashierName = m_currentCashier.isEmpty() ? "Todos los cajeros" : m_currentCashier;
+    html += R"(
+                <p class="report-date">Cajero: )" + cashierName + R"(</p>
+            </div>
+            
+            <div class="stats-box">
+                <table class="stats-table">
+                    <tr>
+                        <td class="label">Total Ventas:</td>
+                        <td class="label">Total Transacciones:</td>
+                        <td class="label">Ticket Promedio:</td>
+                    </tr>
+                    <tr>
+                        <td class="value">S/ )" + QString::number(m_todaySales, 'f', 2) + R"(</td>
+                        <td class="value">)" + QString::number(m_todayTransactions) + R"(</td>
+                        <td class="value">S/ )" + QString::number(m_averageTicket, 'f', 2) + R"(</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <h3 class="section-title">VENTAS POR TIPO DE COMPROBANTE</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th style="text-align: right;">Cantidad</th>
+                        <th style="text-align: right;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Boletas</td>
+                        <td class="money">)" + QString::number(boletasCount) + R"(</td>
+                        <td class="money">S/ )" + QString::number(boletas, 'f', 2) + R"(</td>
+                    </tr>
+                    <tr>
+                        <td>Facturas</td>
+                        <td class="money">)" + QString::number(facturasCount) + R"(</td>
+                        <td class="money">S/ )" + QString::number(facturas, 'f', 2) + R"(</td>
+                    </tr>
+                    <tr>
+                        <td>Tickets</td>
+                        <td class="money">)" + QString::number(ticketsCount) + R"(</td>
+                        <td class="money">S/ )" + QString::number(tickets, 'f', 2) + R"(</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td>TOTAL</td>
+                        <td class="money">)" + QString::number(m_todayTransactions) + R"(</td>
+                        <td class="money">S/ )" + QString::number(m_todaySales, 'f', 2) + R"(</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3 class="section-title">DETALLE DE VENTAS)";
+    
+    int maxSales = qMin(50, todaySales.size());
+    if (todaySales.size() > 50) {
+        html += " (Mostrando primeras 50 de " + QString::number(todaySales.size()) + ")";
+    }
+    
+    html += R"(</h3>)";
+    
+    // Generar detalle de cada venta con sus productos
+    for (int i = 0; i < maxSales; ++i) {
+        const auto& sale = todaySales[i];
+        
+        // Encabezado de la venta
+        html += R"(
+            <table style="margin-bottom: 15px;">
+                <thead>
+                    <tr class="sale-header">
+                        <th style="width: 8%;">Hora</th>
+                        <th style="width: 15%;">Factura</th>
+                        <th style="width: 12%;">Tipo</th>
+                        <th style="width: 25%;">Cliente</th>
+                        <th style="width: 12%;">Pago</th>
+                        <th style="width: 8%;">Items</th>
+                        <th style="text-align: right; width: 20%;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>)" + sale.createdAt.toString("hh:mm") + R"(</td>
+                        <td>)" + sale.invoiceNumber + R"(</td>
+                        <td>)" + (sale.voucherType.isEmpty() ? "TICKET" : sale.voucherType) + R"(</td>
+                        <td>)" + (sale.customerName.isEmpty() ? "-" : sale.customerName) + R"(</td>
+                        <td>)" + (sale.paymentType.isEmpty() ? "CONTADO" : sale.paymentType) + R"(</td>
+                        <td>)" + QString::number(sale.items.size()) + R"(</td>
+                        <td class="money">S/ )" + QString::number(sale.total, 'f', 2) + R"(</td>
+                    </tr>)";
+        
+        // Productos de la venta
+        if (!sale.items.isEmpty()) {
+            html += R"(
+                    <tr class="products-row">
+                        <td colspan="7" style="padding: 5px 10px;">
+                            <table class="products-table">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align: left;">Producto</th>
+                                        <th style="text-align: right; width: 10%;">Cant.</th>
+                                        <th style="text-align: right; width: 15%;">P. Unit.</th>
+                                        <th style="text-align: right; width: 15%;">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>)";
+            
+            for (const auto& item : sale.items) {
+                html += R"(
+                                    <tr>
+                                        <td>)" + item.productName + R"(</td>
+                                        <td class="money">)" + QString::number(item.quantity) + R"(</td>
+                                        <td class="money">S/ )" + QString::number(item.unitPrice, 'f', 2) + R"(</td>
+                                        <td class="money">S/ )" + QString::number(item.subtotal, 'f', 2) + R"(</td>
+                                    </tr>)";
+            }
+            
+            html += R"(
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>)";
+        }
+        
+        html += R"(
+                </tbody>
+            </table>)";
+    }
+    
+    html += R"(
+            <div class="footer">
+                <p>Sistema de Inventario - Reporte Generado Automáticamente</p>
+            </div>
+        </body>
+        </html>)";
+    
+    // Generar PDF usando el mismo patrón que PdfGeneratorService
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(outputPath);
+    printer.setPageSize(QPageSize(QPageSize::A4));
+    printer.setPageMargins(QMarginsF(6, 6, 6, 6), QPageLayout::Millimeter);
+    
+    // Renderizar HTML a PDF
+    QTextDocument document;
+    document.setHtml(html);
+    document.setPageSize(printer.pageRect(QPrinter::Point).size());
+    
+    // Imprimir a PDF
+    document.print(&printer);
+    
+    // Verificar que el archivo se creó
+    QFileInfo fileInfo(outputPath);
+    if (!fileInfo.exists() || fileInfo.size() == 0) {
+        qCritical() << "Error: El PDF no se generó correctamente";
+        return;
+    }
+    
+    qDebug() << "PDF generado exitosamente:" << outputPath;
+    qDebug() << "  Tamaño:" << fileInfo.size() << "bytes";
+    
+    // Abrir el PDF automáticamente
+    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(outputPath))) {
+        qWarning() << "No se pudo abrir el PDF automáticamente";
+    }
 }
 
 void DashboardViewModel::generateDailyReportExcel()
@@ -236,6 +625,25 @@ void DashboardViewModel::generateDailyReportExcel()
     QSettings settings("SistemaInventario", "Config");
     QString businessName = settings.value("businessName", "Mi Negocio").toString();
     
+    // Sanitizar nombre del negocio para carpetas
+    QString sanitizedBusinessName = businessName;
+    sanitizedBusinessName.replace(QRegularExpression("[^a-zA-Z0-9_]"), "_");
+    sanitizedBusinessName.replace(QRegularExpression("_+"), "_");
+    
+    // Construir estructura de carpetas: C:/Reportes_{NombreNegocio}/Reportes_Diarios/
+    QString baseDir = "C:/Reportes_" + sanitizedBusinessName;
+    QString reportsDir = baseDir + "/Reportes_Diarios";
+    
+    // Crear directorios si no existen
+    QDir dir;
+    if (!dir.exists(reportsDir)) {
+        qDebug() << "Creando estructura de directorios:" << reportsDir;
+        if (!dir.mkpath(reportsDir)) {
+            qCritical() << "Error al crear directorio de reportes:" << reportsDir;
+            return;
+        }
+    }
+    
     // Obtener datos de ventas
     SalesService salesService;
     auto todaySales = salesService.getTodaySales();
@@ -245,11 +653,10 @@ void DashboardViewModel::generateDailyReportExcel()
         return;
     }
     
-    // Directorio de documentos del usuario
-    QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    QString fileName = QString("Reporte_Diario_%1.xlsx")
-        .arg(QDate::currentDate().toString("yyyy-MM-dd"));
-    QString defaultPath = documentsPath + "/" + fileName;
+    // Generar nombre de archivo
+    QString dateStr = QDate::currentDate().toString("yyyy-MM-dd");
+    QString fileName = "Reporte_" + dateStr + ".xlsx";
+    QString defaultPath = reportsDir + "/" + fileName;
     
     // Crear documento Excel
     Document xlsx;
