@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import QtQuick.Effects
 import SistemaInventario
 import "../components"
+import "../components/dialogs"
 
 Page {
     id: root
@@ -65,6 +66,16 @@ Page {
         onOperationSucceeded: function(message) {
             errorLabel.visible = false
             newProductDialog.close()
+        }
+        
+        onExportCompleted: function(success, filePath) {
+            if (success) {
+                console.log("Exportación exitosa:", filePath)
+                exportSuccessDialog.filePath = filePath
+                exportSuccessDialog.open()
+            } else {
+                console.log("Exportación fallida")
+            }
         }
     }
     
@@ -228,6 +239,16 @@ Page {
                     onClicked: newProductDialog.openNew()
                 }
                 
+                PrimaryButton {
+                    text: qsTr("Exportar Excel")
+                    iconText: "\uE9F5"  // Excel icon
+                    Material.background: Material.color(Material.Teal)
+                    onClicked: {
+                        console.log("Iniciando exportación a Excel...")
+                        productModel.exportToExcel()
+                    }
+                }
+                
                 Button {
                     text: "\uE74D  " + qsTr("Borrar Todos")
                     font.family: "Segoe MDL2 Assets"
@@ -241,6 +262,75 @@ Page {
                         verticalAlignment: Text.AlignVCenter
                     }
                     onClicked: deleteAllConfirmDialog.open()
+                }
+            }
+        }
+        
+        // Barra de progreso de exportación
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 80
+            Layout.margins: 16
+            radius: 8
+            visible: productModel.isExporting
+            color: Material.theme === Material.Dark ? 
+                Qt.lighter(Material.background, 1.15) : 
+                Material.color(Material.Grey, Material.Shade100)
+            border.width: 1
+            border.color: Material.theme === Material.Dark ?
+                Qt.lighter(Material.background, 1.3) :
+                Material.frameColor
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 16
+                spacing: 8
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+
+                    Label {
+                        text: "📊"
+                        font.pixelSize: 20
+                    }
+
+                    Label {
+                        text: productModel.exportProgressMessage || "Preparando exportación..."
+                        font.pixelSize: 13
+                        font.weight: Font.Medium
+                        Layout.fillWidth: true
+                    }
+
+                    Label {
+                        text: Math.round(productModel.exportProgress) + "%"
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                        color: Material.primary
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 12
+                    radius: 6
+                    color: Material.theme === Material.Dark ?
+                        Qt.darker(Material.background, 1.2) :
+                        Material.color(Material.Grey, Material.Shade200)
+
+                    Rectangle {
+                        width: parent.width * (productModel.exportProgress / 100)
+                        height: parent.height
+                        radius: 6
+                        color: Material.color(Material.Teal)
+
+                        Behavior on width {
+                            NumberAnimation {
+                                duration: 200
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -299,8 +389,12 @@ Page {
                         font.pixelSize: 13
                         horizontalAlignment: Text.AlignRight
                     }
-                    Item { 
-                        Layout.preferredWidth: 100
+                    Label { 
+                        text: qsTr("Acciones")
+                        Layout.preferredWidth: 140
+                        font.bold: true
+                        font.pixelSize: 13
+                        horizontalAlignment: Text.AlignCenter
                     }
                 }
             }
@@ -377,14 +471,16 @@ Page {
                     }
 
                     Row {
-                        Layout.preferredWidth: 100
+                        Layout.preferredWidth: 140
                         spacing: 4
                         layoutDirection: Qt.RightToLeft
 
                         ToolButton {
-                            text: "\uE74D"
+                            text: "\uE74D"  // Delete icon
                             font.family: "Segoe MDL2 Assets"
                             font.pixelSize: 16
+                            ToolTip.text: "Eliminar"
+                            ToolTip.visible: hovered
                             onClicked: {
                                 deleteDialog.productId = model.productId
                                 deleteDialog.productName = model.name
@@ -393,11 +489,29 @@ Page {
                         }
 
                         ToolButton {
-                            text: "\uE70F"
+                            text: "\uE70F"  // Edit icon
                             font.family: "Segoe MDL2 Assets"
                             font.pixelSize: 16
+                            ToolTip.text: "Editar"
+                            ToolTip.visible: hovered
                             onClicked: {
                                 newProductDialog.openEdit(model.productId)
+                            }
+                        }
+                        
+                        ToolButton {
+                            text: "\uE7C3"  // Package/Box icon
+                            font.family: "Segoe MDL2 Assets"
+                            font.pixelSize: 16
+                            Material.foreground: Material.color(Material.Green)
+                            ToolTip.text: "Reponer inventario"
+                            ToolTip.visible: hovered
+                            onClicked: {
+                                restockDialog.openForProduct(
+                                    model.productId,
+                                    model.name,
+                                    model.currentStock
+                                )
                             }
                         }
                     }
@@ -734,6 +848,12 @@ Page {
                     wrapMode: TextArea.Wrap
                     selectByMouse: true
                     
+                    // Padding uniforme para alineación
+                    leftPadding: 12
+                    rightPadding: 12
+                    topPadding: 8
+                    bottomPadding: 8
+                    
                     background: Rectangle {
                         color: Material.theme === Material.Dark ? 
                             Qt.lighter(Material.background, 1.2) : 
@@ -927,4 +1047,73 @@ Page {
         onRejected: {
             confirmTextField.text = ""
         }
-    }}
+    }
+    
+    // Diálogo para reponer inventario
+    RestockDialog {
+        id: restockDialog
+        anchors.centerIn: parent
+        
+        onOpened: root.layer.enabled = true
+        onClosed: root.layer.enabled = false
+        
+        Overlay.modal: Rectangle {
+            color: Material.theme === Material.Dark ? 
+                Qt.rgba(0, 0, 0, 0.7) : 
+                Qt.rgba(0.1, 0.1, 0.1, 0.6)
+        }
+        
+        onRestockConfirmed: function(productId, quantity) {
+            console.log("Reponiendo inventario - Producto ID:", productId, "Cantidad:", quantity)
+            if (productModel.restockProduct(productId, quantity)) {
+                console.log("Inventario repuesto exitosamente")
+            }
+        }
+    }
+    
+    // Diálogo de éxito de exportación
+    Dialog {
+        id: exportSuccessDialog
+        title: "✅ Exportación Exitosa"
+        modal: true
+        standardButtons: Dialog.Ok
+        anchors.centerIn: parent
+        
+        property string filePath: ""
+        
+        ColumnLayout {
+            spacing: 12
+            
+            Label {
+                text: "El inventario se ha exportado correctamente"
+                font.pixelSize: 14
+                Layout.fillWidth: true
+            }
+            
+            Label {
+                text: "Archivo guardado en:"
+                font.pixelSize: 12
+                opacity: 0.7
+                Layout.fillWidth: true
+            }
+            
+            Label {
+                text: exportSuccessDialog.filePath
+                font.pixelSize: 11
+                font.family: "Consolas"
+                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                Layout.fillWidth: true
+                Layout.preferredWidth: 400
+            }
+        }
+        
+        onOpened: root.layer.enabled = true
+        onClosed: root.layer.enabled = false
+        
+        Overlay.modal: Rectangle {
+            color: Material.theme === Material.Dark ? 
+                Qt.rgba(0, 0, 0, 0.7) : 
+                Qt.rgba(0.1, 0.1, 0.1, 0.6)
+        }
+    }
+}

@@ -86,6 +86,13 @@ public slots:
     Q_INVOKABLE QVariantList getSalesByVoucherType();
     
     /**
+     * @brief Obtener categorías más vendidas (hoy)
+     * @param limit Cantidad máxima de categorías
+     * @return QVariantList con {name, quantity, revenue} para cada categoría
+     */
+    Q_INVOKABLE QVariantList getTopCategories(int limit = 10);
+    
+    /**
      * @brief Obtener top productos más vendidos (hoy)
      * @param limit Cantidad máxima de productos
      * @return QVariantList con {name, quantity, revenue} para cada producto
@@ -93,11 +100,41 @@ public slots:
     Q_INVOKABLE QVariantList getTopProducts(int limit = 5);
     
     /**
+     * @brief Obtener categorías más vendidas por período
+     * @param limit Cantidad máxima de categorías
+     * @param days Número de días hacia atrás (1=hoy, 30=mes, 365=año)
+     * @return QVariantList con {name, quantity, revenue} para cada categoría
+     */
+    Q_INVOKABLE QVariantList getTopCategoriesByPeriod(int limit, int days);
+    
+    /**
+     * @brief Obtener top productos más vendidos por período
+     * @param limit Cantidad máxima de productos
+     * @param days Número de días hacia atrás (1=hoy, 30=mes, 365=año)
+     * @return QVariantList con {name, quantity, revenue} para cada producto
+     */
+    Q_INVOKABLE QVariantList getTopProductsByPeriod(int limit, int days);
+    
+    /**
      * @brief Obtener clientes frecuentes (este mes)
      * @param limit Cantidad máxima de clientes
      * @return QVariantList con {name, purchases, totalSpent} para cada cliente
      */
     Q_INVOKABLE QVariantList getTopCustomers(int limit = 5);
+    
+    /**
+     * @brief Obtener productos con stock bajo
+     * @param limit Cantidad máxima de productos
+     * @return QVariantList con {name, currentStock, minStock} para cada producto
+     */
+    Q_INVOKABLE QVariantList getLowStockProducts(int limit = 10);
+    
+    /**
+     * @brief Obtener tendencia de ventas de los últimos N días
+     * @param days Número de días hacia atrás (default: 7)
+     * @return QVariantList con {date, salesCount, salesTotal} para cada día
+     */
+    Q_INVOKABLE QVariantList getSalesTrendData(int days = 7);
 
 signals:
     void todaySalesChanged();

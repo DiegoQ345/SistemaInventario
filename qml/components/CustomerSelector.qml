@@ -36,6 +36,33 @@ ColumnLayout {
         customerCleared()
     }
     
+    // Timer para actualización automática de la lista de clientes
+    Timer {
+        id: autoRefreshTimer
+        interval: 30000 // 30 segundos
+        repeat: true
+        running: root.visible
+        
+        onTriggered: {
+            // Solo refrescar si no hay búsqueda activa
+            if (searchField.text.length === 0) {
+                console.log("🔄 Auto-refrescando lista de clientes...")
+                customerModel.refresh()
+            }
+        }
+    }
+    
+    // Refrescar cuando el componente se hace visible
+    onVisibleChanged: {
+        if (visible) {
+            console.log("👁️ CustomerSelector visible, refrescando lista...")
+            customerModel.refresh()
+            autoRefreshTimer.restart()
+        } else {
+            autoRefreshTimer.stop()
+        }
+    }
+    
     // Campo de búsqueda
     TextField {
         id: searchField

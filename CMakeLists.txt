@@ -72,6 +72,12 @@ set(QML_FILES
     qml/components/dialogs/PrintDialog.qml
     qml/components/dialogs/PrinterSettingsDialog.qml
     qml/components/dialogs/PaymentAmountDialog.qml
+    qml/components/dialogs/QuickCustomerDialog.qml
+    qml/components/dialogs/RestockDialog.qml
+    
+    # Singleton de estilos
+    qml/components/AppStyle.qml
+    qml/components/qmldir
 
     # Diálogos del diseñador de tickets
     qml/components/dialogs/TicketPreviewDialog.qml

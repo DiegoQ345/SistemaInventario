@@ -1,9 +1,14 @@
 #include "ProductListModel.h"
 #include "../services/ProductService.h"
 #include "../database/DatabaseManager.h"
+#include "xlsxdocument.h"
+#include "xlsxformat.h"
 #include <QDebug>
 #include <QSqlQuery>
 #include <QSqlError>
+#include <QStandardPaths>
+#include <QDir>
+#include <QDateTime>
 
 ProductListModel::ProductListModel(QObject *parent)
     : QAbstractListModel(parent)
@@ -356,6 +361,26 @@ bool ProductListModel::deleteAllProducts()
     }
 }
 
+bool ProductListModel::restockProduct(int productId, double quantity)
+{
+    if (quantity <= 0) {
+        emit errorOccurred("La cantidad debe ser mayor a cero");
+        return false;
+    }
+    
+    ProductRepository repository;
+    
+    if (repository.incrementStock(productId, quantity)) {
+        // Recargar lista para actualizar la vista
+        loadProducts();
+        emit operationSucceeded(QString("Se agregaron %1 unidades al inventario").arg(quantity));
+        return true;
+    } else {
+        emit errorOccurred("Error al reponer el inventario");
+        return false;
+    }
+}
+
 QString ProductListModel::validateProductData(const QVariantMap& productData) const
 {
     // Validar campos obligatorios
@@ -451,4 +476,199 @@ QVariantMap ProductListModel::productToVariantMap(const Product& product) const
     map["active"] = product.active;
     map["isLowStock"] = product.isLowStock();
     return map;
+}
+
+void ProductListModel::setIsExporting(bool exporting)
+{
+    if (m_isExporting != exporting) {
+        m_isExporting = exporting;
+        emit isExportingChanged();
+    }
+}
+
+void ProductListModel::setExportProgress(int progress)
+{
+    if (m_exportProgress != progress) {
+        m_exportProgress = progress;
+        emit exportProgressChanged();
+    }
+}
+
+void ProductListModel::setExportProgressMessage(const QString& message)
+{
+    if (m_exportProgressMessage != message) {
+        m_exportProgressMessage = message;
+        emit exportProgressMessageChanged();
+    }
+}
+
+bool ProductListModel::exportToExcel()
+{
+    qDebug() << "=== Iniciando exportación a Excel ===";
+    
+    setIsExporting(true);
+    setExportProgress(0);
+    setExportProgressMessage("Iniciando exportación...");
+    
+    try {
+        // Obtener todos los productos de la base de datos
+        setExportProgressMessage("Consultando productos...");
+        setExportProgress(10);
+        
+        ProductService service;
+        auto allProducts = service.getAllProducts();
+        
+        if (allProducts.empty()) {
+            qWarning() << "No hay productos para exportar";
+            setIsExporting(false);
+            emit exportCompleted(false, "");
+            emit errorOccurred("No hay productos para exportar");
+            return false;
+        }
+        
+        qDebug() << "Productos encontrados:" << allProducts.size();
+        setExportProgress(20);
+        
+        // Crear documento Excel
+        setExportProgressMessage("Creando archivo Excel...");
+        QXlsx::Document xlsx;
+        
+        // Configurar formato de cabecera
+        QXlsx::Format headerFormat;
+        headerFormat.setFontBold(true);
+        headerFormat.setFontSize(11);
+        headerFormat.setHorizontalAlignment(QXlsx::Format::AlignHCenter);
+        headerFormat.setVerticalAlignment(QXlsx::Format::AlignVCenter);
+        headerFormat.setPatternBackgroundColor(QColor(68, 114, 196)); // Azul
+        headerFormat.setFontColor(QColor(Qt::white));
+        headerFormat.setBorderStyle(QXlsx::Format::BorderThin);
+        
+        // Escribir cabeceras
+        setExportProgressMessage("Escribiendo cabeceras...");
+        setExportProgress(30);
+        
+        xlsx.write(1, 1, "ID", headerFormat);
+        xlsx.write(1, 2, "Nombre", headerFormat);
+        xlsx.write(1, 3, "SKU", headerFormat);
+        xlsx.write(1, 4, "Código de Barras", headerFormat);
+        xlsx.write(1, 5, "Categoría", headerFormat);
+        xlsx.write(1, 6, "Stock Actual", headerFormat);
+        xlsx.write(1, 7, "Stock Mínimo", headerFormat);
+        xlsx.write(1, 8, "Precio Compra", headerFormat);
+        xlsx.write(1, 9, "Precio Venta", headerFormat);
+        xlsx.write(1, 10, "Descripción", headerFormat);
+        xlsx.write(1, 11, "Estado", headerFormat);
+        
+        // Ajustar anchos de columna
+        xlsx.setColumnWidth(1, 6);   // ID
+        xlsx.setColumnWidth(2, 30);  // Nombre
+        xlsx.setColumnWidth(3, 15);  // SKU
+        xlsx.setColumnWidth(4, 18);  // Código de Barras
+        xlsx.setColumnWidth(5, 20);  // Categoría
+        xlsx.setColumnWidth(6, 12);  // Stock Actual
+        xlsx.setColumnWidth(7, 12);  // Stock Mínimo
+        xlsx.setColumnWidth(8, 14);  // Precio Compra
+        xlsx.setColumnWidth(9, 14);  // Precio Venta
+        xlsx.setColumnWidth(10, 40); // Descripción
+        xlsx.setColumnWidth(11, 10); // Estado
+        
+        // Formato para datos
+        QXlsx::Format dataFormat;
+        dataFormat.setFontSize(10);
+        dataFormat.setBorderStyle(QXlsx::Format::BorderThin);
+        dataFormat.setBorderColor(QColor(Qt::lightGray));
+        
+        QXlsx::Format numberFormat;
+        numberFormat.setFontSize(10);
+        numberFormat.setBorderStyle(QXlsx::Format::BorderThin);
+        numberFormat.setBorderColor(QColor(Qt::lightGray));
+        numberFormat.setHorizontalAlignment(QXlsx::Format::AlignRight);
+        
+        QXlsx::Format priceFormat;
+        priceFormat.setFontSize(10);
+        priceFormat.setBorderStyle(QXlsx::Format::BorderThin);
+        priceFormat.setBorderColor(QColor(Qt::lightGray));
+        priceFormat.setHorizontalAlignment(QXlsx::Format::AlignRight);
+        priceFormat.setNumberFormat("S/ #,##0.00");
+        
+        // Escribir datos de productos
+        setExportProgressMessage("Escribiendo productos...");
+        int totalProducts = allProducts.size();
+        int row = 2; // Empezar después de la cabecera
+        int processedCount = 0;
+        
+        for (const auto& product : allProducts) {
+            xlsx.write(row, 1, product.id, numberFormat);
+            xlsx.write(row, 2, product.name, dataFormat);
+            xlsx.write(row, 3, product.sku, dataFormat);
+            xlsx.write(row, 4, product.barcode, dataFormat);
+            xlsx.write(row, 5, product.categoryName, dataFormat);
+            xlsx.write(row, 6, product.currentStock, numberFormat);
+            xlsx.write(row, 7, product.minimumStock, numberFormat);
+            xlsx.write(row, 8, product.purchasePrice, priceFormat);
+            xlsx.write(row, 9, product.salePrice, priceFormat);
+            xlsx.write(row, 10, product.description, dataFormat);
+            xlsx.write(row, 11, product.active ? "Activo" : "Inactivo", dataFormat);
+            
+            row++;
+            processedCount++;
+            
+            // Actualizar progreso cada 10 productos
+            if (processedCount % 10 == 0 || processedCount == totalProducts) {
+                int progress = 30 + (processedCount * 50 / totalProducts);
+                setExportProgress(progress);
+                setExportProgressMessage(QString("Escribiendo productos... %1/%2")
+                    .arg(processedCount)
+                    .arg(totalProducts));
+            }
+        }
+        
+        // Guardar archivo
+        setExportProgressMessage("Guardando archivo...");
+        setExportProgress(85);
+        
+        QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+        QDir documentsDir(documentsPath);
+        if (!documentsDir.exists()) {
+            documentsDir.mkpath(".");
+        }
+        
+        QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+        QString fileName = QString("Inventario_%1.xlsx").arg(timestamp);
+        QString fullPath = documentsDir.filePath(fileName);
+        
+        qDebug() << "Guardando archivo en:" << fullPath;
+        
+        if (!xlsx.saveAs(fullPath)) {
+            qWarning() << "Error al guardar el archivo Excel";
+            setIsExporting(false);
+            emit exportCompleted(false, "");
+            emit errorOccurred("Error al guardar el archivo Excel");
+            return false;
+        }
+        
+        setExportProgressMessage("Exportación completada");
+        setExportProgress(100);
+        
+        qDebug() << "Exportación exitosa:" << fullPath;
+        
+        setIsExporting(false);
+        emit exportCompleted(true, fullPath);
+        emit operationSucceeded(QString("Inventario exportado: %1").arg(fileName));
+        
+        return true;
+        
+    } catch (const std::exception& e) {
+        qWarning() << "Excepción durante exportación:" << e.what();
+        setIsExporting(false);
+        emit exportCompleted(false, "");
+        emit errorOccurred(QString("Error durante exportación: %1").arg(e.what()));
+        return false;
+    } catch (...) {
+        qWarning() << "Error desconocido durante exportación";
+        setIsExporting(false);
+        emit exportCompleted(false, "");
+        emit errorOccurred("Error desconocido durante exportación");
+        return false;
+    }
 }

@@ -41,7 +41,7 @@ Page {
             // Título
             Label {
                 text: qsTr("Panel de Control")
-                font.pixelSize: root.width > 800 ? 32 : (root.width > 600 ? 28 : 24)
+                font.pixelSize: ApplicationWindow.window.appStyle.fontHuge
                 font.weight: Font.Bold
                 color: Material.foreground
                 Layout.bottomMargin: root.width > 600 ? 8 : 4
@@ -265,233 +265,1147 @@ Page {
             }
 
             // Gráficos de ventas - Siempre visibles
-            GridLayout {
+            // Carrusel de Gráficos Unificado
+            GroupBox {
+                id: chartsContainer
                 Layout.fillWidth: true
-                columns: root.width > 1000 ? 2 : 1
-                rowSpacing: 16
-                columnSpacing: 16
+                Layout.preferredHeight: chartsContainerHeight
                 
-                // Gráfico circular - Ventas por comprobante
-                GroupBox {
-                    id: voucherChartBox
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 400
-                    title: "Ventas por Tipo de Comprobante (Hoy)"
+                property int chartsContainerHeight: 520
+                property int minHeight: 400
+                property int maxHeight: 1000
+                
+                label: RowLayout {
+                    width: parent.width
+                    spacing: 12
                     
-                    ColumnLayout {
-                        anchors.fill: parent
-                        spacing: 12
+                    Label {
+                        text: "\uE9CE  Análisis Gráfico"  // Icono de gráfico
+                        font.family: "Segoe MDL2 Assets"
+                        font.pixelSize: ApplicationWindow.window.appStyle.fontMedium
+                        font.weight: Font.Bold
+                        Layout.fillWidth: true
+                    }
+                    
+                    // Título dinámico del gráfico actual
+                    Label {
+                        id: currentChartTitle
+                        text: chartsSwipeView.currentIndex === 0 ? "Top 10 Categorías Más Vendidas" :
+                              chartsSwipeView.currentIndex === 1 ? "Top 10 Productos Más Vendidos" :
+                              "Tendencia de Ventas (14 días)"
+                        font.pixelSize: ApplicationWindow.window.appStyle.fontBody
+                        opacity: 0.7
+                        color: Material.accent
                         
-                        // Resumen en cards
-                        GridLayout {
-                            visible: voucherSummaryModel.count > 0
-                            Layout.fillWidth: true
-                            columns: root.width > 1200 ? 3 : (root.width > 600 ? 3 : 1)
-                            rowSpacing: 6
-                            columnSpacing: 6
-                            
-                            Repeater {
-                                id: voucherSummary
-                                model: ListModel { id: voucherSummaryModel }
-                                
-                                delegate: Rectangle {
-                                    Layout.fillWidth: true
-                                    Layout.preferredHeight: 50
-                                    radius: 6
-                                    color: "transparent"
-                                    border.width: 1
-                                    border.color: Material.theme === Material.Dark ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(0, 0, 0, 0.08)
-                                    
-                                    RowLayout {
-                                        anchors.fill: parent
-                                        anchors.margins: 8
-                                        spacing: 8
-                                        
-                                        Rectangle {
-                                            Layout.preferredWidth: 8
-                                            Layout.preferredHeight: 8
-                                            radius: 4
-                                            color: {
-                                                var colors = ["#2196F3", "#9C27B0", "#4CAF50"]
-                                                return colors[index % colors.length]
-                                            }
-                                        }
-                                        
-                                        ColumnLayout {
-                                            Layout.fillWidth: true
-                                            spacing: 0
-                                            
-                                            Label {
-                                                text: model.label
-                                                font.weight: Font.Medium
-                                                font.pixelSize: 11
-                                            }
-                                            
-                                            Label {
-                                                text: model.count + " ventas (" + model.percentage + "%)"
-                                                opacity: 0.6
-                                                font.pixelSize: 9
-                                            }
-                                        }
-                                        
-                                        Label {
-                                            text: "S/ " + Number(model.value).toFixed(2)
-                                            font.weight: Font.Bold
-                                            font.pixelSize: 12
-                                            Layout.alignment: Qt.AlignRight
-                                        }
-                                    }
-                                }
+                        Behavior on opacity {
+                            NumberAnimation { duration: 300; easing.type: Easing.InOutQuad }
+                        }
+                    }
+                    
+                    // Controles de redimensionamiento
+                    Row {
+                        spacing: 4
+                        
+                        ToolButton {
+                            text: "\uE922"  // Reducir altura
+                            font.family: "Segoe MDL2 Assets"
+                            font.pixelSize: 14
+                            enabled: chartsContainer.chartsContainerHeight > chartsContainer.minHeight
+                            ToolTip.visible: hovered
+                            ToolTip.text: "Reducir altura"
+                            onClicked: {
+                                chartsContainer.chartsContainerHeight = Math.max(
+                                    chartsContainer.minHeight,
+                                    chartsContainer.chartsContainerHeight - 100
+                                )
                             }
                         }
                         
-                        // Gráfico circular
-                        ChartView {
-                            id: voucherChart
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            Layout.minimumHeight: 250
-                            antialiasing: true
-                            legend.visible: false
-                            backgroundColor: "transparent"
-                            animationOptions: ChartView.SeriesAnimations
-                            theme: Material.theme === Material.Dark ? ChartView.ChartThemeDark : ChartView.ChartThemeLight
-                            backgroundRoundness: 0
-                            
-                            PieSeries {
-                                id: voucherSeries
-                                size: 0.8
-                                holeSize: 0.45
-                                
-                                onClicked: function(slice) {
-                                    slice.exploded = !slice.exploded
-                                }
-                                
-                                onHovered: function(slice, state) {
-                                    if(state) slice.explodeDistanceFactor = 0.05
-                                    else slice.explodeDistanceFactor = 0.03
-                                }
+                        ToolButton {
+                            text: "\uE921"  // Aumentar altura
+                            font.family: "Segoe MDL2 Assets"
+                            font.pixelSize: 14
+                            enabled: chartsContainer.chartsContainerHeight < chartsContainer.maxHeight
+                            ToolTip.visible: hovered
+                            ToolTip.text: "Aumentar altura"
+                            onClicked: {
+                                chartsContainer.chartsContainerHeight = Math.min(
+                                    chartsContainer.maxHeight,
+                                    chartsContainer.chartsContainerHeight + 100
+                                )
                             }
                         }
-                    }
-                    
-                    Component.onCompleted: {
-                        updateVoucherChart()
-                    }
-                    
-                    function updateVoucherChart() {
-                        var data = viewModel.getSalesByVoucherType()
-                        voucherSeries.clear()
-                        voucherSummaryModel.clear()
                         
-                        if (data.length === 0) {
-                            var emptySlice = voucherSeries.append("Sin ventas", 1)
-                            emptySlice.color = Qt.rgba(0.5, 0.5, 0.5, 0.2)
-                            return
-                        }
-                        
-                        // Calcular el total para porcentajes
-                        var total = 0
-                        for (var i = 0; i < data.length; i++) {
-                            total += data[i].value
-                        }
-                        
-                        var colors = ["#2196F3", "#9C27B0", "#4CAF50"]
-                        for (var i = 0; i < data.length; i++) {
-                            var percentage = total > 0 ? ((data[i].value / total) * 100).toFixed(1) : 0
-                            
-                            var slice = voucherSeries.append(data[i].label + "\n" + percentage + "%", data[i].value)
-                            slice.color = colors[i % colors.length]
-                            slice.labelVisible = true
-                            slice.labelPosition = PieSlice.LabelInsideHorizontal
-                            slice.labelColor = "#FFFFFF"
-                            slice.labelFont.pixelSize = 10
-                            slice.labelFont.bold = true
-                            
-                            voucherSummaryModel.append({
-                                "label": data[i].label,
-                                "count": data[i].count,
-                                "value": data[i].value,
-                                "percentage": percentage
-                            })
-                        }
-                    }
-                    
-                    Connections {
-                        target: viewModel
-                        function onTodaySalesChanged() {
-                            voucherChartBox.updateVoucherChart()
+                        ToolButton {
+                            text: chartsContainer.chartsContainerHeight >= 800 ? "\uE98F" : "\uE740"  // Restaurar/Maximizar
+                            font.family: "Segoe MDL2 Assets"
+                            font.pixelSize: 14
+                            ToolTip.visible: hovered
+                            ToolTip.text: chartsContainer.chartsContainerHeight >= 800 ? "Restaurar tamaño" : "Maximizar"
+                            onClicked: {
+                                if (chartsContainer.chartsContainerHeight >= 800) {
+                                    chartsContainer.chartsContainerHeight = 520  // Tamaño por defecto
+                                } else {
+                                    chartsContainer.chartsContainerHeight = 900  // Tamaño grande
+                                }
+                            }
                         }
                     }
                 }
                 
-                // Gráfico de barras - Productos con stock bajo
-                GroupBox {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 400
-                    title: "Productos con Stock Bajo"
+                Behavior on Layout.preferredHeight {
+                    NumberAnimation {
+                        duration: 300
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+                
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 0
                     
-                    ColumnLayout {
-                        anchors.fill: parent
-                        spacing: 12
+                    // SwipeView con los gráficos
+                    SwipeView {
+                        id: chartsSwipeView
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
                         
-                        Label {
-                            text: viewModel.lowStockProducts > 0 ? 
-                                viewModel.lowStockProducts + " productos requieren atención" : 
-                                "Stock en niveles normales"
-                            font.pixelSize: 11
-                            opacity: 0.7
-                            color: viewModel.lowStockProducts > 0 ? Material.color(Material.Orange) : Material.color(Material.Green)
+                        // Añadir animación suave al cambiar de página
+                        Behavior on currentIndex {
+                            NumberAnimation {
+                                duration: 350
+                                easing.type: Easing.InOutCubic
+                            }
                         }
                         
-                        ChartView {
-                            id: stockChart
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            Layout.minimumHeight: 280
-                            antialiasing: true
-                            legend.visible: false
-                            backgroundColor: "transparent"
-                            animationOptions: ChartView.SeriesAnimations
-                            theme: Material.theme === Material.Dark ? ChartView.ChartThemeDark : ChartView.ChartThemeLight
+                        // === PÁGINA 1: Gráfico Circular - Top Categorías ===
+                        Item {
+                            id: categoriesChartPage
                             
-                            BarSeries {
-                                id: stockSeries
-                                labelsVisible: true
-                                labelsPosition: AbstractBarSeries.LabelsOutsideEnd
+                            property string currentPeriod: "days" // days, month, year
+                            
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 12
                                 
-                                BarSet {
-                                    id: stockBarSet
-                                    label: "Stock actual"
-                                    color: Material.color(Material.Orange)
+                                // Selector de período
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 8
+                                    
+                                    Label {
+                                        text: "Período:"
+                                        font.pixelSize: ApplicationWindow.window.appStyle.fontSmall
+                                        font.weight: Font.Medium
+                                    }
+                                    
+                                    Row {
+                                        spacing: 4
+                                        
+                                        Button {
+                                            text: "Día"
+                                            checkable: true
+                                            checked: categoriesChartPage.currentPeriod === "days"
+                                            font.pixelSize: ApplicationWindow.window.appStyle.fontSmall
+                                            padding: 6
+                                            
+                                            Material.background: checked ? 
+                                                (Material.theme === Material.Dark ? 
+                                                    Qt.darker(ApplicationWindow.window?.currentColors?.primary ?? Material.accent, 1.5) : 
+                                                    (ApplicationWindow.window?.currentColors?.primary ?? Material.accent)) :
+                                                (Material.theme === Material.Dark ? "#2d2d2d" : "#f5f5f5")
+                                            
+                                            contentItem: Label {
+                                                text: parent.text
+                                                font: parent.font
+                                                horizontalAlignment: Text.AlignHCenter
+                                                verticalAlignment: Text.AlignVCenter
+                                                color: parent.checked ? 
+                                                    (Material.theme === Material.Dark ? "#FFFFFF" : "#000000") : 
+                                                    Material.foreground
+                                            }
+                                            
+                                            onClicked: {
+                                                categoriesChartPage.currentPeriod = "days"
+                                                categoriesChartPage.updateCategoriesChart()
+                                            }
+                                        }
+                                        
+                                        Button {
+                                            text: "Mes"
+                                            checkable: true
+                                            checked: categoriesChartPage.currentPeriod === "month"
+                                            font.pixelSize: 10
+                                            padding: 6
+                                            
+                                            Material.background: checked ? 
+                                                (Material.theme === Material.Dark ? 
+                                                    Qt.darker(ApplicationWindow.window?.currentColors?.primary ?? Material.accent, 1.5) : 
+                                                    (ApplicationWindow.window?.currentColors?.primary ?? Material.accent)) :
+                                                (Material.theme === Material.Dark ? "#2d2d2d" : "#f5f5f5")
+                                            
+                                            contentItem: Label {
+                                                text: parent.text
+                                                font: parent.font
+                                                horizontalAlignment: Text.AlignHCenter
+                                                verticalAlignment: Text.AlignVCenter
+                                                color: parent.checked ? 
+                                                    (Material.theme === Material.Dark ? "#FFFFFF" : "#000000") : 
+                                                    Material.foreground
+                                            }
+                                            
+                                            onClicked: {
+                                                categoriesChartPage.currentPeriod = "month"
+                                                categoriesChartPage.updateCategoriesChart()
+                                            }
+                                        }
+                                        
+                                        Button {
+                                            text: "Año"
+                                            checkable: true
+                                            checked: categoriesChartPage.currentPeriod === "year"
+                                            font.pixelSize: 10
+                                            padding: 6
+                                            
+                                            Material.background: checked ? 
+                                                (Material.theme === Material.Dark ? 
+                                                    Qt.darker(ApplicationWindow.window?.currentColors?.primary ?? Material.accent, 1.5) : 
+                                                    (ApplicationWindow.window?.currentColors?.primary ?? Material.accent)) :
+                                                (Material.theme === Material.Dark ? "#2d2d2d" : "#f5f5f5")
+                                            
+                                            contentItem: Label {
+                                                text: parent.text
+                                                font: parent.font
+                                                horizontalAlignment: Text.AlignHCenter
+                                                verticalAlignment: Text.AlignVCenter
+                                                color: parent.checked ? 
+                                                    (Material.theme === Material.Dark ? "#FFFFFF" : "#000000") : 
+                                                    Material.foreground
+                                            }
+                                            
+                                            onClicked: {
+                                                categoriesChartPage.currentPeriod = "year"
+                                                categoriesChartPage.updateCategoriesChart()
+                                            }
+                                        }
+                                    }
+                                    
+                                    Item { Layout.fillWidth: true }
+                                }
+                                
+                                // Resumen en cards
+                                GridLayout {
+                                    visible: voucherSummaryModel.count > 0
+                                    Layout.fillWidth: true
+                                    columns: root.width > 1200 ? 3 : (root.width > 600 ? 3 : 1)
+                                    rowSpacing: 6
+                                    columnSpacing: 6
+                                    
+                                    Repeater {
+                                        id: voucherSummary
+                                        model: ListModel { id: voucherSummaryModel }
+                                        
+                                        delegate: Rectangle {
+                                            Layout.fillWidth: true
+                                            Layout.preferredHeight: 50
+                                            radius: 6
+                                            color: "transparent"
+                                            border.width: 1
+                                            border.color: Material.theme === Material.Dark ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(0, 0, 0, 0.08)
+                                            
+                                            RowLayout {
+                                                anchors.fill: parent
+                                                anchors.margins: 8
+                                                spacing: 8
+                                                
+                                                Rectangle {
+                                                    Layout.preferredWidth: 8
+                                                    Layout.preferredHeight: 8
+                                                    radius: 4
+                                                    color: {
+                                                        var colors = [
+                                                            "#2196F3", "#4CAF50", "#FF9800", "#9C27B0", "#F44336",
+                                                            "#00BCD4", "#8BC34A", "#FFC107", "#E91E63", "#3F51B5"
+                                                        ]
+                                                        var idx = typeof index !== 'undefined' ? index : 0
+                                                        return colors[idx % colors.length]
+                                                    }
+                                                }
+                                                
+                                                ColumnLayout {
+                                                    Layout.fillWidth: true
+                                                    spacing: 0
+                                                    
+                                                    Label {
+                                                        text: model.label
+                                                        font.weight: Font.Medium
+                                                        font.pixelSize: 11
+                                                    }
+                                                    
+                                                    Label {
+                                                        text: model.count + " unidades (" + model.percentage + "%)"
+                                                        opacity: 0.6
+                                                        font.pixelSize: 9
+                                                    }
+                                                }
+                                                
+                                                Label {
+                                                    text: "S/ " + Number(model.value).toFixed(2)
+                                                    font.weight: Font.Bold
+                                                    font.pixelSize: 12
+                                                    Layout.alignment: Qt.AlignRight
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Gráfico circular
+                                ChartView {
+                                    id: voucherChart
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    Layout.minimumHeight: 200
+                                    antialiasing: true
+                                    legend.visible: false
+                                    backgroundColor: "transparent"
+                                    animationOptions: ChartView.SeriesAnimations
+                                    theme: Material.theme === Material.Dark ? ChartView.ChartThemeDark : ChartView.ChartThemeLight
+                                    backgroundRoundness: 0
+                                    
+                                    PieSeries {
+                                        id: voucherSeries
+                                        size: 0.85
+                                        holeSize: 0.4
+                                        
+                                        onClicked: function(slice) {
+                                            slice.exploded = !slice.exploded
+                                        }
+                                        
+                                        onHovered: function(slice, state) {
+                                            if(state) slice.explodeDistanceFactor = 0.05
+                                            else slice.explodeDistanceFactor = 0.03
+                                        }
+                                    }
                                 }
                             }
                             
-                            BarCategoryAxis {
-                                id: stockAxisX
-                                titleText: ""
+                            Component.onCompleted: {
+                                updateCategoriesChart()
                             }
                             
-                            ValueAxis {
-                                id: stockAxisY
-                                titleText: "Unidades"
-                                min: 0
-                                max: 50
-                                tickCount: 6
+                            function updateCategoriesChart() {
+                                console.log("🔄 === INICIANDO updateCategoriesChart ===")
+                                var period = categoriesChartPage.currentPeriod
+                                var days = period === "year" ? 365 : period === "month" ? 30 : 1
+                                var data = viewModel.getTopCategoriesByPeriod(10, days)
+                                console.log("📦 Categorías recibidas (", period, "-", days, "días):", JSON.stringify(data))
+                                
+                                voucherSeries.clear()
+                                voucherSummaryModel.clear()
+                                
+                                if (data.length === 0) {
+                                    console.log("⚠️ No hay categorías para mostrar")
+                                    var emptySlice = voucherSeries.append("Sin ventas", 1)
+                                    emptySlice.color = Qt.rgba(0.5, 0.5, 0.5, 0.2)
+                                    return
+                                }
+                                
+                                // Calcular el total para porcentajes
+                                var totalQty = 0
+                                var totalRevenue = 0
+                                for (var i = 0; i < data.length; i++) {
+                                    totalQty += data[i].quantity
+                                    totalRevenue += data[i].revenue
+                                }
+                                
+                                console.log("📊 Total cantidad:", totalQty, "| Total ingresos: S/", totalRevenue.toFixed(2))
+                                
+                                // Paleta de colores más variada para 10 categorías
+                                var colors = [
+                                    "#2196F3", "#4CAF50", "#FF9800", "#9C27B0", "#F44336",
+                                    "#00BCD4", "#8BC34A", "#FFC107", "#E91E63", "#3F51B5"
+                                ]
+                                
+                                for (var i = 0; i < data.length; i++) {
+                                    var percentage = totalQty > 0 ? ((data[i].quantity / totalQty) * 100).toFixed(1) : 0
+                                    
+                                    var slice = voucherSeries.append(data[i].name, data[i].quantity)
+                                    slice.color = colors[i % colors.length]
+                                    slice.labelVisible = false  // Sin etiquetas dentro
+                                    slice.borderWidth = 0  // Sin contorno
+                                    
+                                    console.log("  Categoría", (i+1) + ":", data[i].name, "|", data[i].quantity, "unidades |", percentage + "%")
+                                    
+                                    voucherSummaryModel.append({
+                                        "label": data[i].name,
+                                        "count": data[i].quantity,
+                                        "value": data[i].revenue,
+                                        "percentage": percentage
+                                    })
+                                }
+                                console.log("✅ Gráfico de categorías actualizado")
+                            }
+                            
+                            Connections {
+                                target: viewModel
+                                function onTodaySalesChanged() {
+                                    console.log("📡 Signal: onTodaySalesChanged - Actualizando categorías")
+                                    categoriesChartPage.updateCategoriesChart()
+                                }
+                            }
+                        }
+                        
+                        // === PÁGINA 2: Gráfico de Barras - Productos Más Vendidos ===
+                        Item {
+                            id: topProductsChartPage
+                            
+                            property string currentPeriod: "days" // days, month, year
+                            
+                            // Función para actualizar el gráfico
+                            function updateTopProductsChart() {
+                                console.log("🔄 === INICIANDO updateTopProductsChart ===")
+                                console.log("ViewModel válido:", viewModel !== null)
+                                
+                                var period = topProductsChartPage.currentPeriod
+                                var days = period === "year" ? 365 : period === "month" ? 30 : 1
+                                var data = viewModel.getTopProductsByPeriod(10, days)
+                                console.log("📦 Datos recibidos:", JSON.stringify(data))
+                                console.log("📦 Cantidad de productos:", data ? data.length : 0)
+                                
+                                if (!data || data.length === 0) {
+                                    console.log("⚠️ No hay productos para mostrar")
+                                    topProductsAxisX.categories = ["Sin ventas hoy"]
+                                    topProductsBarSet.values = [0]
+                                    topProductsAxisY.max = 10
+                                    return
+                                }
+                                
+                                console.log("📈 Procesando", data.length, "productos más vendidos")
+                                
+                                // Preparar categorías y valores
+                                var categories = []
+                                var values = []
+                                var maxQty = 0
+                                
+                                for (var i = 0; i < data.length; i++) {
+                                    var product = data[i]
+                                    console.log("  📊 Producto", i, ":", JSON.stringify(product))
+                                    
+                                    // Nombre del producto (truncar si es muy largo)
+                                    var name = product.name || "Sin nombre"
+                                    if (name.length > 15) {
+                                        name = name.substring(0, 12) + "..."
+                                    }
+                                    
+                                    categories.push(name)
+                                    values.push(product.quantity)
+                                    
+                                    console.log("    Nombre:", name)
+                                    console.log("    Cantidad vendida:", product.quantity)
+                                    console.log("    Ingresos: S/", product.revenue.toFixed(2))
+                                    
+                                    if (product.quantity > maxQty) {
+                                        maxQty = product.quantity
+                                    }
+                                }
+                                
+                                console.log("📋 Categorías:", JSON.stringify(categories))
+                                console.log("📋 Valores:", JSON.stringify(values))
+                                
+                                // Asignar datos al gráfico
+                                topProductsAxisX.categories = categories
+                                topProductsBarSet.values = values
+                                
+                                // Ajustar escala del eje Y con margen superior
+                                topProductsAxisY.max = Math.max(10, Math.ceil(maxQty * 1.3 / 5) * 5)
+                                
+                                console.log("✅ Gráfico actualizado")
+                                console.log("   - Máximo valor:", maxQty)
+                                console.log("   - Escala Y:", topProductsAxisY.max)
+                                console.log("   - Categorías:", categories.length)
+                                console.log("   - Valores:", values.length)
+                                console.log("🔄 === FIN updateTopProductsChart ===")
+                            }
+                            
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 12
+                                
+                                // Header con selector de período
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 8
+                                    
+                                    Label {
+                                        text: "🏆 Top 10 Productos"
+                                        font.pixelSize: 12
+                                        font.weight: Font.DemiBold
+                                        color: Material.color(Material.Green)
+                                    }
+                                    
+                                    Row {
+                                        spacing: 4
+                                        
+                                        Button {
+                                            text: "Día"
+                                            checkable: true
+                                            checked: topProductsChartPage.currentPeriod === "days"
+                                            font.pixelSize: 10
+                                            padding: 6
+                                            
+                                            Material.background: checked ? 
+                                                (Material.theme === Material.Dark ? 
+                                                    Qt.darker(ApplicationWindow.window?.currentColors?.primary ?? Material.accent, 1.5) : 
+                                                    (ApplicationWindow.window?.currentColors?.primary ?? Material.accent)) :
+                                                (Material.theme === Material.Dark ? "#2d2d2d" : "#f5f5f5")
+                                            
+                                            contentItem: Label {
+                                                text: parent.text
+                                                font: parent.font
+                                                horizontalAlignment: Text.AlignHCenter
+                                                verticalAlignment: Text.AlignVCenter
+                                                color: parent.checked ? 
+                                                    (Material.theme === Material.Dark ? "#FFFFFF" : "#000000") : 
+                                                    Material.foreground
+                                            }
+                                            
+                                            onClicked: {
+                                                topProductsChartPage.currentPeriod = "days"
+                                                topProductsChartPage.updateTopProductsChart()
+                                            }
+                                        }
+                                        
+                                        Button {
+                                            text: "Mes"
+                                            checkable: true
+                                            checked: topProductsChartPage.currentPeriod === "month"
+                                            font.pixelSize: 10
+                                            padding: 6
+                                            
+                                            Material.background: checked ? 
+                                                (Material.theme === Material.Dark ? 
+                                                    Qt.darker(ApplicationWindow.window?.currentColors?.primary ?? Material.accent, 1.5) : 
+                                                    (ApplicationWindow.window?.currentColors?.primary ?? Material.accent)) :
+                                                (Material.theme === Material.Dark ? "#2d2d2d" : "#f5f5f5")
+                                            
+                                            contentItem: Label {
+                                                text: parent.text
+                                                font: parent.font
+                                                horizontalAlignment: Text.AlignHCenter
+                                                verticalAlignment: Text.AlignVCenter
+                                                color: parent.checked ? 
+                                                    (Material.theme === Material.Dark ? "#FFFFFF" : "#000000") : 
+                                                    Material.foreground
+                                            }
+                                            
+                                            onClicked: {
+                                                topProductsChartPage.currentPeriod = "month"
+                                                topProductsChartPage.updateTopProductsChart()
+                                            }
+                                        }
+                                        
+                                        Button {
+                                            text: "Año"
+                                            checkable: true
+                                            checked: topProductsChartPage.currentPeriod === "year"
+                                            font.pixelSize: 10
+                                            padding: 6
+                                            
+                                            Material.background: checked ? 
+                                                (Material.theme === Material.Dark ? 
+                                                    Qt.darker(ApplicationWindow.window?.currentColors?.primary ?? Material.accent, 1.5) : 
+                                                    (ApplicationWindow.window?.currentColors?.primary ?? Material.accent)) :
+                                                (Material.theme === Material.Dark ? "#2d2d2d" : "#f5f5f5")
+                                            
+                                            contentItem: Label {
+                                                text: parent.text
+                                                font: parent.font
+                                                horizontalAlignment: Text.AlignHCenter
+                                                verticalAlignment: Text.AlignVCenter
+                                                color: parent.checked ? 
+                                                    (Material.theme === Material.Dark ? "#FFFFFF" : "#000000") : 
+                                                    Material.foreground
+                                            }
+                                            
+                                            onClicked: {
+                                                topProductsChartPage.currentPeriod = "year"
+                                                topProductsChartPage.updateTopProductsChart()
+                                            }
+                                        }
+                                    }
+                                    
+                                    Item { Layout.fillWidth: true }
+                                    
+                                    Label {
+                                        text: "Unidades"
+                                        font.pixelSize: 10
+                                        opacity: 0.7
+                                    }
+                                }
+                                
+                                ChartView {
+                                    id: topProductsChart
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    Layout.minimumHeight: 250
+                                    antialiasing: true
+                                    legend.visible: true
+                                    legend.alignment: Qt.AlignBottom
+                                    backgroundColor: "transparent"
+                                    animationOptions: ChartView.SeriesAnimations
+                                    theme: Material.theme === Material.Dark ? ChartView.ChartThemeDark : ChartView.ChartThemeLight
+                                    
+                                    BarSeries {
+                                        id: topProductsSeries
+                                        labelsVisible: true
+                                        labelsPosition: AbstractBarSeries.LabelsOutsideEnd
+                                        labelsFormat: "@value"
+                                        labelsPrecision: 0
+                                        
+                                        BarSet {
+                                            id: topProductsBarSet
+                                            label: "Unidades vendidas"
+                                            // Color según tema Material
+                                            color: Material.theme === Material.Dark ? 
+                                                   Material.color(Material.Green, Material.Shade700) :
+                                                   Material.color(Material.Green, Material.Shade400)
+                                            borderColor: Material.theme === Material.Dark ?
+                                                        Material.color(Material.Green, Material.Shade900) :
+                                                        Material.color(Material.Green, Material.Shade600)
+                                            borderWidth: 2
+                                        }
+                                    }
+                                    
+                                    BarCategoryAxis {
+                                        id: topProductsAxisX
+                                        titleText: "Productos"
+                                        labelsAngle: -45
+                                        labelsFont.pixelSize: 9
+                                        gridVisible: false
+                                    }
+                                    
+                                    ValueAxis {
+                                        id: topProductsAxisY
+                                        titleText: "Cantidad vendida (unidades)"
+                                        min: 0
+                                        max: 50
+                                        tickCount: 6
+                                        labelFormat: "%.0f"
+                                        labelsFont.pixelSize: 10
+                                    }
+                                    
+                                    Component.onCompleted: {
+                                        console.log("📊 ChartView Component.onCompleted - Inicializando gráfico de productos más vendidos")
+                                        topProductsSeries.axisX = topProductsAxisX
+                                        topProductsSeries.axisY = topProductsAxisY
+                                        console.log("📊 Llamando a updateTopProductsChart()...")
+                                        topProductsChartPage.updateTopProductsChart()
+                                    }
+                                }
+                            }
+                            
+                            Connections {
+                                target: viewModel
+                                function onTodaySalesChanged() {
+                                    console.log("📡 Signal: onTodaySalesChanged recibido - Actualizando productos más vendidos")
+                                    topProductsChartPage.updateTopProductsChart()
+                                }
                             }
                             
                             Component.onCompleted: {
-                                stockSeries.axisX = stockAxisX
-                                stockSeries.axisY = stockAxisY
-                                updateStockChart()
+                                console.log("📊 topProductsChartPage Component.onCompleted")
+                            }
+                        }
+                        
+                        // === PÁGINA 3: Gráfico de Líneas - Tendencia de Ventas ===
+                        Item {
+                            id: trendChartPage
+                            
+                            property string currentPeriod: "days" // days, month, year
+                            
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 12
+                                
+                                // Header con selector de periodo
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 8
+                                    
+                                    // Leyenda
+                                    RowLayout {
+                                        spacing: 8
+                                        
+                                        Rectangle {
+                                            width: 12
+                                            height: 12
+                                            radius: 6
+                                            color: Material.color(Material.Green)
+                                        }
+                                        
+                                        Label {
+                                            text: "Cantidad de Ventas"
+                                            font.pixelSize: 11
+                                            font.weight: Font.Medium
+                                            color: Material.foreground
+                                        }
+                                    }
+                                    
+                                    Item { Layout.fillWidth: true }
+                                    
+                                    // Selector de periodo
+                                    RowLayout {
+                                        spacing: 4
+                                        
+                                        Button {
+                                            text: "Días"
+                                            checkable: true
+                                            checked: trendChartPage.currentPeriod === "days"
+                                            font.pixelSize: 10
+                                            padding: 6
+                                            
+                                            Material.background: checked ? 
+                                                (Material.theme === Material.Dark ? 
+                                                    Qt.darker(ApplicationWindow.window?.currentColors?.primary ?? Material.accent, 1.5) : 
+                                                    (ApplicationWindow.window?.currentColors?.primary ?? Material.accent)) :
+                                                (Material.theme === Material.Dark ? "#2d2d2d" : "#f5f5f5")
+                                            
+                                            contentItem: Label {
+                                                text: parent.text
+                                                font: parent.font
+                                                horizontalAlignment: Text.AlignHCenter
+                                                verticalAlignment: Text.AlignVCenter
+                                                color: parent.checked ? 
+                                                    (Material.theme === Material.Dark ? "#FFFFFF" : "#000000") : 
+                                                    Material.foreground
+                                            }
+                                            
+                                            onClicked: {
+                                                trendChartPage.currentPeriod = "days"
+                                                trendChartPage.updateSalesTrend()
+                                            }
+                                        }
+                                        
+                                        Button {
+                                            text: "Mes"
+                                            checkable: true
+                                            checked: trendChartPage.currentPeriod === "month"
+                                            font.pixelSize: 10
+                                            padding: 6
+                                            
+                                            Material.background: checked ? 
+                                                (Material.theme === Material.Dark ? 
+                                                    Qt.darker(ApplicationWindow.window?.currentColors?.primary ?? Material.accent, 1.5) : 
+                                                    (ApplicationWindow.window?.currentColors?.primary ?? Material.accent)) :
+                                                (Material.theme === Material.Dark ? "#2d2d2d" : "#f5f5f5")
+                                            
+                                            contentItem: Label {
+                                                text: parent.text
+                                                font: parent.font
+                                                horizontalAlignment: Text.AlignHCenter
+                                                verticalAlignment: Text.AlignVCenter
+                                                color: parent.checked ? 
+                                                    (Material.theme === Material.Dark ? "#FFFFFF" : "#000000") : 
+                                                    Material.foreground
+                                            }
+                                            
+                                            onClicked: {
+                                                trendChartPage.currentPeriod = "month"
+                                                trendChartPage.updateSalesTrend()
+                                            }
+                                        }
+                                        
+                                        Button {
+                                            text: "Año"
+                                            checkable: true
+                                            checked: trendChartPage.currentPeriod === "year"
+                                            font.pixelSize: 10
+                                            padding: 6
+                                            
+                                            Material.background: checked ? 
+                                                (Material.theme === Material.Dark ? 
+                                                    Qt.darker(ApplicationWindow.window?.currentColors?.primary ?? Material.accent, 1.5) : 
+                                                    (ApplicationWindow.window?.currentColors?.primary ?? Material.accent)) :
+                                                (Material.theme === Material.Dark ? "#2d2d2d" : "#f5f5f5")
+                                            
+                                            contentItem: Label {
+                                                text: parent.text
+                                                font: parent.font
+                                                horizontalAlignment: Text.AlignHCenter
+                                                verticalAlignment: Text.AlignVCenter
+                                                color: parent.checked ? 
+                                                    (Material.theme === Material.Dark ? "#FFFFFF" : "#000000") : 
+                                                    Material.foreground
+                                            }
+                                            
+                                            onClicked: {
+                                                trendChartPage.currentPeriod = "year"
+                                                trendChartPage.updateSalesTrend()
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                ChartView {
+                                    id: salesTrendChart
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    Layout.minimumHeight: 250
+                                    antialiasing: true
+                                    legend.visible: false
+                                    backgroundColor: "transparent"
+                                    animationOptions: ChartView.SeriesAnimations
+                                    animationDuration: 1000
+                                    animationEasingCurve.type: Easing.OutCubic
+                                    theme: Material.theme === Material.Dark ? ChartView.ChartThemeDark : ChartView.ChartThemeLight
+                                    
+                                    // Eje X: Fechas (formato cambia según periodo)
+                                    DateTimeAxis {
+                                        id: salesDateAxis
+                                        // Formato: "ddd d" = "Lun 10", "Mar 11", etc.
+                                        // Para nombre completo: "dddd d" = "Lunes 10", "Martes 11", etc.
+                                        format: trendChartPage.currentPeriod === "year" ? "MMM" : 
+                                                trendChartPage.currentPeriod === "month" ? "dd" : "dddd d"
+                                        tickCount: trendChartPage.currentPeriod === "year" ? 12 : 
+                                                   trendChartPage.currentPeriod === "month" ? 30 : 14
+                                        labelsAngle: trendChartPage.currentPeriod === "days" ? -45 : 
+                                                    trendChartPage.currentPeriod === "month" ? -45 : 0
+                                        titleText: trendChartPage.currentPeriod === "year" ? "Mes" : 
+                                                  trendChartPage.currentPeriod === "month" ? "Día del Mes" : "Día de la Semana"
+                                        gridVisible: true
+                                        labelsFont.pixelSize: trendChartPage.currentPeriod === "days" ? 8 : 10
+                                        minorGridVisible: false
+                                        lineVisible: true
+                                    }
+                                    
+                                    // Eje Y: Cantidad
+                                    ValueAxis {
+                                        id: salesCountAxis
+                                        titleText: "Cantidad de Ventas"
+                                        min: 0
+                                        max: 100
+                                        tickCount: 6
+                                        labelFormat: "%.0f"
+                                        gridVisible: true
+                                        minorGridVisible: false
+                                        lineVisible: true
+                                        labelsFont: Qt.font({ pixelSize: 10 })
+                                    }
+                                    
+                                    // Serie de línea con área
+                                    AreaSeries {
+                                        id: salesAreaSeries
+                                        name: "Ventas"
+                                        
+                                        axisX: salesDateAxis
+                                        axisY: salesCountAxis
+                                        
+                                        // Línea superior (datos reales)
+                                        upperSeries: LineSeries {
+                                            id: salesCountSeries
+                                            // Color según tema Material
+                                            color: Material.theme === Material.Dark ? 
+                                                   Material.color(Material.Green, Material.Shade600) :
+                                                   Material.color(Material.Green, Material.Shade700)
+                                            width: 3
+                                            
+                                            // Configuración de puntos
+                                            pointsVisible: true
+                                            pointLabelsVisible: false
+                                            pointLabelsFormat: "@yPoint"
+                                            pointLabelsColor: Material.foreground
+                                            pointLabelsFont: Qt.font({ pixelSize: 9, weight: Font.DemiBold })
+                                            
+                                            // Estilo personalizado de puntos
+                                            Component.onCompleted: {
+                                                // Los puntos se muestran automáticamente con pointsVisible: true
+                                            }
+                                        }
+                                        
+                                        // Color de relleno del área según tema Material
+                                        color: Material.theme === Material.Dark ? 
+                                               Material.color(Material.Green, Material.Shade900).toString() + "40" : 
+                                               Material.color(Material.Green, Material.Shade100).toString() + "80"
+                                        borderColor: Material.theme === Material.Dark ? 
+                                                    Material.color(Material.Green, Material.Shade600) :
+                                                    Material.color(Material.Green, Material.Shade700)
+                                        borderWidth: 3
+                                    }
+                                }
+                            }
+                            
+                            Component.onCompleted: {
+                                updateSalesTrend()
+                            }
+                            
+                            function updateSalesTrend() {
+                                var period = trendChartPage.currentPeriod
+                                console.log("🔄 Actualizando gráfico de tendencia de ventas - Periodo:", period)
+                                
+                                var days = period === "year" ? 365 : period === "month" ? 30 : 14
+                                var data = viewModel.getSalesTrendData(days)
+                                salesCountSeries.clear()
+                                
+                                var today = new Date()
+                                today.setHours(12, 0, 0, 0)
+                                
+                                var dateMap = {}
+                                var dates = []
+                                
+                                if (period === "year") {
+                                    // Últimos 12 meses - agrupar por mes
+                                    for (var i = 11; i >= 0; i--) {
+                                        var date = new Date(today.getFullYear(), today.getMonth() - i, 15, 12, 0, 0)
+                                        dates.push(date)
+                                        var key = date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, '0')
+                                        dateMap[key] = 0
+                                    }
+                                } else if (period === "month") {
+                                    // Últimos 30 días
+                                    for (var i = 29; i >= 0; i--) {
+                                        var date = new Date(today)
+                                        date.setDate(date.getDate() - i)
+                                        date.setHours(12, 0, 0, 0)
+                                        dates.push(date)
+                                        var key = date.toISOString().substr(0, 10)
+                                        dateMap[key] = 0
+                                    }
+                                } else {
+                                    // Últimos 14 días (default)
+                                    for (var i = 13; i >= 0; i--) {
+                                        var date = new Date(today)
+                                        date.setDate(date.getDate() - i)
+                                        date.setHours(12, 0, 0, 0)
+                                        dates.push(date)
+                                        var key = date.toISOString().substr(0, 10)
+                                        dateMap[key] = 0
+                                    }
+                                }
+                                
+                                // Llenar con datos reales
+                                var maxCount = 0
+                                if (data.length > 0) {
+                                    console.log("📊 Datos encontrados:", data.length, "registros")
+                                    for (var i = 0; i < data.length; i++) {
+                                        var count = data[i].salesCount
+                                        
+                                        if (period === "year") {
+                                            // Agrupar por mes
+                                            var dateStr = data[i].date // "YYYY-MM-DD"
+                                            var key = dateStr.substr(0, 7) // "YYYY-MM"
+                                            if (dateMap.hasOwnProperty(key)) {
+                                                dateMap[key] += count
+                                            }
+                                        } else {
+                                            // Por día
+                                            var dateStr = data[i].date
+                                            if (dateMap.hasOwnProperty(dateStr)) {
+                                                dateMap[dateStr] = count
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Calcular máximo
+                                    for (var key in dateMap) {
+                                        if (dateMap[key] > maxCount) {
+                                            maxCount = dateMap[key]
+                                        }
+                                    }
+                                } else {
+                                    console.log("⚠️ No hay datos de ventas para el periodo")
+                                }
+                                
+                                // Configurar rango del eje X
+                                salesDateAxis.min = dates[0]
+                                salesDateAxis.max = dates[dates.length - 1]
+                                
+                                // Añadir puntos al gráfico
+                                for (var i = 0; i < dates.length; i++) {
+                                    var date = dates[i]
+                                    var count = 0
+                                    
+                                    if (period === "year") {
+                                        var key = date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, '0')
+                                        count = dateMap[key] || 0
+                                    } else {
+                                        var key = date.toISOString().substr(0, 10)
+                                        count = dateMap[key] || 0
+                                    }
+                                    
+                                    salesCountSeries.append(date.getTime(), count)
+                                }
+                                
+                                console.log("✅ Gráfico actualizado - Periodo:", period, "| Máximo:", maxCount, "ventas")
+                            }
+                            
+                            Connections {
+                                target: viewModel
+                                function onTodaySalesChanged() {
+                                    trendChartPage.updateSalesTrend()
+                                }
                             }
                         }
                     }
                     
-                    function updateStockChart() {
-                        // Simulación de datos - conectar con ViewModel más adelante
-                        stockAxisX.categories = ["Prod. A", "Prod. B", "Prod. C", "Prod. D", "Prod. E"]
-                        stockBarSet.values = [12, 8, 15, 5, 18]
+                    // Barra de navegación inferior compacta
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 52
+                        color: Material.theme === Material.Dark ? 
+                               Qt.rgba(1, 1, 1, 0.05) : 
+                               Qt.rgba(0, 0, 0, 0.03)
+                        radius: 6
+                        
+                        RowLayout {
+                            anchors.centerIn: parent
+                            spacing: 8
+                            
+                            // Botón Anterior
+                            RoundButton {
+                                text: "\uE76B"  // ChevronLeft
+                                font.family: "Segoe MDL2 Assets"
+                                font.pixelSize: 18
+                                flat: true
+                                enabled: chartsSwipeView.currentIndex > 0
+                                opacity: enabled ? 1.0 : 0.2
+                                implicitWidth: 44
+                                implicitHeight: 44
+                                
+                                Material.foreground: Material.accent
+                                
+                                background: Rectangle {
+                                    radius: 22
+                                    color: parent.down ? 
+                                           (Material.theme === Material.Dark ? 
+                                               Qt.rgba(1, 1, 1, 0.15) : 
+                                               Qt.rgba(0, 0, 0, 0.1)) :
+                                           parent.hovered ? 
+                                           (Material.theme === Material.Dark ? 
+                                               Qt.rgba(1, 1, 1, 0.1) : 
+                                               Qt.rgba(0, 0, 0, 0.05)) :
+                                           "transparent"
+                                    
+                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                }
+                                
+                                onClicked: {
+                                    chartsSwipeView.decrementCurrentIndex()
+                                }
+                                
+                                ToolTip.visible: hovered
+                                ToolTip.text: "Gráfico anterior"
+                                
+                                Behavior on opacity { 
+                                    NumberAnimation { 
+                                        duration: 250
+                                        easing.type: Easing.InOutQuad 
+                                    } 
+                                }
+                                
+                                scale: down ? 0.95 : 1.0
+                                Behavior on scale {
+                                    NumberAnimation { duration: 100 }
+                                }
+                            }
+                            
+                            // Indicador de página (puntos)
+                            PageIndicator {
+                                id: chartsPageIndicator
+                                count: chartsSwipeView.count
+                                currentIndex: chartsSwipeView.currentIndex
+                                interactive: true
+                                spacing: 8
+                                
+                                onCurrentIndexChanged: {
+                                    chartsSwipeView.currentIndex = currentIndex
+                                }
+                                
+                                delegate: Rectangle {
+                                    implicitWidth: index === chartsPageIndicator.currentIndex ? 24 : 10
+                                    implicitHeight: 10
+                                    radius: 5
+                                    
+                                    color: index === chartsPageIndicator.currentIndex ? 
+                                           Material.accent : 
+                                           Material.theme === Material.Dark ? 
+                                               Qt.rgba(1, 1, 1, 0.3) : 
+                                               Qt.rgba(0, 0, 0, 0.2)
+                                    
+                                    Behavior on implicitWidth { 
+                                        NumberAnimation { 
+                                            duration: 250
+                                            easing.type: Easing.InOutQuad 
+                                        } 
+                                    }
+                                    Behavior on color { 
+                                        ColorAnimation { 
+                                            duration: 250 
+                                        } 
+                                    }
+                                    
+                                    scale: index === chartsPageIndicator.currentIndex ? 1.0 : 0.85
+                                    Behavior on scale {
+                                        NumberAnimation { 
+                                            duration: 250
+                                            easing.type: Easing.InOutQuad 
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Botón Siguiente
+                            RoundButton {
+                                text: "\uE76C"  // ChevronRight
+                                font.family: "Segoe MDL2 Assets"
+                                font.pixelSize: 18
+                                flat: true
+                                enabled: chartsSwipeView.currentIndex < chartsSwipeView.count - 1
+                                opacity: enabled ? 1.0 : 0.2
+                                implicitWidth: 44
+                                implicitHeight: 44
+                                
+                                Material.foreground: Material.accent
+                                
+                                background: Rectangle {
+                                    radius: 22
+                                    color: parent.down ? 
+                                           (Material.theme === Material.Dark ? 
+                                               Qt.rgba(1, 1, 1, 0.15) : 
+                                               Qt.rgba(0, 0, 0, 0.1)) :
+                                           parent.hovered ? 
+                                           (Material.theme === Material.Dark ? 
+                                               Qt.rgba(1, 1, 1, 0.1) : 
+                                               Qt.rgba(0, 0, 0, 0.05)) :
+                                           "transparent"
+                                    
+                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                }
+                                
+                                onClicked: {
+                                    chartsSwipeView.incrementCurrentIndex()
+                                }
+                                
+                                ToolTip.visible: hovered
+                                ToolTip.text: "Siguiente gráfico"
+                                
+                                Behavior on opacity { 
+                                    NumberAnimation { 
+                                        duration: 250
+                                        easing.type: Easing.InOutQuad 
+                                    } 
+                                }
+                                
+                                scale: down ? 0.95 : 1.0
+                                Behavior on scale {
+                                    NumberAnimation { duration: 100 }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -543,10 +1457,10 @@ Page {
                                     spacing: 16
                                     
                                     Label {
-                                        text: index === 0 ? "\uE735" : index === 1 ? "\uE735" : index === 2 ? "\uE735" : (index + 1)
+                                        text: index === 0 ? "\uE734" : index === 1 ? "\uE734" : index === 2 ? "\uE734" : (index + 1)
                                         font.family: index < 3 ? "Segoe MDL2 Assets" : ""
                                         font.weight: Font.Bold
-                                        font.pixelSize: 16
+                                        font.pixelSize: 18
                                         color: index === 0 ? "#FFD700" : index === 1 ? "#C0C0C0" : index === 2 ? "#CD7F32" : Material.primary
                                         Layout.preferredWidth: 24
                                     }
@@ -752,140 +1666,6 @@ Page {
                         function onMonthSalesChanged() {
                             topCustomersBox.updateTopCustomers()
                         }
-                    }
-                }
-            }
-            
-            // Gráfico de líneas - Tendencia de ventas últimos 7 días
-            GroupBox {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 400
-                title: "Tendencia de Ventas (Últimos 7 Días)"
-                
-                ColumnLayout {
-                    anchors.fill: parent
-                    spacing: 12
-                    
-                    // Leyenda personalizada con puntos redondos
-                    RowLayout {
-                        Layout.alignment: Qt.AlignHCenter
-                        spacing: 20
-                        
-                        RowLayout {
-                            spacing: 6
-                            Rectangle {
-                                width: 10
-                                height: 10
-                                radius: 5
-                                color: Material.color(Material.Blue)
-                            }
-                            Label {
-                                text: "Total Ventas"
-                                font.pixelSize: 11
-                            }
-                        }
-                        
-                        RowLayout {
-                            spacing: 6
-                            Rectangle {
-                                width: 10
-                                height: 10
-                                radius: 5
-                                color: Material.color(Material.Green)
-                            }
-                            Label {
-                                text: "N° Transacciones"
-                                font.pixelSize: 11
-                            }
-                        }
-                    }
-                    
-                    ChartView {
-                        id: salesTrendChart
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        Layout.minimumHeight: 280
-                        antialiasing: true
-                        legend.visible: false
-                        backgroundColor: "transparent"
-                        animationOptions: ChartView.SeriesAnimations
-                        theme: Material.theme === Material.Dark ? ChartView.ChartThemeDark : ChartView.ChartThemeLight
-                        
-                        LineSeries {
-                            id: salesAmountSeries
-                            name: "Total Ventas"
-                            color: Material.color(Material.Blue)
-                            width: 2
-                            pointsVisible: true
-                            
-                            axisX: DateTimeAxis {
-                                id: salesDateAxis
-                                format: "dd/MM"
-                                tickCount: 7
-                                labelsAngle: 0
-                            }
-                            
-                            axisY: ValueAxis {
-                                id: salesAmountAxis
-                                titleText: "Monto (S/)"
-                                min: 0
-                                max: 1000
-                                tickCount: 6
-                            }
-                        }
-                        
-                        LineSeries {
-                            id: salesCountSeries
-                            name: "N° Transacciones"
-                            color: Material.color(Material.Green)
-                            width: 2
-                            pointsVisible: true
-                            
-                            axisX: salesDateAxis
-                            axisYRight: ValueAxis {
-                                id: salesCountAxis
-                                titleText: "Cantidad"
-                                min: 0
-                                max: 50
-                                tickCount: 6
-                            }
-                        }
-                    }
-                    
-                    Component.onCompleted: {
-                        updateSalesTrend()
-                    }
-                    
-                    function updateSalesTrend() {
-                        // Simulación de datos - conectar con ViewModel más adelante
-                        salesAmountSeries.clear()
-                        salesCountSeries.clear()
-                        
-                        var today = new Date()
-                        for (var i = 6; i >= 0; i--) {
-                            var date = new Date(today)
-                            date.setDate(date.getDate() - i)
-                            var timestamp = date.getTime()
-                            
-                            // Datos simulados
-                            var amount = 200 + Math.random() * 500
-                            var count = 5 + Math.floor(Math.random() * 20)
-                            
-                            salesAmountSeries.append(timestamp, amount)
-                            salesCountSeries.append(timestamp, count)
-                        }
-                        
-                        // Ajustar máximo del eje Y
-                        var maxAmount = 0
-                        var maxCount = 0
-                        for (var j = 0; j < salesAmountSeries.count; j++) {
-                            if (salesAmountSeries.at(j).y > maxAmount) maxAmount = salesAmountSeries.at(j).y
-                        }
-                        for (var k = 0; k < salesCountSeries.count; k++) {
-                            if (salesCountSeries.at(k).y > maxCount) maxCount = salesCountSeries.at(k).y
-                        }
-                        salesAmountAxis.max = Math.ceil(maxAmount * 1.2 / 100) * 100
-                        salesCountAxis.max = Math.ceil(maxCount * 1.2 / 5) * 5
                     }
                 }
             }

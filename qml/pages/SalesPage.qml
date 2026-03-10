@@ -1098,8 +1098,11 @@ Page {
                                 Material.foreground: Material.accent
                                 
                                 onClicked: {
-                                    // TODO: Abrir diálogo para crear nuevo cliente
-                                    console.log("Abrir diálogo de nuevo cliente")
+                                    console.log("🔵 Botón 'Nuevo Cliente' clickeado")
+                                    clickConfirmPopup.open()
+                                    Qt.callLater(function() {
+                                        quickCustomerDialog.open()
+                                    })
                                 }
                                 
                                 ToolTip.visible: hovered
@@ -1325,12 +1328,18 @@ Page {
                                 return
                             }
                             
-                            // Si es pago en EFECTIVO, mostrar diálogo de ingreso de monto
-                            if (paymentMethodComboBox.currentIndex === 0) {
+                            // Si es venta al CRÉDITO con cliente seleccionado, procesar directamente
+                            if (paymentTypeComboBox.currentIndex === 1 && root.currentCustomerId !== 0) {
+                                // Para crédito, el monto pagado es 0 (deuda completa)
+                                viewModel.amountPaid = 0
+                                processSaleAfterPayment()
+                            }
+                            // Si es CONTADO y pago en EFECTIVO, mostrar diálogo de ingreso de monto
+                            else if (paymentTypeComboBox.currentIndex === 0 && paymentMethodComboBox.currentIndex === 0) {
                                 paymentAmountDialog.totalAmount = viewModel.totalWithDiscount
                                 paymentAmountDialog.open()
                             } else {
-                                // Para otros métodos de pago, asumir pago exacto
+                                // Para otros métodos de pago al contado, asumir pago exacto
                                 viewModel.amountPaid = viewModel.totalWithDiscount
                                 // changeGiven se calcula automáticamente en el setter (será 0)
                                 processSaleAfterPayment()
@@ -1396,6 +1405,342 @@ Page {
         parentPage: root
     }
     
+    // Diálogo de creación rápida de cliente
+    Dialog {
+        id: quickCustomerDialog
+        title: qsTr("Nuevo Cliente")
+        modal: true
+        anchors.centerIn: parent
+        width: Math.min(500, parent ? parent.width * 0.9 : 500)
+        
+        // ViewModel para crear cliente
+        CustomerFormViewModel {
+            id: customerViewModel
+            
+            onSaved: {
+                console.log("✅ Cliente guardado en BD:", customerId, name)
+                
+                // Timer para refrescar después de un pequeño delay
+                refreshTimer.savedCustomerId = customerId
+                refreshTimer.savedCustomerName = name
+                refreshTimer.restart()
+            }
+            
+            onErrorOccurred: function(message) {
+                console.error("❌ Error al guardar cliente:", message)
+                notificationBar.show("Error: " + message, "error")
+            }
+        }
+        
+        // Timer para refrescar y seleccionar cliente después de guardarlo
+        Timer {
+            id: refreshTimer
+            interval: 200 // Primera búsqueda rápida: 200ms
+            repeat: false
+            
+            property int savedCustomerId: -1
+            property string savedCustomerName: ""
+            property int retryCount: 0
+            property int maxRetries: 3
+            
+            onTriggered: {
+                console.log("🔄 Refrescando lista de clientes (intento " + (retryCount + 1) + "/" + maxRetries + ")...")
+                
+                // Forzar refresco completo del modelo
+                customerSelector.model.refresh()
+                
+                // Esperar a que se complete el refresco del modelo
+                Qt.callLater(function() {
+                    console.log("🔍 Buscando cliente recién creado (ID:" + savedCustomerId + ")...")
+                    console.log("   Total clientes en lista:", customerSelector.model.count)
+                    
+                    var found = false
+                    for (var i = 0; i < customerSelector.model.count; i++) {
+                        var customer = customerSelector.model.get(i)
+                        
+                        if (customer.customerId === savedCustomerId) {
+                            found = true
+                            console.log("✅ Cliente encontrado en posición", i)
+                            
+                            // Actualizar las propiedades del selector
+                            customerSelector.selectedCustomerId = savedCustomerId
+                            customerSelector.selectedCustomerName = savedCustomerName
+                            customerSelector.selectedDocumentNumber = customer.documentNumber || ""
+                            customerSelector.selectedAddress = customer.address || ""
+                            
+                            // Actualizar las propiedades del root
+                            root.currentCustomerId = savedCustomerId
+                            root.currentCustomerName = savedCustomerName
+                            root.currentCustomerDocument = customer.documentNumber || ""
+                            
+                            // Emitir señal de selección
+                            customerSelector.customerSelected(
+                                savedCustomerId,
+                                savedCustomerName,
+                                customer.documentNumber || "",
+                                customer.address || ""
+                            )
+                            
+                            notificationBar.show("Cliente '" + savedCustomerName + "' creado y seleccionado", "success")
+                            console.log("✅ Cliente auto-seleccionado exitosamente")
+                            
+                            // Cerrar el diálogo
+                            quickCustomerDialog.close()
+                            
+                            // Resetear contador de reintentos
+                            retryCount = 0
+                            break
+                        }
+                    }
+                    
+                    if (!found) {
+                        retryCount++
+                        if (retryCount < maxRetries) {
+                            console.warn("⚠️ Cliente no encontrado, reintentando en " + interval + "ms...")
+                            // Aumentar el intervalo para el siguiente intento
+                            interval = interval + 200
+                            restart()
+                        } else {
+                            console.error("❌ No se encontró el cliente después de " + maxRetries + " intentos")
+                            notificationBar.show("Cliente creado. Actualice manualmente si no aparece.", "warning")
+                            retryCount = 0
+                            interval = 200 // Resetear intervalo
+                            quickCustomerDialog.close()
+                        }
+                    }
+                })
+            }
+        }
+        
+        onAboutToShow: {
+            console.log("🔵 Abriendo diálogo de nuevo cliente")
+            customerViewModel.clear()
+            newCustomerNameField.text = ""
+            newCustomerDocumentNumberField.text = ""
+            newCustomerPhoneField.text = ""
+            newCustomerEmailField.text = ""
+            newCustomerAddressField.text = ""
+            newCustomerDocumentTypeCombo.currentIndex = 0
+            newCustomerNameField.forceActiveFocus()
+        }
+        
+        function saveCustomer() {
+            console.log("💾 Intentando guardar nuevo cliente")
+            
+            // Validar campos requeridos
+            if (newCustomerNameField.text.trim() === "") {
+                notificationBar.show("El nombre es obligatorio", "error")
+                return false
+            }
+            
+            if (newCustomerDocumentTypeCombo.currentIndex < 0) {
+                notificationBar.show("Seleccione un tipo de documento", "error")
+                return false
+            }
+            
+            if (newCustomerDocumentNumberField.text.trim() === "") {
+                notificationBar.show("El número de documento es obligatorio", "error")
+                return false
+            }
+            
+            // Validar formato según tipo de documento
+            var docType = newCustomerDocumentTypeCombo.currentText
+            var docNumber = newCustomerDocumentNumberField.text.trim()
+            
+            if (docType === "DNI" && docNumber.length !== 8) {
+                notificationBar.show("El DNI debe tener 8 dígitos", "error")
+                return false
+            }
+            
+            if (docType === "RUC" && docNumber.length !== 11) {
+                notificationBar.show("El RUC debe tener 11 dígitos", "error")
+                return false
+            }
+            
+            // Asignar valores al ViewModel
+            customerViewModel.name = newCustomerNameField.text.trim()
+            customerViewModel.documentType = newCustomerDocumentTypeCombo.currentText
+            customerViewModel.documentNumber = newCustomerDocumentNumberField.text.trim()
+            customerViewModel.phone = newCustomerPhoneField.text.trim()
+            customerViewModel.email = newCustomerEmailField.text.trim()
+            customerViewModel.address = newCustomerAddressField.text.trim()
+            
+            console.log("📝 Datos del cliente a guardar:")
+            console.log("  - Nombre:", customerViewModel.name)
+            console.log("  - Tipo Doc:", customerViewModel.documentType)
+            console.log("  - Nro Doc:", customerViewModel.documentNumber)
+            console.log("  - Teléfono:", customerViewModel.phone)
+            console.log("  - Email:", customerViewModel.email)
+            console.log("  - Dirección:", customerViewModel.address)
+            
+            // Guardar en la base de datos
+            customerViewModel.save()
+            return true
+        }
+        
+        contentItem: Flickable {
+            implicitHeight: contentColumn.implicitHeight
+            contentHeight: contentColumn.implicitHeight
+            clip: true
+            
+            ScrollBar.vertical: ScrollBar {}
+            
+            ColumnLayout {
+                id: contentColumn
+                width: parent.width
+                spacing: 16
+                
+                // Nombre (requerido)
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+                    
+                    Label {
+                        text: qsTr("Nombre *")
+                        font.weight: Font.Medium
+                        font.pixelSize: 13
+                    }
+                    
+                    TextField {
+                        id: newCustomerNameField
+                        Layout.fillWidth: true
+                        placeholderText: qsTr("Ingrese nombre completo")
+                    }
+                }
+                
+                // Tipo de documento (requerido)
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+                    
+                    Label {
+                        text: qsTr("Tipo de Documento *")
+                        font.weight: Font.Medium
+                        font.pixelSize: 13
+                    }
+                    
+                    ComboBox {
+                        id: newCustomerDocumentTypeCombo
+                        Layout.fillWidth: true
+                        model: ["DNI", "RUC", "CE", "PASAPORTE"]
+                        currentIndex: 0
+                    }
+                }
+                
+                // Número de documento (requerido)
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+                    
+                    Label {
+                        text: qsTr("Número de Documento *")
+                        font.weight: Font.Medium
+                        font.pixelSize: 13
+                    }
+                    
+                    TextField {
+                        id: newCustomerDocumentNumberField
+                        Layout.fillWidth: true
+                        placeholderText: newCustomerDocumentTypeCombo.currentText === "DNI" ? "8 dígitos" : newCustomerDocumentTypeCombo.currentText === "RUC" ? "11 dígitos" : "Número de documento"
+                        validator: RegularExpressionValidator {
+                            regularExpression: /^\d{0,20}$/
+                        }
+                        maximumLength: newCustomerDocumentTypeCombo.currentText === "DNI" ? 8 : newCustomerDocumentTypeCombo.currentText === "RUC" ? 11 : 20
+                    }
+                }
+                
+                // Teléfono (opcional)
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+                    
+                    Label {
+                        text: qsTr("Teléfono")
+                        font.pixelSize: 13
+                    }
+                    
+                    TextField {
+                        id: newCustomerPhoneField
+                        Layout.fillWidth: true
+                        placeholderText: qsTr("9 dígitos")
+                        validator: RegularExpressionValidator {
+                            regularExpression: /^\d{0,9}$/
+                        }
+                        maximumLength: 9
+                    }
+                }
+                
+                // Email (opcional)
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+                    
+                    Label {
+                        text: qsTr("Email")
+                        font.pixelSize: 13
+                    }
+                    
+                    TextField {
+                        id: newCustomerEmailField
+                        Layout.fillWidth: true
+                        placeholderText: qsTr("ejemplo@correo.com")
+                        inputMethodHints: Qt.ImhEmailCharactersOnly
+                    }
+                }
+                
+                // Dirección (opcional)
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+                    
+                    Label {
+                        text: qsTr("Dirección")
+                        font.pixelSize: 13
+                    }
+                    
+                    TextField {
+                        id: newCustomerAddressField
+                        Layout.fillWidth: true
+                        placeholderText: qsTr("Dirección completa")
+                    }
+                }
+                
+                Label {
+                    text: qsTr("* Campos obligatorios")
+                    font.pixelSize: 11
+                    opacity: 0.6
+                    Layout.fillWidth: true
+                }
+            }
+        }
+        
+        footer: DialogButtonBox {
+            Button {
+                text: qsTr("Cancelar")
+                flat: true
+                DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+                
+                onClicked: {
+                    console.log("❌ Cancelar creación de cliente")
+                    quickCustomerDialog.close()
+                }
+            }
+            
+            Button {
+                text: qsTr("Guardar")
+                highlighted: true
+                DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
+                Material.background: Material.primary
+                Material.foreground: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
+                
+                onClicked: {
+                    console.log("💾 Botón Guardar clickeado")
+                    quickCustomerDialog.saveCustomer()
+                }
+            }
+        }
+    }
+    
     // Notificación rápida para código duplicado (incremento automático)
     Popup {
         id: duplicateNotification
@@ -1450,6 +1795,49 @@ Page {
             interval: 1500
             running: duplicateNotification.visible
             onTriggered: duplicateNotification.close()
+        }
+    }
+    
+    // Popup de confirmación de clic en "Nuevo Cliente"
+    Popup {
+        id: clickConfirmPopup
+        anchors.centerIn: parent
+        width: 300
+        height: 90
+        modal: false
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        
+        background: Rectangle {
+            color: Material.dialogColor
+            radius: 8
+            border.width: 2
+            border.color: Material.primary
+        }
+
+        RowLayout {
+            anchors.centerIn: parent
+            spacing: 16
+
+            Label {
+                text: "\uE73E"  // Checkmark icon
+                font.family: "Segoe MDL2 Assets"
+                font.pixelSize: 32
+                color: Material.primary
+            }
+            
+            Label {
+                text: qsTr("Abriendo formulario de nuevo cliente...")
+                font.pixelSize: 14
+                font.weight: Font.Medium
+                Layout.maximumWidth: 220
+                wrapMode: Text.WordWrap
+            }
+        }
+
+        Timer {
+            interval: 1500
+            running: clickConfirmPopup.visible
+            onTriggered: clickConfirmPopup.close()
         }
     }
 

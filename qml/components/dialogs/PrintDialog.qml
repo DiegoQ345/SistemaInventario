@@ -908,10 +908,35 @@ Dialog {
     
     Component {
         id: linePreviewComponent
-        Rectangle {
+        Item {
             width: elementData.width * pixelsPerMM
-            height: 1
-            color: Material.theme === Material.Dark ? "white" : "black"
+            height: elementData.height * pixelsPerMM
+            
+            Canvas {
+                anchors.fill: parent
+                onPaint: {
+                    var ctx = getContext("2d")
+                    ctx.clearRect(0, 0, width, height)
+                    ctx.strokeStyle = Material.theme === Material.Dark ? "white" : "black"
+                    ctx.lineWidth = 2
+                    
+                    var y = height / 2
+                    
+                    // Aplicar estilo de línea
+                    if (elementData.lineStyle === "dotted") {
+                        ctx.setLineDash([2, 4])
+                    } else if (elementData.lineStyle === "dashed") {
+                        ctx.setLineDash([8, 4])
+                    } else {
+                        ctx.setLineDash([])
+                    }
+                    
+                    ctx.beginPath()
+                    ctx.moveTo(0, y)
+                    ctx.lineTo(width, y)
+                    ctx.stroke()
+                }
+            }
         }
     }
     

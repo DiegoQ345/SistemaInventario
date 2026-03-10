@@ -273,6 +273,32 @@ bool ProductRepository::updateStock(int productId, double newStock)
     return query.numRowsAffected() > 0;
 }
 
+bool ProductRepository::incrementStock(int productId, double quantity)
+{
+    QSqlQuery query(DatabaseManager::instance().database());
+    query.prepare(R"(
+        UPDATE products 
+        SET current_stock = current_stock + :quantity,
+            updated_at = datetime('now')
+        WHERE id = :id
+    )");
+    query.bindValue(":quantity", quantity);
+    query.bindValue(":id", productId);
+    
+    if (!query.exec()) {
+        qCritical() << "Error incrementando stock del producto" << productId 
+                    << ":" << query.lastError().text();
+        return false;
+    }
+    
+    bool success = query.numRowsAffected() > 0;
+    if (success) {
+        qInfo() << "Stock incrementado:" << quantity << "unidades al producto ID" << productId;
+    }
+    
+    return success;
+}
+
 int ProductRepository::count()
 {
     QSqlQuery query(DatabaseManager::instance().database());

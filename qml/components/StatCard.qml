@@ -16,7 +16,7 @@ Rectangle {
     
     // Configuración visual
     color: Material.background
-    radius: 8
+    radius: ApplicationWindow.window ? ApplicationWindow.window.appStyle.radiusMedium : 8
     border.width: 1
     border.color: Material.frameColor
     
@@ -47,15 +47,15 @@ Rectangle {
             spacing: 12
             
             Rectangle {
-                width: 40
-                height: 40
-                radius: 20
+                width: ApplicationWindow.window ? ApplicationWindow.window.appStyle.scaled(40) : 40
+                height: ApplicationWindow.window ? ApplicationWindow.window.appStyle.scaled(40) : 40
+                radius: ApplicationWindow.window ? ApplicationWindow.window.appStyle.scaled(20) : 20
                 color: Qt.rgba(control.accentColor.r, control.accentColor.g, control.accentColor.b, 0.15)
                 
                 Label {
                     anchors.centerIn: parent
                     text: control.icon
-                    font.pixelSize: 20
+                    font.pixelSize: ApplicationWindow.window ? ApplicationWindow.window.appStyle.iconLarge : 20
                     color: control.accentColor
                 }
             }
@@ -75,7 +75,7 @@ Rectangle {
         // Título
         Label {
             text: control.title
-            font.pixelSize: 12
+            font.pixelSize: ApplicationWindow.window ? ApplicationWindow.window.appStyle.fontBody : 12
             opacity: 0.7
             Layout.fillWidth: true
         }
@@ -83,7 +83,7 @@ Rectangle {
         // Valor principal
         Label {
             text: control.value
-            font.pixelSize: 24
+            font.pixelSize: ApplicationWindow.window ? ApplicationWindow.window.appStyle.fontXXLarge : 24
             font.weight: Font.Bold
             color: control.warning ? Material.color(Material.Red) : Material.foreground
             Layout.fillWidth: true
@@ -92,7 +92,7 @@ Rectangle {
         // Subtítulo
         Label {
             text: control.subtitle
-            font.pixelSize: 11
+            font.pixelSize: ApplicationWindow.window ? ApplicationWindow.window.appStyle.fontSmall : 11
             opacity: 0.6
             Layout.fillWidth: true
         }

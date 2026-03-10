@@ -935,6 +935,59 @@ QVariantList DashboardViewModel::getSalesByVoucherType()
     return result;
 }
 
+QVariantList DashboardViewModel::getTopCategories(int limit)
+{
+    QVariantList result;
+    
+    qDebug() << "=== getTopCategories called with limit:" << limit;
+    
+    QSqlQuery query(DatabaseManager::instance().database());
+    // SQLite no acepta bind en LIMIT, usar QString directamente
+    QString queryStr = QString(R"(
+        SELECT c.name, SUM(si.quantity) as total_qty, SUM(si.subtotal) as revenue
+        FROM sale_items si
+        INNER JOIN sales s ON si.sale_id = s.id
+        INNER JOIN products p ON si.product_id = p.id
+        LEFT JOIN categories c ON p.category_id = c.id
+        WHERE DATE(s.created_at) = DATE('now', 'localtime')
+        AND s.status != 'CANCELLED'
+        GROUP BY p.category_id
+        ORDER BY total_qty DESC
+        LIMIT %1
+    )").arg(limit);
+    
+    qDebug() << "Executing query:" << queryStr;
+    
+    if (query.exec(queryStr)) {
+        int count = 0;
+        while (query.next()) {
+            QVariantMap item;
+            QString name = query.value(0).toString();
+            if (name.isEmpty()) {
+                name = "Sin categoría";
+            }
+            double quantity = query.value(1).toDouble();
+            double revenue = query.value(2).toDouble();
+            
+            item["name"] = name;
+            item["quantity"] = quantity;
+            item["revenue"] = revenue;
+            
+            result.append(item);
+            count++;
+            
+            qDebug() << "  Category" << count << ":" << name 
+                     << "| Quantity:" << quantity
+                     << "| Revenue: S/" << revenue;
+        }
+        qDebug() << "=== Total categories returned:" << result.size();
+    } else {
+        qWarning() << "❌ Error getting top categories:" << query.lastError().text();
+    }
+    
+    return result;
+}
+
 QVariantList DashboardViewModel::getTopProducts(int limit)
 {
     QVariantList result;
@@ -968,6 +1021,108 @@ QVariantList DashboardViewModel::getTopProducts(int limit)
     return result;
 }
 
+QVariantList DashboardViewModel::getTopCategoriesByPeriod(int limit, int days)
+{
+    QVariantList result;
+    
+    qDebug() << "=== getTopCategoriesByPeriod called with limit:" << limit << "days:" << days;
+    
+    QSqlQuery query(DatabaseManager::instance().database());
+    // SQLite no acepta bind en LIMIT, usar QString directamente
+    QString queryStr = QString(R"(
+        SELECT c.name, SUM(si.quantity) as total_qty, SUM(si.subtotal) as revenue
+        FROM sale_items si
+        INNER JOIN sales s ON si.sale_id = s.id
+        INNER JOIN products p ON si.product_id = p.id
+        LEFT JOIN categories c ON p.category_id = c.id
+        WHERE DATE(s.created_at) >= DATE('now', 'localtime', '-%1 days')
+        AND s.status != 'CANCELLED'
+        GROUP BY p.category_id
+        ORDER BY total_qty DESC
+        LIMIT %2
+    )").arg(days).arg(limit);
+    
+    qDebug() << "Executing query:" << queryStr;
+    
+    if (query.exec(queryStr)) {
+        int count = 0;
+        while (query.next()) {
+            QVariantMap item;
+            QString name = query.value(0).toString();
+            if (name.isEmpty()) {
+                name = "Sin categoría";
+            }
+            double quantity = query.value(1).toDouble();
+            double revenue = query.value(2).toDouble();
+            
+            item["name"] = name;
+            item["quantity"] = quantity;
+            item["revenue"] = revenue;
+            
+            result.append(item);
+            count++;
+            
+            qDebug() << "  Category" << count << ":" << name 
+                     << "| Quantity:" << quantity
+                     << "| Revenue: S/" << revenue;
+        }
+        qDebug() << "=== Total categories returned:" << result.size();
+    } else {
+        qWarning() << "❌ Error getting top categories by period:" << query.lastError().text();
+    }
+    
+    return result;
+}
+
+QVariantList DashboardViewModel::getTopProductsByPeriod(int limit, int days)
+{
+    QVariantList result;
+    
+    qDebug() << "=== getTopProductsByPeriod called with limit:" << limit << "days:" << days;
+    
+    QSqlQuery query(DatabaseManager::instance().database());
+    // SQLite no acepta bind en LIMIT, usar QString directamente
+    QString queryStr = QString(R"(
+        SELECT p.name, SUM(si.quantity) as total_qty, SUM(si.subtotal) as revenue
+        FROM sale_items si
+        INNER JOIN sales s ON si.sale_id = s.id
+        INNER JOIN products p ON si.product_id = p.id
+        WHERE DATE(s.created_at) >= DATE('now', 'localtime', '-%1 days')
+        AND s.status != 'CANCELLED'
+        GROUP BY si.product_id
+        ORDER BY total_qty DESC
+        LIMIT %2
+    )").arg(days).arg(limit);
+    
+    qDebug() << "Executing query:" << queryStr;
+    
+    if (query.exec(queryStr)) {
+        int count = 0;
+        while (query.next()) {
+            QVariantMap item;
+            QString name = query.value(0).toString();
+            double quantity = query.value(1).toDouble();
+            double revenue = query.value(2).toDouble();
+            
+            item["name"] = name;
+            item["quantity"] = quantity;
+            item["revenue"] = revenue;
+            
+            result.append(item);
+            count++;
+            
+            qDebug() << "  Product" << count << ":" << name 
+                     << "| Quantity:" << quantity
+                     << "| Revenue: S/" << revenue;
+        }
+        qDebug() << "=== Total products returned:" << result.size();
+    } else {
+        qWarning() << "❌ Error getting top products by period:" << query.lastError().text();
+    }
+    
+    return result;
+}
+
 QVariantList DashboardViewModel::getTopCustomers(int limit)
 {
     QVariantList result;
@@ -995,6 +1150,90 @@ QVariantList DashboardViewModel::getTopCustomers(int limit)
         }
     } else {
         qWarning() << "Error getting top customers:" << query.lastError().text();
+    }
+    
+    return result;
+}
+
+QVariantList DashboardViewModel::getLowStockProducts(int limit)
+{
+    QVariantList result;
+    
+    qDebug() << "=== getLowStockProducts called with limit:" << limit;
+    
+    QSqlQuery query(DatabaseManager::instance().database());
+    // SQLite no acepta bind en LIMIT, usar QString directamente
+    QString queryStr = QString(R"(
+        SELECT name, current_stock, minimum_stock
+        FROM products
+        WHERE current_stock >= 0
+        ORDER BY current_stock ASC, name ASC
+        LIMIT %1
+    )").arg(limit);
+    
+    qDebug() << "Executing query:" << queryStr;
+    
+    if (query.exec(queryStr)) {
+        int count = 0;
+        while (query.next()) {
+            QVariantMap item;
+            QString name = query.value(0).toString();
+            int currentStock = query.value(1).toInt();
+            int minimumStock = query.value(2).toInt();
+            
+            item["name"] = name;
+            item["currentStock"] = currentStock;
+            item["minimumStock"] = minimumStock;
+            item["needsRestock"] = currentStock < minimumStock;
+            
+            result.append(item);
+            count++;
+            
+            qDebug() << "  Product" << count << ":" << name 
+                     << "| Stock:" << currentStock << "/" << minimumStock
+                     << "| Needs restock:" << (currentStock < minimumStock ? "YES" : "NO");
+        }
+        qDebug() << "=== Total products returned:" << result.size();
+    } else {
+        qWarning() << "❌ Error getting low stock products:" << query.lastError().text();
+    }
+    
+    return result;
+}
+
+QVariantList DashboardViewModel::getSalesTrendData(int days)
+{
+    QVariantList result;
+    
+    QSqlQuery query(DatabaseManager::instance().database());
+    query.prepare(R"(
+        SELECT 
+            DATE(created_at) as sale_date,
+            COUNT(*) as sales_count,
+            SUM(total) as sales_total
+        FROM sales
+        WHERE DATE(created_at) >= DATE('now', 'localtime', '-' || :days || ' days')
+        AND status != 'CANCELLED'
+        GROUP BY DATE(created_at)
+        ORDER BY sale_date ASC
+    )");
+    query.bindValue(":days", days);
+    
+    if (query.exec()) {
+        while (query.next()) {
+            QVariantMap item;
+            // Convertir fecha SQL a timestamp para QML DateTimeAxis
+            QString dateStr = query.value(0).toString(); // "YYYY-MM-DD"
+            QDate date = QDate::fromString(dateStr, "yyyy-MM-dd");
+            QDateTime dateTime(date, QTime(12, 0)); // Mediodía para centrar en el día
+            item["timestamp"] = dateTime.toMSecsSinceEpoch();
+            item["date"] = dateStr;
+            item["salesCount"] = query.value(1).toInt();
+            item["salesTotal"] = query.value(2).toDouble();
+            result.append(item);
+        }
+    } else {
+        qWarning() << "Error getting sales trend data:" << query.lastError().text();
     }
     
     return result;

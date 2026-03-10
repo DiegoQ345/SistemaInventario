@@ -20,6 +20,9 @@ class ProductListModel : public QAbstractListModel
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
     Q_PROPERTY(bool isLoading READ isLoading NOTIFY isLoadingChanged)
     Q_PROPERTY(QStringList availableCategories READ availableCategories NOTIFY availableCategoriesChanged)
+    Q_PROPERTY(bool isExporting READ isExporting NOTIFY isExportingChanged)
+    Q_PROPERTY(int exportProgress READ exportProgress NOTIFY exportProgressChanged)
+    Q_PROPERTY(QString exportProgressMessage READ exportProgressMessage NOTIFY exportProgressMessageChanged)
 
 public:
     enum ProductRoles {
@@ -46,6 +49,9 @@ public:
 
     bool isLoading() const { return m_isLoading; }
     QStringList availableCategories() const { return m_availableCategories; }
+    bool isExporting() const { return m_isExporting; }
+    int exportProgress() const { return m_exportProgress; }
+    QString exportProgressMessage() const { return m_exportProgressMessage; }
 
 public slots:
     /**
@@ -107,6 +113,14 @@ public slots:
      * @brief Eliminar TODOS los productos
      */
     Q_INVOKABLE bool deleteAllProducts();
+    
+    /**
+     * @brief Reponer inventario (incrementar stock)
+     * @param productId ID del producto
+     * @param quantity Cantidad a agregar al stock actual
+     * @return true si se actualizó correctamente
+     */
+    Q_INVOKABLE bool restockProduct(int productId, double quantity);
 
     /**
      * @brief Validar datos del producto antes de guardar
@@ -122,6 +136,12 @@ public slots:
      * @brief Verificar si existe un producto con el código de barras dado
      */
     Q_INVOKABLE bool hasProductWithBarcode(const QString& barcode) const;
+    
+    /**
+     * @brief Exportar inventario completo a Excel
+     * @return true si la exportación se inició correctamente
+     */
+    Q_INVOKABLE bool exportToExcel();
 
 signals:
     void countChanged();
@@ -132,13 +152,23 @@ signals:
     void productUpdated(int productId);
     void productDeleted(int productId);
     void operationSucceeded(const QString& message);
+    void isExportingChanged();
+    void exportProgressChanged();
+    void exportProgressMessageChanged();
+    void exportCompleted(bool success, const QString& filePath);
 
 private:
     QList<Product> m_products;
     bool m_isLoading = false;
     QStringList m_availableCategories;
+    bool m_isExporting = false;
+    int m_exportProgress = 0;
+    QString m_exportProgressMessage;
 
     void setIsLoading(bool loading);
+    void setIsExporting(bool exporting);
+    void setExportProgress(int progress);
+    void setExportProgressMessage(const QString& message);
     QVariantMap productToVariantMap(const Product& product) const;
 };
 

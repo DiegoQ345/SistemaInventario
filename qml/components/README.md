@@ -2,6 +2,68 @@
 
 Este directorio contiene componentes QML reutilizables para la aplicación Sistema de Inventario, diseñados siguiendo Material Design 3 y la arquitectura MVVM del proyecto.
 
+## 🎨 Sistema de Estilos Global (AppStyle)
+
+El singleton `AppStyle` proporciona tamaños de fuente e iconos escalables que responden a la configuración del usuario en Ajustes.
+
+### Uso de AppStyle
+
+**Importar en tu archivo QML:**
+```qml
+import "../components"  // Si estás en qml/pages/
+// o
+import "."  // Si estás en qml/components/
+```
+
+**Tamaños de fuente disponibles:**
+```qml
+Label {
+    text: "Ejemplo"
+    font.pixelSize: AppStyle.fontBody        // 12px escalado
+    // Opciones:
+    // AppStyle.fontXSmall      -> 8px base
+    // AppStyle.fontSmall       -> 10px base
+    // AppStyle.fontBody        -> 12px base
+    // AppStyle.fontBodyLarge   -> 14px base
+    // AppStyle.fontMedium      -> 16px base
+    // AppStyle.fontLarge       -> 18px base
+    // AppStyle.fontXLarge      -> 20px base
+    // AppStyle.fontXXLarge     -> 24px base
+    // AppStyle.fontHuge        -> 32px base
+}
+```
+
+**Tamaños de iconos (Segoe MDL2 Assets):**
+```qml
+Label {
+    text: "\uE8F1"  // Icono
+    font.family: "Segoe MDL2 Assets"
+    font.pixelSize: AppStyle.iconMedium      // 16px escalado
+    // Opciones:
+    // AppStyle.iconSmall       -> 12px base
+    // AppStyle.iconMedium      -> 16px base
+    // AppStyle.iconLarge       -> 20px base
+    // AppStyle.iconXLarge      -> 24px base
+    // AppStyle.iconXXLarge     -> 32px base
+    // AppStyle.iconHuge        -> 48px base
+}
+```
+
+**Función de escalado personalizado:**
+```qml
+Rectangle {
+    width: AppStyle.scaled(200)   // Escala 200px según fontScale
+    height: AppStyle.scaled(50)
+}
+```
+
+**⚠️ Importante:**
+- Todos los nuevos componentes deben usar `AppStyle` en lugar de valores fijos
+- Los cambios de tamaño se aplican inmediatamente en toda la aplicación
+- Los espacios y márgenes también pueden escalarse con `AppStyle.paddingMedium`, etc.
+
+---
+
 ## 📂 Índice de Componentes
 
 ### Botones

@@ -216,11 +216,43 @@ Rectangle {
             border.color: root.selectedElementIndex === index ? Material.accent : "#90A4AE"
             z: 15
             
-            // Contenido de texto o línea
+            // Para separadores (líneas), renderizar con Canvas
+            Canvas {
+                anchors.fill: parent
+                visible: modelData.type === "line"
+                onPaint: {
+                    var ctx = getContext("2d")
+                    ctx.clearRect(0, 0, width, height)
+                    ctx.strokeStyle = Material.theme === Material.Dark ? "white" : "black"
+                    ctx.lineWidth = 2
+                    
+                    var y = height / 2
+                    
+                    if (modelData.lineStyle === "dotted") {
+                        ctx.setLineDash([2, 4])
+                    } else if (modelData.lineStyle === "dashed") {
+                        ctx.setLineDash([8, 4])
+                    } else {
+                        ctx.setLineDash([])
+                    }
+                    
+                    ctx.beginPath()
+                    ctx.moveTo(0, y)
+                    ctx.lineTo(width, y)
+                    ctx.stroke()
+                }
+                
+                Connections {
+                    target: root
+                    function onTicketElementsChanged() { parent.requestPaint() }
+                }
+            }
+            
+            // Contenido de texto
             Label {
                 anchors.fill: parent
                 anchors.margins: 2
-                visible: modelData.type !== "image"
+                visible: modelData.type === "text"
                 wrapMode: Text.WordWrap
                 verticalAlignment: {
                     // En modo preview con {{Productos}}, alinear arriba para evitar cortes
@@ -231,13 +263,8 @@ Rectangle {
                 }
                 color: Material.theme === Material.Dark ? "white" : "black"
                 
-                // Mostrar línea visual o texto
+                // Si estamos en modo preview y hay función de reemplazo, usarla
                 text: {
-                    if (modelData.type === "line") {
-                        return "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                    }
-                    
-                    // Si estamos en modo preview y hay función de reemplazo, usarla
                     if (root.usePreviewData && root.replacePreviewVariables) {
                         return root.replacePreviewVariables(modelData.content)
                     }

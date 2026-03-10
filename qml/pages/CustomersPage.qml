@@ -536,6 +536,12 @@ Page {
                         text: customerFormViewModel.address
                         onTextChanged: customerFormViewModel.address = text
                         wrapMode: TextArea.Wrap
+                        
+                        // Padding uniforme para alineación
+                        leftPadding: 12
+                        rightPadding: 12
+                        topPadding: 8
+                        bottomPadding: 8
                     }
                 }
                 

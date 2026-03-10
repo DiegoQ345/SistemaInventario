@@ -135,6 +135,72 @@ Page {
                                 onClicked: ApplicationWindow.window.settings.fontScale = 1.3
                             }
                         }
+                        
+                        // Vista previa del tamaño de fuente
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 120
+                            Layout.topMargin: 12
+                            radius: 8
+                            color: Material.theme === Material.Dark ? 
+                                   Qt.lighter(Material.background, 1.2) : 
+                                   Material.color(Material.Grey, Material.Shade100)
+                            border.width: 1
+                            border.color: Material.frameColor
+                            
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 16
+                                spacing: 12
+                                
+                                Label {
+                                    text: "Vista Previa"
+                                    font.weight: Font.Medium
+                                    font.pixelSize: ApplicationWindow.window.appStyle.fontMedium
+                                    opacity: 0.7
+                                }
+                                
+                                RowLayout {
+                                    spacing: 12
+                                    
+                                    Label {
+                                        text: "\uE735"  // Icono de documento
+                                        font.family: "Segoe MDL2 Assets"
+                                        font.pixelSize: ApplicationWindow.window.appStyle.iconXLarge
+                                        color: Material.accent
+                                    }
+                                    
+                                    Column {
+                                        spacing: 4
+                                        
+                                        Label {
+                                            text: "Texto de ejemplo"
+                                            font.pixelSize: ApplicationWindow.window.appStyle.fontBodyLarge
+                                            font.weight: Font.Medium
+                                        }
+                                        
+                                        Label {
+                                            text: "Este es el tamaño actual: " + 
+                                                  (ApplicationWindow.window.settings.fontScale === 0.85 ? "Pequeño (85%)" :
+                                                   ApplicationWindow.window.settings.fontScale === 1.0 ? "Normal (100%)" :
+                                                   ApplicationWindow.window.settings.fontScale === 1.15 ? "Grande (115%)" :
+                                                   "Extra Grande (130%)")
+                                            font.pixelSize: ApplicationWindow.window.appStyle.fontBody
+                                            opacity: 0.7
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Label {
+                            text: "⚠️ Los cambios se aplican inmediatamente en toda la aplicación"
+                            font.pixelSize: ApplicationWindow.window.appStyle.fontSmall
+                            opacity: 0.6
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
+                            Layout.topMargin: 8
+                        }
                     }
 
                     Rectangle {

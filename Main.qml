@@ -17,6 +17,77 @@ ApplicationWindow {
     
     // Exponer stackView como propiedad para acceso desde páginas hijas
     property alias stackView: stackView
+    
+    // Exponer settings para acceso global
+    property alias settings: settings
+    
+    // Objeto de estilos accesible globalmente
+    property QtObject appStyle: QtObject {
+        // Tamaños de fuente base escalados
+        readonly property real fontXSmall: 8 * settings.fontScale
+        readonly property real fontSmall: 10 * settings.fontScale
+        readonly property real fontBody: 12 * settings.fontScale
+        readonly property real fontBodyLarge: 14 * settings.fontScale
+        readonly property real fontMedium: 16 * settings.fontScale
+        readonly property real fontLarge: 18 * settings.fontScale
+        readonly property real fontXLarge: 20 * settings.fontScale
+        readonly property real fontXXLarge: 24 * settings.fontScale
+        readonly property real fontHuge: 32 * settings.fontScale
+        readonly property real fontGiant: 40 * settings.fontScale
+        
+        // Tamaños de iconos escalados (Segoe MDL2 Assets)
+        readonly property real iconSmall: 12 * settings.fontScale
+        readonly property real iconMedium: 16 * settings.fontScale
+        readonly property real iconLarge: 20 * settings.fontScale
+        readonly property real iconXLarge: 24 * settings.fontScale
+        readonly property real iconXXLarge: 32 * settings.fontScale
+        readonly property real iconHuge: 48 * settings.fontScale
+        
+        // Tamaños de componentes escalados
+        readonly property real buttonHeight: 40 * settings.fontScale
+        readonly property real textFieldHeight: 48 * settings.fontScale
+        readonly property real toolButtonSize: 40 * settings.fontScale
+        
+        // Espaciados escalados
+        readonly property real paddingSmall: 4 * settings.fontScale
+        readonly property real paddingMedium: 8 * settings.fontScale
+        readonly property real paddingLarge: 12 * settings.fontScale
+        readonly property real paddingXLarge: 16 * settings.fontScale
+        
+        readonly property real marginSmall: 8 * settings.fontScale
+        readonly property real marginMedium: 12 * settings.fontScale
+        readonly property real marginLarge: 16 * settings.fontScale
+        readonly property real marginXLarge: 20 * settings.fontScale
+        
+        // Radios de borde (estos no se escalan con fuente)
+        readonly property real radiusSmall: 4
+        readonly property real radiusMedium: 8
+        readonly property real radiusLarge: 12
+        readonly property real radiusXLarge: 16
+        
+        // Función auxiliar para escalar valores personalizados
+        function scaled(baseValue) {
+            return baseValue * settings.fontScale
+        }
+    }
+    
+    // Tamaños de fuente escalados (legacy - mantener por compatibilidad)
+    property real fontSizeXSmall: 8 * settings.fontScale
+    property real fontSizeSmall: 10 * settings.fontScale
+    property real fontSizeBody: 12 * settings.fontScale
+    property real fontSizeBodyLarge: 14 * settings.fontScale
+    property real fontSizeMedium: 16 * settings.fontScale
+    property real fontSizeLarge: 18 * settings.fontScale
+    property real fontSizeXLarge: 20 * settings.fontScale
+    property real fontSizeXXLarge: 24 * settings.fontScale
+    property real fontSizeHuge: 32 * settings.fontScale
+    
+    // Tamaños de iconos escalados (legacy - mantener por compatibilidad)
+    property real iconSizeSmall: 14 * settings.fontScale
+    property real iconSizeMedium: 16 * settings.fontScale
+    property real iconSizeLarge: 20 * settings.fontScale
+    property real iconSizeXLarge: 24 * settings.fontScale
+    property real iconSizeXXLarge: 32 * settings.fontScale
 
     // Configuración de temas - Material 3
     Settings {

@@ -326,17 +326,50 @@ Page {
                                 z: 15
                                 
                                 // Contenido del elemento
+                                // Para separadores, mostrar línea visual
+                                Canvas {
+                                    anchors.fill: parent
+                                    visible: modelData.type === "line"
+                                    onPaint: {
+                                        var ctx = getContext("2d")
+                                        ctx.clearRect(0, 0, width, height)
+                                        ctx.strokeStyle = Material.theme === Material.Dark ? "white" : "black"
+                                        ctx.lineWidth = 2
+                                        
+                                        var y = height / 2
+                                        
+                                        if (modelData.lineStyle === "dotted") {
+                                            ctx.setLineDash([2, 4])
+                                        } else if (modelData.lineStyle === "dashed") {
+                                            ctx.setLineDash([8, 4])
+                                        } else {
+                                            ctx.setLineDash([])
+                                        }
+                                        
+                                        ctx.beginPath()
+                                        ctx.moveTo(0, y)
+                                        ctx.lineTo(width, y)
+                                        ctx.stroke()
+                                    }
+                                    
+                                    Connections {
+                                        target: viewModel
+                                        function onTicketElementsChanged() { parent.requestPaint() }
+                                    }
+                                }
+                                
+                                // Para texto, mostrar el contenido
                                 Label {
                                     anchors.fill: parent
                                     anchors.margins: 2
-                                    text: modelData.type === "line" ? "━━━━━━━━━━━━━━━━━━━━━━━━━━━━" : (modelData.content || "")
+                                    text: modelData.content || ""
                                     font.pixelSize: modelData.fontSize * (pixelsPerMM / 3)
                                     font.bold: modelData.bold || false
                                     horizontalAlignment: modelData.align === "center" ? Text.AlignHCenter : 
                                                         modelData.align === "right" ? Text.AlignRight : Text.AlignLeft
                                     verticalAlignment: Text.AlignVCenter
                                     wrapMode: Text.WordWrap
-                                    visible: modelData.type !== "image"
+                                    visible: modelData.type === "text"
                                     color: Material.theme === Material.Dark ? "white" : "black"
                                 }
                                 
@@ -405,8 +438,9 @@ Page {
                                 MouseArea {
                                     anchors.fill: parent
                                     drag.target: parent
-                                    drag.axis: Drag.XAndYAxis
-                                    cursorShape: Qt.SizeAllCursor
+                                    // Los separadores (líneas) solo se pueden mover horizontalmente
+                                    drag.axis: modelData.type === "line" ? Drag.XAxis : Drag.XAndYAxis
+                                    cursorShape: modelData.type === "line" ? Qt.SizeHorCursor : Qt.SizeAllCursor
                                     z: 10
                                     preventStealing: true
                                     propagateComposedEvents: false
@@ -419,12 +453,121 @@ Page {
                                         // Actualizar posición en el modelo
                                         var newX = Math.round((parent.x / pixelsPerMM) * 10) / 10
                                         var newY = Math.round((parent.y / pixelsPerMM) * 10) / 10
-                                        viewModel.updateElementPosition(index, newX, newY)
+                                        // Los separadores no cambian Y
+                                        if (modelData.type === "line") {
+                                            viewModel.updateElementPosition(index, newX, modelData.y)
+                                        } else {
+                                            viewModel.updateElementPosition(index, newX, newY)
+                                        }
                                     }
                                 }
                                 
                                 // Handles de redimensionamiento (solo visibles cuando está seleccionado)
-                                // Handle esquina superior izquierda
+                                // Para separadores, solo handles laterales (izquierda y derecha)
+                                // Para otros elementos, handles en las 4 esquinas
+                                
+                                // Handle lateral izquierdo (solo para separadores)
+                                Rectangle {
+                                    x: -4
+                                    y: parent.height / 2 - 4
+                                    width: 8
+                                    height: 8
+                                    color: "white"
+                                    border.color: Material.accent
+                                    border.width: 2
+                                    radius: 4
+                                    visible: viewModel.selectedElementIndex === index && modelData.type === "line"
+                                    z: 20
+                                    
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.SizeHorCursor
+                                        drag.target: parent
+                                        
+                                        property point startPos
+                                        property real startWidth
+                                        property real startX
+                                        
+                                        onPressed: function(mouse) {
+                                            startPos = Qt.point(mouse.x, mouse.y)
+                                            startWidth = elementRect.width
+                                            startX = elementRect.x
+                                        }
+                                        
+                                        onPositionChanged: function(mouse) {
+                                            if (pressed) {
+                                                var dx = parent.x + 4
+                                                var newWidth = startWidth - dx
+                                                
+                                                if (newWidth > 10) {
+                                                    elementRect.width = newWidth
+                                                    elementRect.x = startX + dx
+                                                }
+                                            }
+                                        }
+                                        
+                                        onReleased: {
+                                            viewModel.updateElementGeometry(
+                                                index,
+                                                Math.round((elementRect.x / pixelsPerMM) * 10) / 10,
+                                                modelData.y,
+                                                Math.round((elementRect.width / pixelsPerMM) * 10) / 10,
+                                                modelData.height
+                                            )
+                                        }
+                                    }
+                                }
+                                
+                                // Handle lateral derecho (solo para separadores)
+                                Rectangle {
+                                    x: parent.width - 4
+                                    y: parent.height / 2 - 4
+                                    width: 8
+                                    height: 8
+                                    color: "white"
+                                    border.color: Material.accent
+                                    border.width: 2
+                                    radius: 4
+                                    visible: viewModel.selectedElementIndex === index && modelData.type === "line"
+                                    z: 20
+                                    
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.SizeHorCursor
+                                        drag.target: parent
+                                        
+                                        property point startPos
+                                        property real startWidth
+                                        
+                                        onPressed: function(mouse) {
+                                            startPos = Qt.point(mouse.x, mouse.y)
+                                            startWidth = elementRect.width
+                                        }
+                                        
+                                        onPositionChanged: function(mouse) {
+                                            if (pressed) {
+                                                var dx = parent.x - (elementRect.width - 4)
+                                                var newWidth = startWidth + dx
+                                                
+                                                if (newWidth > 10) {
+                                                    elementRect.width = newWidth
+                                                }
+                                            }
+                                        }
+                                        
+                                        onReleased: {
+                                            viewModel.updateElementGeometry(
+                                                index,
+                                                modelData.x,
+                                                modelData.y,
+                                                Math.round((elementRect.width / pixelsPerMM) * 10) / 10,
+                                                modelData.height
+                                            )
+                                        }
+                                    }
+                                }
+                                
+                                // Handle esquina superior izquierda (solo para elementos NO separadores)
                                 Rectangle {
                                     x: -4
                                     y: -4
@@ -434,7 +577,7 @@ Page {
                                     border.color: Material.accent
                                     border.width: 2
                                     radius: 4
-                                    visible: viewModel.selectedElementIndex === index
+                                    visible: viewModel.selectedElementIndex === index && modelData.type !== "line"
                                     z: 20
                                     
                                     MouseArea {
@@ -485,7 +628,7 @@ Page {
                                     }
                                 }
                                 
-                                // Handle esquina superior derecha
+                                // Handle esquina superior derecha (solo para elementos NO separadores)
                                 Rectangle {
                                     x: parent.width - 4
                                     y: -4
@@ -495,7 +638,7 @@ Page {
                                     border.color: Material.accent
                                     border.width: 2
                                     radius: 4
-                                    visible: viewModel.selectedElementIndex === index
+                                    visible: viewModel.selectedElementIndex === index && modelData.type !== "line"
                                     z: 20
                                     
                                     MouseArea {
@@ -543,7 +686,7 @@ Page {
                                     }
                                 }
                                 
-                                // Handle esquina inferior izquierda
+                                // Handle esquina inferior izquierda (solo para elementos NO separadores)
                                 Rectangle {
                                     x: -4
                                     y: parent.height - 4
@@ -553,7 +696,7 @@ Page {
                                     border.color: Material.accent
                                     border.width: 2
                                     radius: 4
-                                    visible: viewModel.selectedElementIndex === index
+                                    visible: viewModel.selectedElementIndex === index && modelData.type !== "line"
                                     z: 20
                                     
                                     MouseArea {
@@ -601,7 +744,7 @@ Page {
                                     }
                                 }
                                 
-                                // Handle esquina inferior derecha
+                                // Handle esquina inferior derecha (solo para elementos NO separadores)
                                 Rectangle {
                                     x: parent.width - 4
                                     y: parent.height - 4
@@ -611,7 +754,7 @@ Page {
                                     border.color: Material.accent
                                     border.width: 2
                                     radius: 4
-                                    visible: viewModel.selectedElementIndex === index
+                                    visible: viewModel.selectedElementIndex === index && modelData.type !== "line"
                                     z: 20
                                     
                                     MouseArea {
@@ -866,6 +1009,9 @@ Page {
                                         Layout.fillWidth: true
                                         from: 0
                                         to: viewModel.ticketHeight
+                                        // Los separadores no permiten cambiar Y
+                                        enabled: viewModel.selectedElementIndex >= 0 && 
+                                                viewModel.ticketElements[viewModel.selectedElementIndex].type !== "line"
                                         onValueModified: {
                                             if (viewModel.selectedElementIndex >= 0) {
                                                 viewModel.updateElementProperty(viewModel.selectedElementIndex, "y", value)
@@ -892,6 +1038,9 @@ Page {
                                         Layout.fillWidth: true
                                         from: 1
                                         to: viewModel.ticketHeight
+                                        // Los separadores no permiten cambiar altura
+                                        enabled: viewModel.selectedElementIndex >= 0 && 
+                                                viewModel.ticketElements[viewModel.selectedElementIndex].type !== "line"
                                         onValueModified: {
                                             if (viewModel.selectedElementIndex >= 0) {
                                                 viewModel.updateElementProperty(viewModel.selectedElementIndex, "height", value)
@@ -921,6 +1070,12 @@ Page {
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: 60
                                         wrapMode: TextArea.WordWrap
+                                        
+                                        // Padding uniforme para alineación
+                                        leftPadding: 12
+                                        rightPadding: 12
+                                        topPadding: 8
+                                        bottomPadding: 8
                                         
                                         // Binding para mostrar el contenido actual del elemento seleccionado
                                         text: {
@@ -1101,6 +1256,133 @@ Page {
                                         onActivated: {
                                             if (viewModel.selectedElementIndex >= 0) {
                                                 viewModel.updateElementProperty(viewModel.selectedElementIndex, "align", model[currentIndex])
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Propiedades de separador (línea)
+                                Label {
+                                    text: qsTr("Estilo de Línea")
+                                    font.bold: true
+                                    Layout.fillWidth: true
+                                    visible: viewModel.selectedElementIndex >= 0 && viewModel.ticketElements[viewModel.selectedElementIndex].type === "line"
+                                }
+                                
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 8
+                                    visible: viewModel.selectedElementIndex >= 0 && viewModel.ticketElements[viewModel.selectedElementIndex].type === "line"
+                                    
+                                    Label { 
+                                        text: "Tipo de línea:" 
+                                        font.pixelSize: 11
+                                    }
+                                    
+                                    ButtonGroup {
+                                        id: lineStyleGroup
+                                    }
+                                    
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 8
+                                        
+                                        Button {
+                                            Layout.fillWidth: true
+                                            text: "━━━"
+                                            font.pixelSize: 14
+                                            flat: true
+                                            checkable: true
+                                            checked: viewModel.selectedElementIndex >= 0 && 
+                                                     viewModel.ticketElements[viewModel.selectedElementIndex].lineStyle === "solid"
+                                            ButtonGroup.group: lineStyleGroup
+                                            onClicked: {
+                                                if (viewModel.selectedElementIndex >= 0) {
+                                                    viewModel.updateElementProperty(viewModel.selectedElementIndex, "lineStyle", "solid")
+                                                }
+                                            }
+                                            ToolTip.visible: hovered
+                                            ToolTip.text: "Línea sólida"
+                                        }
+                                        
+                                        Button {
+                                            Layout.fillWidth: true
+                                            text: "╌╌╌"
+                                            font.pixelSize: 14
+                                            flat: true
+                                            checkable: true
+                                            checked: viewModel.selectedElementIndex >= 0 && 
+                                                     viewModel.ticketElements[viewModel.selectedElementIndex].lineStyle === "dashed"
+                                            ButtonGroup.group: lineStyleGroup
+                                            onClicked: {
+                                                if (viewModel.selectedElementIndex >= 0) {
+                                                    viewModel.updateElementProperty(viewModel.selectedElementIndex, "lineStyle", "dashed")
+                                                }
+                                            }
+                                            ToolTip.visible: hovered
+                                            ToolTip.text: "Línea discontinua"
+                                        }
+                                        
+                                        Button {
+                                            Layout.fillWidth: true
+                                            text: "┄┄┄"
+                                            font.pixelSize: 14
+                                            flat: true
+                                            checkable: true
+                                            checked: viewModel.selectedElementIndex >= 0 && 
+                                                     viewModel.ticketElements[viewModel.selectedElementIndex].lineStyle === "dotted"
+                                            ButtonGroup.group: lineStyleGroup
+                                            onClicked: {
+                                                if (viewModel.selectedElementIndex >= 0) {
+                                                    viewModel.updateElementProperty(viewModel.selectedElementIndex, "lineStyle", "dotted")
+                                                }
+                                            }
+                                            ToolTip.visible: hovered
+                                            ToolTip.text: "Línea punteada"
+                                        }
+                                    }
+                                    
+                                    // Vista previa de la línea
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 40
+                                        color: Material.theme === Material.Dark ? "#2a2a2a" : "#f5f5f5"
+                                        border.color: Material.frameColor
+                                        border.width: 1
+                                        radius: 4
+                                        
+                                        Canvas {
+                                            anchors.fill: parent
+                                            anchors.margins: 8
+                                            
+                                            onPaint: {
+                                                if (viewModel.selectedElementIndex < 0) return
+                                                
+                                                var ctx = getContext("2d")
+                                                ctx.clearRect(0, 0, width, height)
+                                                ctx.strokeStyle = Material.theme === Material.Dark ? "white" : "black"
+                                                ctx.lineWidth = 2
+                                                
+                                                var y = height / 2
+                                                var lineStyle = viewModel.ticketElements[viewModel.selectedElementIndex].lineStyle
+                                                
+                                                if (lineStyle === "dotted") {
+                                                    ctx.setLineDash([2, 4])
+                                                } else if (lineStyle === "dashed") {
+                                                    ctx.setLineDash([8, 4])
+                                                } else {
+                                                    ctx.setLineDash([])
+                                                }
+                                                
+                                                ctx.beginPath()
+                                                ctx.moveTo(0, y)
+                                                ctx.lineTo(width, y)
+                                                ctx.stroke()
+                                            }
+                                            
+                                            Connections {
+                                                target: viewModel
+                                                function onTicketElementsChanged() { parent.requestPaint() }
                                             }
                                         }
                                     }

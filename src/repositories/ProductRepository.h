@@ -76,6 +76,14 @@ public:
      * @return true si se actualizó correctamente
      */
     bool updateStock(int productId, double newStock);
+    
+    /**
+     * @brief Incrementar stock de un producto (reposición)
+     * @param productId ID del producto
+     * @param quantity Cantidad a agregar al stock actual
+     * @return true si se actualizó correctamente
+     */
+    bool incrementStock(int productId, double quantity);
 
     /**
      * @brief Contar total de productos
