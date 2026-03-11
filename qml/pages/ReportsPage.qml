@@ -29,14 +29,14 @@ Page {
 
                 Label {
                     text: qsTr("Reportes y Análisis")
-                    font.pixelSize: 32
+                    font.pixelSize: 38
                     font.weight: Font.Bold
                     color: Material.foreground
                 }
 
                 Label {
                     text: qsTr("Analiza el rendimiento de tus ventas")
-                    font.pixelSize: 16
+                    font.pixelSize: 19
                     opacity: 0.7
                     color: Material.foreground
                 }
@@ -483,8 +483,8 @@ Page {
                     flat: true
                     Material.foreground: Material.primary
                     onClicked: {
-                        // TODO: Abrir diálogo de guardar archivo
-                        viewModel.exportToPdf("reporte.pdf")
+                        // Exportar a carpeta configurada
+                        viewModel.exportToPdf("")
                     }
                 }
             }
@@ -701,7 +701,7 @@ Page {
 
                     header: Rectangle {
                         width: parent.width
-                        height: 40
+                        height: 48
                         color: Material.theme === Material.Dark ?
                             Qt.darker(Material.background, 1.1) :
                             Material.color(Material.Grey, Material.Shade200)
@@ -716,6 +716,7 @@ Page {
                                 height: parent.height
                                 text: qsTr("Factura")
                                 font.weight: Font.Bold
+                                font.pixelSize: 15
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                             }
@@ -725,6 +726,7 @@ Page {
                                 height: parent.height
                                 text: qsTr("Fecha")
                                 font.weight: Font.Bold
+                                font.pixelSize: 15
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                             }
@@ -734,6 +736,7 @@ Page {
                                 height: parent.height
                                 text: qsTr("Cliente")
                                 font.weight: Font.Bold
+                                font.pixelSize: 15
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                             }
@@ -743,6 +746,17 @@ Page {
                                 height: parent.height
                                 text: qsTr("Total")
                                 font.weight: Font.Bold
+                                font.pixelSize: 15
+                                verticalAlignment: Text.AlignVCenter
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+
+                            Label {
+                                width: 90
+                                height: parent.height
+                                text: qsTr("Tipo")
+                                font.weight: Font.Bold
+                                font.pixelSize: 15
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                             }
@@ -752,6 +766,7 @@ Page {
                                 height: parent.height
                                 text: qsTr("Pago")
                                 font.weight: Font.Bold
+                                font.pixelSize: 15
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                             }
@@ -761,15 +776,17 @@ Page {
                                 height: parent.height
                                 text: qsTr("Items")
                                 font.weight: Font.Bold
+                                font.pixelSize: 15
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                             }
                             
                             Label {
-                                width: 100
+                                width: 110
                                 height: parent.height
                                 text: qsTr("Detalles")
                                 font.weight: Font.Bold
+                                font.pixelSize: 15
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                             }
@@ -778,7 +795,7 @@ Page {
 
                     delegate: Rectangle {
                         width: ListView.view.width
-                        height: 50
+                        height: 58
                         color: index % 2 === 0 ? "transparent" : 
                             Material.theme === Material.Dark ?
                                 Qt.rgba(1, 1, 1, 0.02) :
@@ -793,6 +810,7 @@ Page {
                                 width: 110
                                 height: parent.height
                                 text: modelData.invoiceNumber
+                                font.pixelSize: 15
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                                 font.family: "Consolas"
@@ -802,6 +820,7 @@ Page {
                                 width: 130
                                 height: parent.height
                                 text: modelData.date
+                                font.pixelSize: 15
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                                 opacity: 0.8
@@ -811,6 +830,7 @@ Page {
                                 width: 150
                                 height: parent.height
                                 text: modelData.customerName
+                                font.pixelSize: 15
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                                 elide: Text.ElideRight
@@ -820,6 +840,7 @@ Page {
                                 width: 100
                                 height: parent.height
                                 text: "S/" + modelData.total.toFixed(2)
+                                font.pixelSize: 15
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                                 font.weight: Font.Bold
@@ -827,9 +848,21 @@ Page {
                             }
 
                             Label {
+                                width: 90
+                                height: parent.height
+                                text: modelData.paymentType === "CREDITO" ? "CRÉDITO" : "CONTADO"
+                                font.pixelSize: 14
+                                verticalAlignment: Text.AlignVCenter
+                                horizontalAlignment: Text.AlignHCenter
+                                font.weight: Font.Bold
+                                color: modelData.paymentType === "CREDITO" ? Material.color(Material.Orange) : Material.color(Material.Green)
+                            }
+
+                            Label {
                                 width: 100
                                 height: parent.height
                                 text: modelData.paymentMethod
+                                font.pixelSize: 15
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                                 opacity: 0.7
@@ -839,16 +872,18 @@ Page {
                                 width: 60
                                 height: parent.height
                                 text: modelData.itemCount
+                                font.pixelSize: 15
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                                 opacity: 0.7
                             }
                             
                             Button {
-                                width: 100
+                                width: 110
                                 height: parent.height
                                 text: "\uE8A5"
                                 font.family: "Segoe MDL2 Assets"
+                                font.pixelSize: 20
                                 flat: true
                                 Material.foreground: Material.accent
                                 

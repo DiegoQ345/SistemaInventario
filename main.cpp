@@ -10,6 +10,7 @@
 #include "src/viewmodels/DashboardViewModel.h"
 #include "src/viewmodels/TicketDesignerViewModel.h"
 #include "src/viewmodels/ProductListModel.h"
+#include "src/viewmodels/UserListModel.h"
 #include "src/viewmodels/SalesCartViewModel.h"
 #include "src/viewmodels/CustomerListModel.h"
 #include "src/viewmodels/CustomerFormViewModel.h"
@@ -56,6 +57,7 @@ int main(int argc, char *argv[])
     qmlRegisterType<DashboardViewModel>("SistemaInventario", 1, 0, "DashboardViewModel");
     qmlRegisterType<TicketDesignerViewModel>("SistemaInventario", 1, 0, "TicketDesignerViewModel");
     qmlRegisterType<ProductListModel>("SistemaInventario", 1, 0, "ProductListModel");
+    qmlRegisterType<UserListModel>("SistemaInventario", 1, 0, "UserListModel");
     qmlRegisterType<SalesCartViewModel>("SistemaInventario", 1, 0, "SalesCartViewModel");
     qmlRegisterType<CartItemModel>("SistemaInventario", 1, 0, "CartItemModel");
     qmlRegisterType<CustomerListModel>("SistemaInventario", 1, 0, "CustomerListModel");

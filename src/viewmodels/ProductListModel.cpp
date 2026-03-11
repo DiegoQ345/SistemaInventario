@@ -9,6 +9,8 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QDateTime>
+#include <QSettings>
+#include <QRegularExpression>
 
 ProductListModel::ProductListModel(QObject *parent)
     : QAbstractListModel(parent)
@@ -627,15 +629,36 @@ bool ProductListModel::exportToExcel()
         setExportProgressMessage("Guardando archivo...");
         setExportProgress(85);
         
-        QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-        QDir documentsDir(documentsPath);
-        if (!documentsDir.exists()) {
-            documentsDir.mkpath(".");
+        // Obtener información del negocio
+        QSettings settings("SistemaInventario", "Config");
+        QString businessName = settings.value("businessName", "Mi Negocio").toString();
+        
+        // Sanitizar nombre del negocio para carpetas
+        QString sanitizedBusinessName = businessName;
+        sanitizedBusinessName.replace(QRegularExpression("[^a-zA-Z0-9_]"), "_");
+        sanitizedBusinessName.replace(QRegularExpression("_+"), "_");
+        
+        // Construir estructura de carpetas: {reportsFolder}/{NombreNegocio}/Versiones de inventario/
+        QString reportsBaseFolder = settings.value("reportsFolder", "C:/Reportes_SistemaInventario").toString();
+        QString baseDir = reportsBaseFolder + "/" + sanitizedBusinessName;
+        QString reportsDir = baseDir + "/Versiones de inventario";
+        
+        // Crear directorios si no existen
+        QDir dir;
+        if (!dir.exists(reportsDir)) {
+            qDebug() << "Creando estructura de directorios:" << reportsDir;
+            if (!dir.mkpath(reportsDir)) {
+                qCritical() << "Error al crear directorio de inventario:" << reportsDir;
+                setIsExporting(false);
+                emit exportCompleted(false, "");
+                emit errorOccurred("Error al crear directorio de inventario");
+                return false;
+            }
         }
         
         QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
         QString fileName = QString("Inventario_%1.xlsx").arg(timestamp);
-        QString fullPath = documentsDir.filePath(fileName);
+        QString fullPath = reportsDir + "/" + fileName;
         
         qDebug() << "Guardando archivo en:" << fullPath;
         

@@ -17,6 +17,7 @@ Page {
         property string businessAddress: ""
         property string businessPhone: ""
         property string businessEmail: ""
+        property string reportsFolder: "C:/Reportes_SistemaInventario"
     }
 
     PrintViewModel {
@@ -346,10 +347,10 @@ Page {
                 }
             }
 
-            // ========== IMPRESIÓN ==========
+            // ========== UBICACIÓN DE DOCUMENTOS ==========
             GroupBox {
                 Layout.fillWidth: true
-                title: "\uE749  " + qsTr("Configuración de Impresión")
+                title: "\uE8B7  " + qsTr("Ubicación de Documentos y Reportes")
                 font.family: "Segoe MDL2 Assets"
                 font.pixelSize: 18
                 font.weight: Font.Medium
@@ -358,86 +359,93 @@ Page {
                     anchors.fill: parent
                     spacing: 16
 
-                    GridLayout {
+                    Label {
+                        text: qsTr("Selecciona la carpeta donde se guardarán los documentos generados (reportes, facturas, etc.)")
+                        wrapMode: Text.WordWrap
                         Layout.fillWidth: true
-                        columns: 2
-                        rowSpacing: 12
-                        columnSpacing: 16
-
-                        Label {
-                            text: qsTr("Impresora por defecto:")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                        }
-                        ComboBox {
-                            id: printerComboBox
-                            Layout.fillWidth: true
-                            model: printViewModel.availablePrinters
-                            currentIndex: printViewModel.defaultPrinterIndex
-                            onCurrentTextChanged: {
-                                if (currentText !== "")
-                                    printViewModel.defaultPrinter = currentText
-                            }
-                        }
-
-                        Label {
-                            text: qsTr("Tamaño de papel:")
-                            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                        }
-                        ComboBox {
-                            id: paperSizeComboBox
-                            Layout.fillWidth: true
-                            model: [
-                                qsTr("A4 (210 x 297 mm)"),
-                                qsTr("Carta (216 x 279 mm)"),
-                                qsTr("Térmico 80mm"),
-                                qsTr("Térmico 58mm")
-                            ]
-                            currentIndex: printViewModel.paperSize
-                            onCurrentIndexChanged: {
-                                printViewModel.paperSize = currentIndex
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        height: 1
-                        color: Material.frameColor
+                        opacity: 0.8
+                        font.pixelSize: 13
                     }
 
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: 12
 
-                        Label {
-                            text: "\uE8A5"
-                            font.family: "Segoe MDL2 Assets"
-                            font.pixelSize: 24
-                            color: Material.primary
-                        }
-
-                        ColumnLayout {
+                        Rectangle {
                             Layout.fillWidth: true
-                            spacing: 4
+                            Layout.preferredHeight: 48
+                            color: Material.theme === Material.Dark ? 
+                                   Qt.lighter(Material.background, 1.2) : 
+                                   Material.color(Material.Grey, Material.Shade100)
+                            radius: 4
+                            border.width: 1
+                            border.color: Material.frameColor
 
-                            Label {
-                                text: qsTr("Diseñador de Tickets")
-                                font.weight: Font.Medium
-                            }
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 8
 
-                            Label {
-                                text: qsTr("Personaliza el formato de tus tickets y facturas")
-                                font.pixelSize: 12
-                                opacity: 0.7
+                                Label {
+                                    text: "\uE8DA"
+                                    font.family: "Segoe MDL2 Assets"
+                                    font.pixelSize: 20
+                                    color: Material.accent
+                                }
+
+                                Label {
+                                    id: folderPathLabel
+                                    text: localSettings.reportsFolder
+                                    font.pixelSize: 13
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideMiddle
+                                }
                             }
                         }
 
                         Button {
-                            text: qsTr("Abrir")
-                            flat: true
-                            Material.foreground: Material.primary
-                            onClicked: {
-                                ApplicationWindow.window.stackView.push("qml/pages/TicketsPage.qml")
+                            text: qsTr("Seleccionar")
+                            icon.name: "folder-open"
+                            flat: false
+                            Material.background: Material.accent
+                            Material.foreground: "white"
+                            Layout.preferredHeight: 48
+                            onClicked: folderDialog.open()
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: infoLayout.implicitHeight + 16
+                        color: Material.theme === Material.Dark ?
+                               Qt.rgba(0.2, 0.4, 0.8, 0.15) :
+                               Material.color(Material.Blue, Material.Shade50)
+                        radius: 6
+                        border.width: 1
+                        border.color: Material.theme === Material.Dark ?
+                                      Qt.rgba(0.3, 0.5, 0.9, 0.4) :
+                                      Material.color(Material.Blue, Material.Shade300)
+
+                        RowLayout {
+                            id: infoLayout
+                            anchors.fill: parent
+                            anchors.margins: 8
+                            spacing: 8
+
+                            Label {
+                                text: "ℹ️"
+                                font.pixelSize: 16
+                            }
+
+                            Label {
+                                text: qsTr("Los reportes de ventas, clientes y demás documentos se guardarán en esta ubicación.")
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                font.pixelSize: 12
+                                opacity: 0.9
+                                color: Material.theme === Material.Dark ?
+                                       Material.color(Material.Blue, Material.Shade200) :
+                                       Material.color(Material.Blue, Material.Shade900)
                             }
                         }
                     }
@@ -741,6 +749,29 @@ Page {
                 exportNotification.message = qsTr("Error al exportar: ") + databaseManager.lastError()
                 exportNotification.open()
             }
+        }
+    }
+
+    // Di\u00e1logo para seleccionar carpeta de reportes
+    Platform.FolderDialog {
+        id: folderDialog
+        title: qsTr("Seleccionar carpeta para documentos y reportes")
+        currentFolder: Platform.StandardPaths.writableLocation(Platform.StandardPaths.DocumentsLocation)
+        
+        onAccepted: {
+            // Convertir la URL del folder a path
+            var folderPath = folder.toString()
+            // Remover el prefijo "file:///"
+            if (folderPath.startsWith("file:///")) {
+                folderPath = folderPath.substring(8)
+            }
+            // Guardar en settings
+            localSettings.reportsFolder = folderPath
+            
+            // Mostrar notificaci\u00f3n de confirmaci\u00f3n
+            exportNotification.isSuccess = true
+            exportNotification.message = qsTr("Carpeta de reportes actualizada correctamente")
+            exportNotification.open()
         }
     }
 }

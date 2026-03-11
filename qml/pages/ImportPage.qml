@@ -92,13 +92,13 @@ Page {
 
                     Label {
                         text: qsTr("📊 Importar desde Excel")
-                        font.pixelSize: 24
+                        font.pixelSize: 29
                         font.weight: Font.Bold
                     }
 
                     Label {
                         text: qsTr("Importa múltiples productos desde un archivo Excel de forma rápida y sencilla")
-                        font.pixelSize: 14
+                        font.pixelSize: 17
                         opacity: 0.7
                     }
                 }
@@ -154,11 +154,11 @@ Page {
                             spacing: 8
                             Label {
                                 text: "ℹ️"
-                                font.pixelSize: 18
+                                font.pixelSize: 22
                             }
                             Label {
                                 text: qsTr("Formato del archivo Excel")
-                                font.pixelSize: 15
+                                font.pixelSize: 18
                                 font.weight: Font.Bold
                                 color: Material.theme === Material.Dark ?
                                        Material.color(Material.Blue, Material.Shade200) :
@@ -168,7 +168,7 @@ Page {
 
                         Label {
                             text: qsTr("Tu archivo Excel debe contener columnas con los datos de los productos. El sistema detectará automáticamente:")
-                            font.pixelSize: 13
+                            font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             opacity: 0.9
@@ -180,14 +180,14 @@ Page {
                             columnSpacing: 20
                             rowSpacing: 8
 
-                            Label { text: "•  Nombre del producto"; font.pixelSize: 12; opacity: 0.8 }
-                            Label { text: "•  Precio de compra"; font.pixelSize: 12; opacity: 0.8 }
-                            Label { text: "•  SKU (código único)"; font.pixelSize: 12; opacity: 0.8 }
-                            Label { text: "•  Precio de venta"; font.pixelSize: 12; opacity: 0.8 }
-                            Label { text: "•  Código de barras"; font.pixelSize: 12; opacity: 0.8 }
-                            Label { text: "•  Descripción"; font.pixelSize: 12; opacity: 0.8 }
-                            Label { text: "•  Stock actual"; font.pixelSize: 12; opacity: 0.8 }
-                            Label { text: "•  Stock mínimo"; font.pixelSize: 12; opacity: 0.8 }
+                            Label { text: "•  Nombre del producto"; font.pixelSize: 14; opacity: 0.8 }
+                            Label { text: "•  Precio de compra"; font.pixelSize: 14; opacity: 0.8 }
+                            Label { text: "•  SKU (código único)"; font.pixelSize: 14; opacity: 0.8 }
+                            Label { text: "•  Precio de venta"; font.pixelSize: 14; opacity: 0.8 }
+                            Label { text: "•  Código de barras"; font.pixelSize: 14; opacity: 0.8 }
+                            Label { text: "•  Descripción"; font.pixelSize: 14; opacity: 0.8 }
+                            Label { text: "•  Stock actual"; font.pixelSize: 14; opacity: 0.8 }
+                            Label { text: "•  Stock mínimo"; font.pixelSize: 14; opacity: 0.8 }
                         }
                     }
                 }
@@ -282,7 +282,7 @@ Page {
                             Label {
                                 text: "\uE8B7"
                                 font.family: "Segoe MDL2 Assets"
-                                font.pixelSize: 84
+                                font.pixelSize: 100
                                 color: dropArea.containsDrag ? 
                                        Material.primary : 
                                        importViewModel.hasFile ? 
@@ -308,7 +308,7 @@ Page {
                                       importViewModel.hasFile ?
                                       qsTr("Archivo cargado correctamente") :
                                       qsTr("Arrastra tu archivo Excel aquí")
-                                font.pixelSize: 20
+                                font.pixelSize: 24
                                 font.weight: Font.DemiBold
                                 Layout.alignment: Qt.AlignHCenter
                                 color: dropArea.containsDrag ? Material.primary : Material.foreground
@@ -320,7 +320,7 @@ Page {
 
                             Label {
                                 text: qsTr("Formatos: .xlsx, .xls")
-                                font.pixelSize: 14
+                                font.pixelSize: 17
                                 opacity: 0.6
                                 Layout.alignment: Qt.AlignHCenter
                             }
@@ -375,7 +375,7 @@ Page {
                                 anchors.verticalCenter: parent.verticalCenter
                                 anchors.margins: 12
                                 text: qsTr("✓ El sistema ha detectado y ordenado automáticamente tus columnas. Verifica que cada columna del Excel esté relacionada correctamente con el campo del sistema. Si alguna no es correcta, puedes cambiarla manualmente.")
-                                font.pixelSize: 13
+                                font.pixelSize: 16
                                 wrapMode: Text.WordWrap
                                 color: Material.theme === Material.Dark ?
                                        Material.color(Material.Green, Material.Shade200) :
@@ -403,7 +403,7 @@ Page {
                                     id: headerText1
                                     anchors.centerIn: parent
                                     text: qsTr("COLUMNAS DEL EXCEL")
-                                    font.pixelSize: 12
+                                    font.pixelSize: 14
                                     font.weight: Font.Bold
                                     color: Material.theme === Material.Dark ?
                                            Material.color(Material.Blue, Material.Shade200) :
@@ -432,7 +432,7 @@ Page {
                                     id: headerText2
                                     anchors.centerIn: parent
                                     text: qsTr("CAMPOS DEL SISTEMA")
-                                    font.pixelSize: 12
+                                    font.pixelSize: 14
                                     font.weight: Font.Bold
                                     color: Material.theme === Material.Dark ?
                                            Material.color(Material.Green, Material.Shade200) :
@@ -450,7 +450,7 @@ Page {
                                     id: headerText3
                                     anchors.centerIn: parent
                                     text: qsTr("ESTADO")
-                                    font.pixelSize: 10
+                                    font.pixelSize: 12
                                     font.weight: Font.Bold
                                     opacity: 0.7
                                 }
@@ -461,7 +461,7 @@ Page {
 
                         Label {
                             text: qsTr("Columnas detectadas: %1").arg(importViewModel.excelColumns.length)
-                            font.pixelSize: 13
+                            font.pixelSize: 16
                             font.weight: Font.Bold
                             opacity: 0.8
                         }
@@ -498,13 +498,13 @@ Page {
 
                                             Label {
                                                 text: "📥"
-                                                font.pixelSize: 16
+                                                font.pixelSize: 19
                                             }
 
                                             Label {
                                                 text: modelData
                                                 font.weight: Font.Bold
-                                                font.pixelSize: 13
+                                                font.pixelSize: 16
                                                 color: Material.color(Material.Blue, Material.Shade900)
                                                 Layout.fillWidth: true
                                                 elide: Text.ElideRight
@@ -514,7 +514,7 @@ Page {
 
                                     Label {
                                         text: "→"
-                                        font.pixelSize: 24
+                                        font.pixelSize: 29
                                         color: Material.primary
                                         font.weight: Font.Bold
                                     }
@@ -648,7 +648,7 @@ Page {
                                                         return "✓"
                                                     }
                                                 }
-                                                font.pixelSize: 20
+                                                font.pixelSize: 24
                                                 font.weight: Font.Bold
                                                 color: {
                                                     if (mappingCombo.currentValue === "ninguno") {
@@ -672,7 +672,7 @@ Page {
                                                         return "Mapeado"
                                                     }
                                                 }
-                                                font.pixelSize: 9
+                                                font.pixelSize: 11
                                                 opacity: 0.8
                                                 Layout.alignment: Qt.AlignHCenter
                                                 color: {
@@ -714,7 +714,7 @@ Page {
                                 Label {
                                     text: "📊 Resumen del mapeo:"
                                     font.weight: Font.Bold
-                                    font.pixelSize: 13
+                                    font.pixelSize: 16
                                 }
 
                                 Rectangle {
@@ -729,7 +729,7 @@ Page {
                                         id: totalLabel
                                         anchors.centerIn: parent
                                         text: "📥 Total columnas: " + importViewModel.excelColumns.length
-                                        font.pixelSize: 12
+                                        font.pixelSize: 14
                                         font.weight: Font.Medium
                                         color: Material.color(Material.Blue, Material.Shade900)
                                     }
@@ -751,7 +751,7 @@ Page {
                                         id: infoLabel
                                         anchors.centerIn: parent
                                         text: "→ Se mapean automáticamente"
-                                        font.pixelSize: 11
+                                        font.pixelSize: 13
                                         opacity: 0.8
                                     }
                                 }
@@ -760,40 +760,40 @@ Page {
 
                                 Label {
                                     text: "✓"
-                                    font.pixelSize: 18
+                                    font.pixelSize: 22
                                     color: Material.color(Material.Green)
                                     font.weight: Font.Bold
                                 }
 
                                 Label {
                                     text: "= Campo obligatorio"
-                                    font.pixelSize: 11
+                                    font.pixelSize: 13
                                     opacity: 0.7
                                 }
 
                                 Label {
                                     text: "✓"
-                                    font.pixelSize: 18
+                                    font.pixelSize: 22
                                     color: Material.color(Material.Teal)
                                     font.weight: Font.Bold
                                 }
 
                                 Label {
                                     text: "= Campo opcional mapeado"
-                                    font.pixelSize: 11
+                                    font.pixelSize: 13
                                     opacity: 0.7
                                 }
 
                                 Label {
                                     text: "—"
-                                    font.pixelSize: 18
+                                    font.pixelSize: 22
                                     opacity: 0.5
                                     font.weight: Font.Bold
                                 }
 
                                 Label {
                                     text: "= Sin mapear"
-                                    font.pixelSize: 11
+                                    font.pixelSize: 13
                                     opacity: 0.7
                                 }
                             }
@@ -819,7 +819,7 @@ Page {
                                 anchors.verticalCenter: parent.verticalCenter
                                 anchors.margins: 8
                                 text: qsTr("⚠️ Campos obligatorios: Nombre y SKU. Sin estos campos no se podrán importar los productos.")
-                                font.pixelSize: 12
+                                font.pixelSize: 14
                                 wrapMode: Text.WordWrap
                                 color: Material.theme === Material.Dark ?
                                        Material.color(Material.Orange, Material.Shade200) :
@@ -839,7 +839,7 @@ Page {
 
                             Label {
                                 text: qsTr("Total de filas: %1").arg(importViewModel.totalRows)
-                                font.pixelSize: 13
+                                font.pixelSize: 16
                                 opacity: 0.7
                                 visible: importViewModel.totalRows > 0
                             }

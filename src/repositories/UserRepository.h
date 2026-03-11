@@ -31,6 +31,16 @@ public:
     std::optional<User> authenticate(const QString& username, const QString& password);
     bool updateLastLogin(int userId);
     bool changePassword(int userId, const QString& newPassword);
+    
+    // Statistics
+    /**
+     * @brief Obtener estadísticas de ventas de un usuario
+     * @param userId ID del usuario
+     * @param startDate Fecha inicio (opcional)
+     * @param endDate Fecha fin (opcional)
+     * @return User con totalSales y totalRevenue actualizados
+     */
+    User getUserWithStats(int userId, const QDate& startDate = QDate(), const QDate& endDate = QDate());
 
     // Helpers
     QString hashPassword(const QString& password) const;

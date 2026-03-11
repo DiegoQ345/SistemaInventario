@@ -11,8 +11,8 @@ Button {
     property color accentColor: Material.primary
     
     // Configuración por defecto
-    implicitHeight: 40
-    font.pixelSize: 14
+    implicitHeight: 48
+    font.pixelSize: 16
     font.weight: Font.Medium
     
     Material.background: "transparent"
@@ -29,7 +29,7 @@ Button {
     }
     
     background: Rectangle {
-        implicitHeight: 40
+        implicitHeight: 48
         radius: 4
         color: control.down ? 
             (Material.theme === Material.Dark ?

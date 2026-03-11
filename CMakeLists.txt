@@ -45,6 +45,7 @@ set(QML_FILES
     qml/pages/SettingsPage.qml
     qml/pages/ConsolePage.qml
     qml/pages/TicketsPage.qml
+    qml/pages/UsersManagementPage.qml
     
     # Componentes reutilizables
     qml/components/CartItemDelegate.qml
@@ -65,6 +66,11 @@ set(QML_FILES
     qml/components/LoadingSpinner.qml
     qml/components/NumPad.qml
     qml/components/TicketRenderer.qml
+    
+    # Componentes de gráficos para Dashboard
+    qml/components/CategoriesPieChart.qml
+    qml/components/TopProductsBarChart.qml
+    qml/components/SalesTrendLineChart.qml
     
     # Diálogos de ventas
     qml/components/dialogs/SaleSuccessDialog.qml
@@ -119,6 +125,7 @@ set(HEADER_FILES
     src/viewmodels/PrintViewModel.h
     src/viewmodels/ExcelImportViewModel.h
     src/viewmodels/ReportsViewModel.h
+    src/viewmodels/UserListModel.h
     src/utils/BarcodeScannerHandler.h
 )
 
@@ -148,6 +155,7 @@ set(SOURCE_FILES
     src/viewmodels/PrintViewModel.cpp
     src/viewmodels/ExcelImportViewModel.cpp
     src/viewmodels/ReportsViewModel.cpp
+    src/viewmodels/UserListModel.cpp
     src/utils/BarcodeScannerHandler.cpp
 )
 

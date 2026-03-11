@@ -421,8 +421,8 @@ ApplicationWindow {
                     ListElement { title: "Ventas"; iconName: "shopping-cart"; page: "Sales"; requirePermission: "canAccessSales" }
                     // Clientes - Admin y Vendedor
                     ListElement { title: "Clientes"; iconName: "group"; page: "Customers"; requirePermission: "canAccessCustomers" }
-                    // Inventario - Solo Admin
-                    ListElement { title: "Inventario"; iconName: "warehouse"; page: "Inventory"; requirePermission: "canAccessInventory" }
+                    // Usuarios - Solo Admin
+                    ListElement { title: "Usuarios"; iconName: "contact"; page: "UsersManagement"; requirePermission: "canAccessSettings" }
                     // Reportes - Admin y Programador
                     ListElement { title: "Reportes"; iconName: "bar-chart"; page: "Reports"; requirePermission: "canAccessReports" }
                     // Diseñador de Tickets - Admin y Programador

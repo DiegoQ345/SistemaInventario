@@ -123,7 +123,7 @@ Page {
         // Barra de herramientas - Material 3
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 72
+            Layout.preferredHeight: 84
             color: Material.background
             
             // Sombra sutil
@@ -142,8 +142,9 @@ Page {
                 TextField {
                     id: searchField
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 48
+                    Layout.preferredHeight: 56
                     placeholderText: qsTr("Buscar por nombre, SKU o código de barras...")
+                    font.pixelSize: 16
                     
                     // Icono de búsqueda
                     leftPadding: 44
@@ -154,7 +155,7 @@ Page {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "\uE721"
                         font.family: "Segoe MDL2 Assets"
-                        font.pixelSize: 16
+                        font.pixelSize: 20
                         color: Material.primary
                         opacity: 0.7
                     }
@@ -182,11 +183,12 @@ Page {
                 ComboBox {
                     id: categoryFilterCombo
                     Layout.preferredWidth: 200
-                    Layout.preferredHeight: 48
+                    Layout.preferredHeight: 56
                     model: productModel.availableCategories
                     
                     displayText: "\uE71C  " + currentText
                     font.family: "Segoe MDL2 Assets"
+                    font.pixelSize: 16
                     
                     onCurrentTextChanged: {
                         productModel.filterByCategoryName(currentText)
@@ -253,6 +255,8 @@ Page {
                     text: "\uE74D  " + qsTr("Borrar Todos")
                     font.family: "Segoe MDL2 Assets"
                     font.weight: Font.Medium
+                    font.pixelSize: 16
+                    implicitHeight: 48
                     Material.background: Material.color(Material.Red)
                     contentItem: Label {
                         text: parent.text
@@ -269,7 +273,7 @@ Page {
         // Barra de progreso de exportación
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 80
+            Layout.preferredHeight: 88
             Layout.margins: 16
             radius: 8
             visible: productModel.isExporting
@@ -292,19 +296,19 @@ Page {
 
                     Label {
                         text: "📊"
-                        font.pixelSize: 20
+                        font.pixelSize: 24
                     }
 
                     Label {
                         text: productModel.exportProgressMessage || "Preparando exportación..."
-                        font.pixelSize: 13
+                        font.pixelSize: 16
                         font.weight: Font.Medium
                         Layout.fillWidth: true
                     }
 
                     Label {
                         text: Math.round(productModel.exportProgress) + "%"
-                        font.pixelSize: 16
+                        font.pixelSize: 19
                         font.weight: Font.Bold
                         color: Material.primary
                     }
@@ -312,8 +316,8 @@ Page {
 
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 12
-                    radius: 6
+                    Layout.preferredHeight: 14
+                    radius: 7
                     color: Material.theme === Material.Dark ?
                         Qt.darker(Material.background, 1.2) :
                         Material.color(Material.Grey, Material.Shade200)
@@ -321,7 +325,7 @@ Page {
                     Rectangle {
                         width: parent.width * (productModel.exportProgress / 100)
                         height: parent.height
-                        radius: 6
+                        radius: 7
                         color: Material.color(Material.Teal)
 
                         Behavior on width {
@@ -346,7 +350,7 @@ Page {
 
             header: Rectangle {
                 width: parent.width
-                height: 48
+                height: 56
                 color: Material.background
                 border.width: 1
                 border.color: Material.dividerColor
@@ -361,39 +365,39 @@ Page {
                         text: qsTr("Nombre")
                         Layout.fillWidth: true
                         font.bold: true
-                        font.pixelSize: 13
+                        font.pixelSize: 16
                     }
                     Label { 
                         text: qsTr("Categoría")
                         Layout.preferredWidth: 140
                         font.bold: true
-                        font.pixelSize: 13
+                        font.pixelSize: 16
                     }
                     Label { 
                         text: qsTr("SKU")
                         Layout.preferredWidth: 100
                         font.bold: true
-                        font.pixelSize: 13
+                        font.pixelSize: 16
                     }
                     Label { 
                         text: qsTr("Stock")
                         Layout.preferredWidth: 70
                         font.bold: true
-                        font.pixelSize: 13
+                        font.pixelSize: 16
                         horizontalAlignment: Text.AlignRight
                     }
                     Label { 
                         text: qsTr("Precio")
                         Layout.preferredWidth: 90
                         font.bold: true
-                        font.pixelSize: 13
+                        font.pixelSize: 16
                         horizontalAlignment: Text.AlignRight
                     }
                     Label { 
                         text: qsTr("Acciones")
                         Layout.preferredWidth: 140
                         font.bold: true
-                        font.pixelSize: 13
+                        font.pixelSize: 16
                         horizontalAlignment: Text.AlignCenter
                     }
                 }
@@ -401,7 +405,7 @@ Page {
 
             delegate: ItemDelegate {
                 width: listView.width
-                height: 72
+                height: 80
 
                 Rectangle {
                     anchors.fill: parent
@@ -420,7 +424,7 @@ Page {
 
                         Label {
                             text: model.name
-                            font.pixelSize: 14
+                            font.pixelSize: 17
                             font.bold: true
                             elide: Text.ElideRight
                             Layout.fillWidth: true
@@ -431,7 +435,7 @@ Page {
                                 model.description.substring(0, Math.min(50, model.description.length)) + 
                                 (model.description.length > 50 ? "..." : "") : 
                                 qsTr("Sin descripción")
-                            font.pixelSize: 11
+                            font.pixelSize: 13
                             opacity: 0.6
                             elide: Text.ElideRight
                             Layout.fillWidth: true
@@ -441,7 +445,7 @@ Page {
                     Label {
                         text: model.category || qsTr("Sin categoría")
                         Layout.preferredWidth: 140
-                        font.pixelSize: 12
+                        font.pixelSize: 15
                         elide: Text.ElideRight
                         opacity: 0.8
                     }
@@ -449,7 +453,7 @@ Page {
                     Label {
                         text: model.sku || "-"
                         Layout.preferredWidth: 100
-                        font.pixelSize: 13
+                        font.pixelSize: 16
                         elide: Text.ElideRight
                     }
 
@@ -459,7 +463,7 @@ Page {
                         horizontalAlignment: Text.AlignRight
                         color: model.isLowStock ? Material.color(Material.Orange) : Material.foreground
                         font.bold: model.isLowStock
-                        font.pixelSize: 13
+                        font.pixelSize: 16
                     }
 
                     Label {
@@ -467,7 +471,7 @@ Page {
                         Layout.preferredWidth: 90
                         horizontalAlignment: Text.AlignRight
                         font.bold: true
-                        font.pixelSize: 13
+                        font.pixelSize: 16
                     }
 
                     Row {
@@ -478,7 +482,7 @@ Page {
                         ToolButton {
                             text: "\uE74D"  // Delete icon
                             font.family: "Segoe MDL2 Assets"
-                            font.pixelSize: 16
+                            font.pixelSize: 20
                             ToolTip.text: "Eliminar"
                             ToolTip.visible: hovered
                             onClicked: {
@@ -491,7 +495,7 @@ Page {
                         ToolButton {
                             text: "\uE70F"  // Edit icon
                             font.family: "Segoe MDL2 Assets"
-                            font.pixelSize: 16
+                            font.pixelSize: 20
                             ToolTip.text: "Editar"
                             ToolTip.visible: hovered
                             onClicked: {
@@ -502,7 +506,7 @@ Page {
                         ToolButton {
                             text: "\uE7C3"  // Package/Box icon
                             font.family: "Segoe MDL2 Assets"
-                            font.pixelSize: 16
+                            font.pixelSize: 20
                             Material.foreground: Material.color(Material.Green)
                             ToolTip.text: "Reponer inventario"
                             ToolTip.visible: hovered
@@ -522,7 +526,7 @@ Page {
                 anchors.centerIn: parent
                 text: qsTr("No hay productos")
                 visible: listView.count === 0 && !productModel.isLoading
-                font.pixelSize: 16
+                font.pixelSize: 19
                 opacity: 0.5
             }
 
@@ -544,6 +548,7 @@ Page {
                 text: qsTr("%1 productos").arg(productModel.count)
                 color: Material.theme === Material.Dark ? "#FFFFFF" : "#FFFFFF"
                 font.weight: Font.Medium
+                font.pixelSize: 15
             }
         }
     }

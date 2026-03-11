@@ -159,7 +159,7 @@ bool CustomerListModel::generatePurchaseHistoryPdf(int customerId, const QString
     Customer customer = *customerOpt;
     
     // Cargar información del negocio desde configuración
-    QSettings settings;
+    QSettings settings("SistemaInventario", "Config");
     QString businessName = settings.value("businessName", "Mi_Negocio").toString();
     
     // Sanitizar nombre del negocio para nombre de carpeta
@@ -172,8 +172,9 @@ bool CustomerListModel::generatePurchaseHistoryPdf(int customerId, const QString
     sanitizedCustomerName.replace(QRegularExpression("[^a-zA-Z0-9_]"), "_");
     sanitizedCustomerName.replace(QRegularExpression("_+"), "_");
     
-    // Construir estructura de carpetas: Reportes_{NombreNegocio}/Reportes_Clientes/
-    QString baseDir = "C:/Reportes_" + sanitizedBusinessName;
+    // Construir estructura de carpetas: {reportsFolder}/{NombreNegocio}/Reportes_Clientes/
+    QString reportsBaseFolder = settings.value("reportsFolder", "C:/Reportes_SistemaInventario").toString();
+    QString baseDir = reportsBaseFolder + "/" + sanitizedBusinessName;
     QString reportsDir = baseDir + "/Reportes_Clientes";
     
     // Crear directorios si no existen
@@ -286,7 +287,7 @@ bool CustomerListModel::generateCustomerReport(int customerId, const QString& fo
     }
     
     // Cargar información del negocio
-    QSettings settings;
+    QSettings settings("SistemaInventario", "Config");
     QString businessName = settings.value("businessName", "Mi_Negocio").toString();
     
     // Sanitizar nombres
@@ -298,8 +299,9 @@ bool CustomerListModel::generateCustomerReport(int customerId, const QString& fo
     sanitizedCustomerName.replace(QRegularExpression("[^a-zA-Z0-9_]"), "_");
     sanitizedCustomerName.replace(QRegularExpression("_+"), "_");
     
-    // Construir estructura de carpetas
-    QString baseDir = "C:/Reportes_" + sanitizedBusinessName;
+    // Construir estructura de carpetas: {reportsFolder}/{NombreNegocio}/Reportes_Clientes/
+    QString reportsBaseFolder = settings.value("reportsFolder", "C:/Reportes_SistemaInventario").toString();
+    QString baseDir = reportsBaseFolder + "/" + sanitizedBusinessName;
     QString reportsDir = baseDir + "/Reportes_Clientes";
     
     // Crear directorios si no existen
@@ -379,7 +381,7 @@ bool CustomerListModel::generateExcelReport(const Customer& customer, const QLis
     using namespace QXlsx;
     
     // Cargar configuración del negocio
-    QSettings settings;
+    QSettings settings("SistemaInventario", "Config");
     
     QXlsx::Document xlsx;
     

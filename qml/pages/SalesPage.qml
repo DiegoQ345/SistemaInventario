@@ -45,7 +45,7 @@ Page {
     Keys.onPressed: function(event) {
         console.log("*** SalesPage: Keys.onPressed disparado - Tecla:", event.key, "Texto:", event.text, "***")
         // Solo procesar si no hay diálogos abiertos
-        if (!successDialog.opened && !errorDialog.opened && !printDialog.opened && !printerSettingsDialog.opened && !quantityDialog.opened) {
+        if (!successDialog.opened && !errorDialog.opened && !printDialog.opened && !quantityDialog.opened) {
             // Capturar caracteres alfanuméricos del escáner
             if (event.text.length > 0) {
                 console.log("SalesPage: Tecla presionada:", event.text)
@@ -464,7 +464,7 @@ Page {
 
                         Label {
                             text: qsTr("Productos Sugeridos")
-                            font.pixelSize: 14
+                            font.pixelSize: 17
                             font.weight: Font.Medium
                         }
 
@@ -479,7 +479,7 @@ Page {
 
                             delegate: Item {
                                 width: ListView.view.width
-                                height: 64
+                                height: 76
 
                                 Rectangle {
                                     anchors.fill: parent
@@ -522,7 +522,7 @@ Page {
 
                                             Label {
                                                 text: model.name
-                                                font.pixelSize: 14
+                                                font.pixelSize: 17
                                                 font.weight: Font.Medium
                                                 color: Material.foreground
                                                 elide: Text.ElideRight
@@ -531,7 +531,7 @@ Page {
 
                                             Label {
                                                 text: "SKU: " + model.sku + " | Stock: " + model.currentStock
-                                                font.pixelSize: 11
+                                                font.pixelSize: 13
                                                 opacity: 0.7
                                                 color: Material.foreground
                                                 elide: Text.ElideRight
@@ -546,10 +546,10 @@ Page {
                                             anchors.rightMargin: 12
                                             anchors.verticalCenter: parent.verticalCenter
                                             text: "S/" + model.salePrice.toFixed(2)
-                                            font.pixelSize: 15
+                                            font.pixelSize: 18
                                             font.weight: Font.Bold
                                             color: Material.primary
-                                            width: 90
+                                            width: 100
                                             horizontalAlignment: Text.AlignRight
                                         }
 
@@ -560,10 +560,10 @@ Page {
                                             anchors.verticalCenter: parent.verticalCenter
                                             text: "\uE710"  // Add icon (+)
                                             font.family: "Segoe MDL2 Assets"
-                                            font.pixelSize: 18
+                                            font.pixelSize: 22
                                             flat: true
-                                            width: 36
-                                            height: 36
+                                            width: 44
+                                            height: 44
                                             Material.foreground: Material.primary
 
                                             background: Rectangle {
@@ -1347,22 +1347,6 @@ Page {
                         }
                     }
 
-                    RoundButton {
-                        text: "\uE713"  // Settings icon
-                        font.family: "Segoe MDL2 Assets"
-                        font.pixelSize: 18
-                        Layout.preferredWidth: 48
-                        Layout.preferredHeight: 48
-                        ToolTip.visible: hovered
-                        ToolTip.text: qsTr("Configurar impresora")
-
-                        Material.background: Material.theme === Material.Dark ?
-                            Qt.lighter(Material.background, 1.3) :
-                            Material.color(Material.Grey, Material.Shade200)
-                        Material.foreground: Material.foreground
-
-                        onClicked: printerSettingsDialog.open()
-                    }
                 }
             }  // Fin ColumnLayout
         }  // Fin Flickable columna derecha
@@ -1844,13 +1828,6 @@ Page {
     // Diálogo de vista previa de impresión
     PrintDialog {
         id: printDialog
-        printViewModel: root.printViewModel
-        parentPage: root
-    }
-
-    // Diálogo de configuración de impresora
-    PrinterSettingsDialog {
-        id: printerSettingsDialog
         printViewModel: root.printViewModel
         parentPage: root
     }

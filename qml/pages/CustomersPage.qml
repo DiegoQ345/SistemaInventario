@@ -53,27 +53,27 @@ Page {
 
                 Label {
                     text: qsTr("Gestión de Clientes")
-                    font.pixelSize: 32
+                    font.pixelSize: 38
                     font.weight: Font.Bold
                 }
 
                 Label {
                     text: qsTr("Total: %1 clientes").arg(customerListModel.count)
-                    font.pixelSize: 16
+                    font.pixelSize: 19
                     opacity: 0.7
                 }
             }
 
             Button {
                 text: qsTr("➕ Nuevo Cliente")
-                font.pixelSize: 16
+                font.pixelSize: 19
                 font.weight: Font.Medium
                 Material.background: Material.primary
                 Material.foreground: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
-                leftPadding: 24
-                rightPadding: 24
-                topPadding: 12
-                bottomPadding: 12
+                leftPadding: 28
+                rightPadding: 28
+                topPadding: 14
+                bottomPadding: 14
 
                 onClicked: {
                     customerFormViewModel.clear()
@@ -91,7 +91,7 @@ Page {
                 id: searchField
                 Layout.fillWidth: true
                 placeholderText: qsTr("🔍 Buscar por nombre, documento, email o teléfono...")
-                font.pixelSize: 14
+                font.pixelSize: 17
 
                 onTextChanged: {
                     searchTimer.restart()
@@ -133,7 +133,7 @@ Page {
                 // Encabezado de tabla
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 48
+                    height: 56
                     color: Material.dialogColor
                     radius: 8
 
@@ -147,49 +147,49 @@ Page {
                             Layout.preferredWidth: 200
                             text: qsTr("Nombre")
                             font.weight: Font.Medium
-                            font.pixelSize: 13
+                            font.pixelSize: 16
                         }
 
                         Label {
                             Layout.preferredWidth: 80
                             text: qsTr("Documento")
                             font.weight: Font.Medium
-                            font.pixelSize: 13
+                            font.pixelSize: 16
                         }
 
                         Label {
                             Layout.preferredWidth: 100
                             text: qsTr("Nro. Doc.")
                             font.weight: Font.Medium
-                            font.pixelSize: 13
+                            font.pixelSize: 16
                         }
 
                         Label {
                             Layout.fillWidth: true
                             text: qsTr("Email")
                             font.weight: Font.Medium
-                            font.pixelSize: 13
+                            font.pixelSize: 16
                         }
 
                         Label {
                             Layout.preferredWidth: 100
                             text: qsTr("Teléfono")
                             font.weight: Font.Medium
-                            font.pixelSize: 13
+                            font.pixelSize: 16
                         }
                         
                         Label {
                             Layout.preferredWidth: 85
                             text: qsTr("Límite Créd.")
                             font.weight: Font.Medium
-                            font.pixelSize: 13
+                            font.pixelSize: 16
                         }
 
                         Label {
                             Layout.preferredWidth: 85
                             text: qsTr("Deuda")
                             font.weight: Font.Medium
-                            font.pixelSize: 13
+                            font.pixelSize: 16
                             color: Material.color(Material.Red)
                         }
 
@@ -197,7 +197,7 @@ Page {
                             Layout.preferredWidth: 180
                             text: qsTr("Acciones")
                             font.weight: Font.Medium
-                            font.pixelSize: 13
+                            font.pixelSize: 16
                             horizontalAlignment: Text.AlignHCenter
                         }
                     }
@@ -217,7 +217,7 @@ Page {
 
                     delegate: ItemDelegate {
                         width: customerListView.width
-                        height: 64
+                        height: 72
 
                         RowLayout {
                             anchors.fill: parent
@@ -229,7 +229,7 @@ Page {
                             Label {
                                 Layout.preferredWidth: 200
                                 text: model.customerName
-                                font.pixelSize: 14
+                                font.pixelSize: 17
                                 elide: Text.ElideRight
                                 font.weight: Font.Medium
                             }
@@ -238,7 +238,7 @@ Page {
                             Label {
                                 Layout.preferredWidth: 80
                                 text: model.documentType || "-"
-                                font.pixelSize: 13
+                                font.pixelSize: 16
                                 opacity: 0.7
                             }
 
@@ -246,7 +246,7 @@ Page {
                             Label {
                                 Layout.preferredWidth: 100
                                 text: model.documentNumber || "-"
-                                font.pixelSize: 13
+                                font.pixelSize: 16
                                 font.family: "monospace"
                             }
 
@@ -254,7 +254,7 @@ Page {
                             Label {
                                 Layout.fillWidth: true
                                 text: model.email || "-"
-                                font.pixelSize: 13
+                                font.pixelSize: 16
                                 opacity: 0.7
                                 elide: Text.ElideRight
                             }
@@ -263,7 +263,7 @@ Page {
                             Label {
                                 Layout.preferredWidth: 100
                                 text: model.phone || "-"
-                                font.pixelSize: 13
+                                font.pixelSize: 16
                                 font.family: "monospace"
                             }
                             
@@ -271,7 +271,7 @@ Page {
                             Label {
                                 Layout.preferredWidth: 85
                                 text: model.creditLimit ? "S/ " + Number(model.creditLimit).toFixed(2) : "-"
-                                font.pixelSize: 13
+                                font.pixelSize: 16
                                 font.family: "monospace"
                                 opacity: 0.8
                             }
@@ -280,7 +280,7 @@ Page {
                             Label {
                                 Layout.preferredWidth: 85
                                 text: model.currentDebt > 0 ? "S/ " + Number(model.currentDebt).toFixed(2) : "-"
-                                font.pixelSize: 13
+                                font.pixelSize: 16
                                 font.family: "monospace"
                                 font.weight: model.currentDebt > 0 ? Font.Bold : Font.Normal
                                 color: model.currentDebt > 0 ? Material.color(Material.Red) : Material.foreground
@@ -294,14 +294,14 @@ Page {
                                 Button {
                                     text: "\uE8BC"
                                     font.family: "Segoe MDL2 Assets"
-                                    font.pixelSize: 18
+                                    font.pixelSize: 22
                                     flat: true
                                     Material.foreground: Material.color(Material.Blue)
                                     ToolTip.visible: hovered
                                     ToolTip.text: "Ver detalles de ventas"
                                     enabled: model.totalPurchases > 0
-                                    Layout.preferredWidth: 40
-                                    Layout.preferredHeight: 40
+                                    Layout.preferredWidth: 46
+                                    Layout.preferredHeight: 46
 
                                     onClicked: {
                                         customerDetailsDialog.customerId = model.customerId
@@ -314,14 +314,14 @@ Page {
                                 Button {
                                     text: "\uE8A5"
                                     font.family: "Segoe MDL2 Assets"
-                                    font.pixelSize: 18
+                                    font.pixelSize: 22
                                     flat: true
                                     Material.foreground: Material.color(Material.Blue)
                                     ToolTip.visible: hovered
                                     ToolTip.text: "Generar y abrir PDF de historial de compras"
                                     enabled: model.totalPurchases > 0
-                                    Layout.preferredWidth: 40
-                                    Layout.preferredHeight: 40
+                                    Layout.preferredWidth: 46
+                                    Layout.preferredHeight: 46
 
                                     onClicked: {
                                         // Abrir diálogo de opciones de reporte
@@ -334,13 +334,13 @@ Page {
                                 Button {
                                     text: "\uE70F"
                                     font.family: "Segoe MDL2 Assets"
-                                    font.pixelSize: 18
+                                    font.pixelSize: 22
                                     flat: true
                                     Material.foreground: Material.color(Material.Green)
                                     ToolTip.visible: hovered
                                     ToolTip.text: "Editar"
-                                    Layout.preferredWidth: 40
-                                    Layout.preferredHeight: 40
+                                    Layout.preferredWidth: 46
+                                    Layout.preferredHeight: 46
 
                                     onClicked: {
                                         customerFormViewModel.loadCustomer(model.customerId)

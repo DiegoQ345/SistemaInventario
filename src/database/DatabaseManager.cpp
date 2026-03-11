@@ -597,6 +597,61 @@ bool DatabaseManager::runMigrations()
         }
         qDebug() << "Migración 10 completada";
     }
+    
+    // Migración 11: Sistema de permisos personalizados y rastreo de usuario en ventas
+    if (currentVersion < 11) {
+        qDebug() << "Aplicando migración 11: Permisos personalizados y user_id en ventas";
+        
+        // Verificar columnas existentes en users
+        query.exec("PRAGMA table_info(users)");
+        QStringList userColumns;
+        while (query.next()) {
+            userColumns << query.value(1).toString();
+        }
+        
+        // Agregar email si no existe
+        if (!userColumns.contains("email")) {
+            if (!query.exec("ALTER TABLE users ADD COLUMN email TEXT")) {
+                qWarning() << "Error agregando email:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna email agregada a users";
+            }
+        }
+        
+        // Agregar custom_permissions si no existe (JSON con permisos personalizados)
+        if (!userColumns.contains("custom_permissions")) {
+            if (!query.exec("ALTER TABLE users ADD COLUMN custom_permissions TEXT")) {
+                qWarning() << "Error agregando custom_permissions:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna custom_permissions agregada a users";
+            }
+        }
+        
+        // Verificar columnas existentes en sales
+        query.exec("PRAGMA table_info(sales)");
+        QStringList salesColumns;
+        while (query.next()) {
+            salesColumns << query.value(1).toString();
+        }
+        
+        // Agregar user_id si no existe (quién realizó la venta)
+        if (!salesColumns.contains("user_id")) {
+            if (!query.exec("ALTER TABLE sales ADD COLUMN user_id INTEGER")) {
+                qWarning() << "Error agregando user_id:" << query.lastError().text();
+            } else {
+                qDebug() << "Columna user_id agregada a sales";
+                
+                // Intentar asignar ventas antiguas al admin (id=1) si existe
+                query.exec("UPDATE sales SET user_id = 1 WHERE user_id IS NULL AND EXISTS(SELECT 1 FROM users WHERE id = 1)");
+            }
+        }
+        
+        if (!setSchemaVersion(11)) {
+            qCritical() << "Error estableciendo versión de esquema 11";
+            return false;
+        }
+        qDebug() << "Migración 11 completada";
+    }
 
     qDebug() << "=== MIGRACIONES COMPLETADAS ===";
     return true;
@@ -616,7 +671,9 @@ bool DatabaseManager::createTables()
         "username TEXT NOT NULL UNIQUE,"
         "password TEXT NOT NULL,"  // Almacenado con hash SHA-256
         "full_name TEXT NOT NULL,"
-        "role TEXT NOT NULL,"  // 'Admin', 'Vendedor', 'Programador'
+        "email TEXT,"
+        "role TEXT NOT NULL,"  // 'Admin', 'Vendedor', 'Programador', 'Custom'
+        "custom_permissions TEXT,"  // JSON con permisos cuando role='Custom'
         "is_active INTEGER DEFAULT 1,"
         "created_at TEXT DEFAULT (datetime('now')),"
         "last_login TEXT"
@@ -772,6 +829,7 @@ bool DatabaseManager::createTables()
         "invoice_number TEXT UNIQUE NOT NULL,"
         "voucher_type TEXT DEFAULT 'TICKET',"  // BOLETA, FACTURA, TICKET
         "customer_id INTEGER,"
+        "user_id INTEGER,"  // Usuario que realizó la venta
         "subtotal REAL NOT NULL,"
         "tax REAL DEFAULT 0,"
         "discount REAL DEFAULT 0,"
@@ -782,6 +840,7 @@ bool DatabaseManager::createTables()
         "created_at TEXT DEFAULT (datetime('now')),"
         "created_by TEXT,"
         "FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,"
+        "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,"
         "FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id)"
         ")")) {
         m_lastError = query.lastError().text();

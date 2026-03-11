@@ -235,9 +235,10 @@ void DashboardViewModel::generateDailyReportPDF()
     sanitizedBusinessName.replace(QRegularExpression("[^a-zA-Z0-9_]"), "_");
     sanitizedBusinessName.replace(QRegularExpression("_+"), "_");
     
-    // Construir estructura de carpetas: C:/Reportes_{NombreNegocio}/Reportes_Diarios/
-    QString baseDir = "C:/Reportes_" + sanitizedBusinessName;
-    QString reportsDir = baseDir + "/Reportes_Diarios";
+    // Construir estructura de carpetas: {reportsFolder}/{NombreNegocio}/Reportes/Reportes del sistema/
+    QString reportsBaseFolder = settings.value("reportsFolder", "C:/Reportes_SistemaInventario").toString();
+    QString baseDir = reportsBaseFolder + "/" + sanitizedBusinessName;
+    QString reportsDir = baseDir + "/Reportes/Reportes del sistema";
     
     // Crear directorios si no existen
     QDir dir;
@@ -630,9 +631,10 @@ void DashboardViewModel::generateDailyReportExcel()
     sanitizedBusinessName.replace(QRegularExpression("[^a-zA-Z0-9_]"), "_");
     sanitizedBusinessName.replace(QRegularExpression("_+"), "_");
     
-    // Construir estructura de carpetas: C:/Reportes_{NombreNegocio}/Reportes_Diarios/
-    QString baseDir = "C:/Reportes_" + sanitizedBusinessName;
-    QString reportsDir = baseDir + "/Reportes_Diarios";
+    // Construir estructura de carpetas: {reportsFolder}/{NombreNegocio}/Reportes/Reportes del sistema/
+    QString reportsBaseFolder = settings.value("reportsFolder", "C:/Reportes_SistemaInventario").toString();
+    QString baseDir = reportsBaseFolder + "/" + sanitizedBusinessName;
+    QString reportsDir = baseDir + "/Reportes/Reportes del sistema";
     
     // Crear directorios si no existen
     QDir dir;
