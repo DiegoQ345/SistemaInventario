@@ -185,6 +185,7 @@ qt_add_qml_module(appSistemaInventario
     URI SistemaInventario
     VERSION 1.0
     QML_FILES ${QML_FILES}
+    QML_FILES qml/components/dialogs/QuantityDialog.qml
     # NO agregar SOURCES aquí - causará errores de moc
 )
 

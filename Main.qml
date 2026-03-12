@@ -95,6 +95,7 @@ ApplicationWindow {
         property bool isDarkMode: false
         property int colorScheme: 0  // 0: Purple, 1: Blue, 2: Green, 3: Orange
         property real fontScale: 1.0  // 0.85: Pequeño, 1.0: Normal, 1.15: Grande, 1.3: Extra Grande
+        property bool quickSaleMode: false  // Modo venta rápida: agrega 1 unidad sin diálogo al escanear
     }
     
     // Esquemas de color Material 3 - Optimizados para legibilidad y contraste

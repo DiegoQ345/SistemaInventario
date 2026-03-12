@@ -283,6 +283,8 @@ QVariantMap SalesCartViewModel::findProductByCode(const QString& code)
     result["barcode"] = product->barcode;
     result["salePrice"] = product->salePrice;
     result["currentStock"] = product->currentStock;
+    result["minimumStock"] = product->minimumStock;
+    result["sellableStock"] = qMax(0.0, product->currentStock - product->minimumStock);
     result["exists"] = true;
 
     return result;
@@ -320,14 +322,7 @@ bool SalesCartViewModel::addProductById(int productId, double quantity)
         return false;
     }
 
-    // Validar stock
-    QString errorMsg;
-    if (!validateStock(product.value(), quantity, errorMsg)) {
-        emit insufficientStock(product->name, product->currentStock, quantity);
-        return false;
-    }
-
-    // Verificar si ya está en el carrito para ajustar stock disponible
+    // Calcular stock disponible para venta (respetando stock mínimo)
     double alreadyInCart = 0.0;
     for (const auto& item : m_cart->items()) {
         if (item.productId == productId) {
@@ -336,7 +331,15 @@ bool SalesCartViewModel::addProductById(int productId, double quantity)
         }
     }
 
-    double availableStock = product->currentStock - alreadyInCart;
+    // Stock vendible = currentStock - minimumStock (no se puede vender por debajo del mínimo)
+    double sellableStock = qMax(0.0, product->currentStock - product->minimumStock);
+    // Stock aún disponible para agregar = sellable total - lo que ya está en carrito
+    double remainingToAdd = qMax(0.0, sellableStock - alreadyInCart);
+
+    if (quantity > remainingToAdd) {
+        emit insufficientStock(product->name, remainingToAdd, quantity);
+        return false;
+    }
 
     m_cart->addItem(
         product->id,
@@ -345,7 +348,7 @@ bool SalesCartViewModel::addProductById(int productId, double quantity)
         product->barcode,
         quantity,
         product->salePrice,
-        availableStock
+        sellableStock  // maxQuantity = total vendible (sin doble resta)
     );
 
     emit productAdded(product->name, quantity);
@@ -466,8 +469,10 @@ bool SalesCartViewModel::validateStock(const Product& product, double quantity, 
         return false;
     }
 
-    if (product.currentStock < quantity) {
-        errorMsg = QString("Stock insuficiente. Disponible: %1").arg(product.currentStock);
+    double sellableStock = qMax(0.0, product.currentStock - product.minimumStock);
+    if (sellableStock < quantity) {
+        errorMsg = QString("Stock disponible para venta: %1 (stock actual: %2, mínimo: %3)")
+                    .arg(sellableStock).arg(product.currentStock).arg(product.minimumStock);
         return false;
     }
 

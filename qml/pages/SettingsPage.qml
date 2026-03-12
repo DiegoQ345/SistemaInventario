@@ -79,6 +79,49 @@ Page {
                     anchors.fill: parent
                     spacing: 16
 
+                    // Modo venta rápida
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+
+                                Label {
+                                    text: qsTr("Modo Venta Rápida")
+                                    font.weight: Font.Medium
+                                    font.pixelSize: 14
+                                }
+
+                                Label {
+                                    text: qsTr("Agrega productos automáticamente sin mostrar el diálogo de cantidad al escanear. Cada escaneo añade 1 unidad.")
+                                    font.pixelSize: 12
+                                    opacity: 0.7
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                }
+                            }
+
+                            Switch {
+                                checked: ApplicationWindow.window.settings.quickSaleMode
+                                onToggled: ApplicationWindow.window.settings.quickSaleMode = checked
+                            }
+                        }
+                        
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 1
+                            color: Material.frameColor
+                            Layout.topMargin: 8
+                            Layout.bottomMargin: 8
+                        }
+                    }
+
                     // Tamaño de fuente
                     ColumnLayout {
                         Layout.fillWidth: true
