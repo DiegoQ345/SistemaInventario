@@ -279,12 +279,22 @@ Page {
                     width: parent.width
                     spacing: 12
                     
-                    Label {
-                        text: "\uE9CE  Análisis Gráfico"  // Icono de gráfico
-                        font.family: "Segoe MDL2 Assets"
-                        font.pixelSize: ApplicationWindow.window.appStyle.fontMedium
-                        font.weight: Font.Bold
+                    RowLayout {
+                        spacing: 8
                         Layout.fillWidth: true
+                        
+                        Label {
+                            text: "\uE9CE"  // Icono de gráfico
+                            font.family: "Segoe MDL2 Assets"
+                            font.pixelSize: ApplicationWindow.window ? ApplicationWindow.window.appStyle.fontLarge : 18
+                            color: Material.accent
+                        }
+                        
+                        Label {
+                            text: "Análisis Gráfico"
+                            font.pixelSize: ApplicationWindow.window ? ApplicationWindow.window.appStyle.fontMedium : 16
+                            font.weight: Font.Bold
+                        }
                     }
                     
                     // Título dinámico del gráfico actual
@@ -1471,10 +1481,36 @@ Page {
                     }
                     
                     Label { 
-                        text: qsTr("Tipo de Pago:")
+                        text: qsTr("Tipo de Venta:")
                         font.weight: Font.Medium
                     }
-                    Label { text: saleDetailsDialog.saleData.paymentType || "" }
+                    Label { 
+                        text: (saleDetailsDialog.saleData.paymentType === "CREDITO" ? "CRÉDITO" : "CONTADO") || ""
+                        color: saleDetailsDialog.saleData.paymentType === "CREDITO" ? Material.color(Material.Orange) : Material.color(Material.Green)
+                        font.weight: Font.Bold
+                    }
+                    
+                    Label { 
+                        text: qsTr("Estado de Pago:")
+                        font.weight: Font.Medium
+                    }
+                    Label { 
+                        text: {
+                            var status = saleDetailsDialog.saleData.paymentStatus
+                            if (status === "PAID") return "PAGADO"
+                            else if (status === "PENDING") return "PENDIENTE"
+                            else if (status === "PARTIAL") return "PARCIAL"
+                            else return status || "—"
+                        }
+                        color: {
+                            var status = saleDetailsDialog.saleData.paymentStatus
+                            if (status === "PAID") return Material.color(Material.Green)
+                            else if (status === "PENDING") return Material.color(Material.Red)
+                            else if (status === "PARTIAL") return Material.color(Material.Orange)
+                            else return Material.foreground
+                        }
+                        font.weight: Font.Bold
+                    }
                     
                     Label { 
                         text: qsTr("Fecha:")

@@ -65,7 +65,8 @@ Page {
             }
 
             Button {
-                text: qsTr("➕ Nuevo Cliente")
+                text: "\uE710  " + qsTr("Nuevo Cliente")
+                font.family: "Segoe MDL2 Assets"
                 font.pixelSize: 19
                 font.weight: Font.Medium
                 Material.background: Material.primary
@@ -919,7 +920,8 @@ Page {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 50
                 visible: totalPendingLabel.text !== "S/ 0.00" && totalPendingLabel.text !== ""
-                text: qsTr("💰 Pagar Todas las Deudas Pendientes")
+                text: "\uE8EA  " + qsTr("Pagar Todas las Deudas Pendientes")
+                font.family: "Segoe MDL2 Assets"
                 font.pixelSize: 14
                 font.weight: Font.Bold
                 Material.background: Material.color(Material.Green)

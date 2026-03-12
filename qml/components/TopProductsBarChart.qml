@@ -11,6 +11,9 @@ Item {
     property var viewModel: null
     property string currentPeriod: "days" // days, month, year
     
+    // Color de texto consistente para ambos temas
+    property color textColor: Material.theme === Material.Dark ? "#FFFFFF" : "#000000"
+    
     // Señales
     signal periodChanged(string period)
     
@@ -24,11 +27,22 @@ Item {
             Layout.fillWidth: true
             spacing: 8
             
-            Label {
-                text: "🏆 Top 10 Productos"
-                font.pixelSize: 12
-                font.weight: Font.DemiBold
-                color: Material.color(Material.Green)
+            RowLayout {
+                spacing: 6
+                
+                Label {
+                    text: "\uE734"  // Trophy icon
+                    font.family: "Segoe MDL2 Assets"
+                    font.pixelSize: ApplicationWindow.window ? ApplicationWindow.window.appStyle.fontMedium : 16
+                    color: root.textColor
+                }
+                
+                Label {
+                    text: "Top 10 Productos"
+                    font.pixelSize: ApplicationWindow.window ? ApplicationWindow.window.appStyle.fontBody : 12
+                    font.weight: Font.DemiBold
+                    color: root.textColor
+                }
             }
             
             Row {
@@ -124,7 +138,7 @@ Item {
             Label {
                 text: "Unidades"
                 font.pixelSize: 10
-                opacity: 0.7
+                color: Material.theme === Material.Dark ? "#DDDDDD" : "#333333"
             }
         }
         
@@ -139,8 +153,10 @@ Item {
             legend.alignment: Qt.AlignBottom
             legend.font.pixelSize: 14
             legend.font.bold: true
+            legend.labelColor: root.textColor
             backgroundColor: "transparent"
             animationOptions: ChartView.SeriesAnimations
+            // Usar Light/Dark theme para garantizar contraste correcto
             theme: Material.theme === Material.Dark ? ChartView.ChartThemeDark : ChartView.ChartThemeLight
             
             BarSeries {
@@ -153,6 +169,7 @@ Item {
                 BarSet {
                     id: barSet
                     label: "Unidades vendidas"
+                    labelColor: root.textColor
                     color: Material.theme === Material.Dark ? 
                            Material.color(Material.Green, Material.Shade700) :
                            Material.color(Material.Green, Material.Shade400)
@@ -166,28 +183,39 @@ Item {
             BarCategoryAxis {
                 id: axisX
                 titleText: "Productos"
-                titleFont.pixelSize: 17
+                titleFont.pixelSize: ApplicationWindow.window ? ApplicationWindow.window.appStyle.fontMedium : 16
                 titleFont.bold: true
                 labelsAngle: -45
-                labelsFont.pixelSize: 13
+                labelsFont.pixelSize: ApplicationWindow.window ? ApplicationWindow.window.appStyle.fontBody : 13
+                labelsColor: root.textColor
                 gridVisible: false
             }
             
             ValueAxis {
                 id: axisY
                 titleText: "Cantidad vendida (unidades)"
-                titleFont.pixelSize: 17
+                titleFont.pixelSize: ApplicationWindow.window ? ApplicationWindow.window.appStyle.fontMedium : 16
                 titleFont.bold: true
                 min: 0
-                max: 50
+                max: 100
                 tickCount: 6
                 labelFormat: "%.0f"
-                labelsFont.pixelSize: 14
+                labelsFont.pixelSize: ApplicationWindow.window ? ApplicationWindow.window.appStyle.fontBodyLarge : 14
+                labelsColor: root.textColor
             }
             
             Component.onCompleted: {
+                console.log("📊 TopProductsBarChart: ChartView creado")
+                console.log("   Theme actual:", Material.theme === Material.Dark ? "Dark" : "Light")
+                console.log("   ChartView theme:", chartView.theme)
+                console.log("📊 TopProductsBarChart: Configurando ejes")
                 barSeries.axisX = axisX
                 barSeries.axisY = axisY
+                console.log("   labelsVisible:", barSeries.labelsVisible)
+                console.log("   labelsPosition:", barSeries.labelsPosition)
+                console.log("   labelsFormat:", barSeries.labelsFormat)
+                console.log("   BarSet color:", barSet.color)
+                console.log("   Material.theme:", Material.theme)
                 if (root.viewModel) {
                     root.updateChart()
                 }
@@ -203,6 +231,9 @@ Item {
         }
         
         console.log("🔄 TopProductsBarChart: Actualizando gráfico")
+        console.log("   Período actual:", currentPeriod)
+        console.log("   Theme Material:", Material.theme === Material.Dark ? "Dark" : "Light")
+        console.log("   ChartView theme:", chartView.theme)
         
         var days = currentPeriod === "year" ? 365 : currentPeriod === "month" ? 30 : 1
         var data = viewModel.getTopProductsByPeriod(10, days)
@@ -211,7 +242,7 @@ Item {
             console.log("⚠️ No hay productos para mostrar")
             axisX.categories = ["Sin ventas"]
             barSet.values = [0]
-            axisY.max = 10
+            axisY.max = 100
             return
         }
         
@@ -241,10 +272,13 @@ Item {
         axisX.categories = categories
         barSet.values = values
         
-        // Ajustar escala del eje Y con margen superior
-        axisY.max = Math.max(10, Math.ceil(maxQty * 1.3 / 5) * 5)
+        // Mantener eje Y fijo en 100
+        axisY.max = 100
         
         console.log("✅ TopProductsBarChart: Gráfico actualizado:", categories.length, "productos")
+        console.log("   Cantidad máxima:", maxQty)
+        console.log("   Valores:", JSON.stringify(values))
+        console.log("   Categorías:", JSON.stringify(categories))
     }
     
     // Conexión con ViewModel

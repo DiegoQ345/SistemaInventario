@@ -71,6 +71,7 @@ Item {
                                             "#2196F3", "#4CAF50", "#FF9800", "#9C27B0", "#F44336",
                                             "#00BCD4", "#8BC34A", "#FFC107", "#E91E63", "#3F51B5"
                                         ]
+                                        // Usar index del ListView en lugar de model.index
                                         var idx = typeof index !== 'undefined' ? index : 0
                                         return colors[idx % colors.length]
                                     }

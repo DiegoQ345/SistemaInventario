@@ -185,7 +185,8 @@ QString DashboardViewModel::closeDayShift()
         saleObj["id"] = sale.id;
         saleObj["invoiceNumber"] = sale.invoiceNumber;
         saleObj["voucherType"] = sale.voucherType.isEmpty() ? "TICKET" : sale.voucherType;
-        saleObj["paymentType"] = sale.paymentType;
+        saleObj["paymentType"] = sale.paymentType;  // CONTADO o CREDITO
+        saleObj["paymentStatus"] = sale.paymentStatus;  // PAID, PENDING, PARTIAL
         saleObj["total"] = sale.total;
         saleObj["createdAt"] = sale.createdAt.toString("dd/MM/yyyy hh:mm");
         saleObj["itemCount"] = sale.items.size();
@@ -918,7 +919,8 @@ QVariantList DashboardViewModel::getSalesByVoucherType()
         SELECT voucher_type, COUNT(*) as count, SUM(total) as total
         FROM sales
         WHERE DATE(created_at) = DATE('now', 'localtime')
-        AND status != 'CANCELLED'
+        AND status = 'COMPLETED'
+        AND (payment_type = 'CONTADO' OR payment_status = 'PAID')
         GROUP BY voucher_type
     )");
     
@@ -952,7 +954,8 @@ QVariantList DashboardViewModel::getTopCategories(int limit)
         INNER JOIN products p ON si.product_id = p.id
         LEFT JOIN categories c ON p.category_id = c.id
         WHERE DATE(s.created_at) = DATE('now', 'localtime')
-        AND s.status != 'CANCELLED'
+        AND s.status = 'COMPLETED'
+        AND (s.payment_type = 'CONTADO' OR s.payment_status = 'PAID')
         GROUP BY p.category_id
         ORDER BY total_qty DESC
         LIMIT %1
@@ -1001,7 +1004,8 @@ QVariantList DashboardViewModel::getTopProducts(int limit)
         INNER JOIN sales s ON si.sale_id = s.id
         INNER JOIN products p ON si.product_id = p.id
         WHERE DATE(s.created_at) = DATE('now', 'localtime')
-        AND s.status != 'CANCELLED'
+        AND s.status = 'COMPLETED'
+        AND (s.payment_type = 'CONTADO' OR s.payment_status = 'PAID')
         GROUP BY si.product_id
         ORDER BY total_qty DESC
         LIMIT :limit
@@ -1038,7 +1042,8 @@ QVariantList DashboardViewModel::getTopCategoriesByPeriod(int limit, int days)
         INNER JOIN products p ON si.product_id = p.id
         LEFT JOIN categories c ON p.category_id = c.id
         WHERE DATE(s.created_at) >= DATE('now', 'localtime', '-%1 days')
-        AND s.status != 'CANCELLED'
+        AND s.status = 'COMPLETED'
+        AND (s.payment_type = 'CONTADO' OR s.payment_status = 'PAID')
         GROUP BY p.category_id
         ORDER BY total_qty DESC
         LIMIT %2
@@ -1090,7 +1095,8 @@ QVariantList DashboardViewModel::getTopProductsByPeriod(int limit, int days)
         INNER JOIN sales s ON si.sale_id = s.id
         INNER JOIN products p ON si.product_id = p.id
         WHERE DATE(s.created_at) >= DATE('now', 'localtime', '-%1 days')
-        AND s.status != 'CANCELLED'
+        AND s.status = 'COMPLETED'
+        AND (s.payment_type = 'CONTADO' OR s.payment_status = 'PAID')
         GROUP BY si.product_id
         ORDER BY total_qty DESC
         LIMIT %2
@@ -1135,7 +1141,8 @@ QVariantList DashboardViewModel::getTopCustomers(int limit)
         FROM sales s
         INNER JOIN customers c ON s.customer_id = c.id
         WHERE strftime('%Y-%m', s.created_at) = strftime('%Y-%m', 'now', 'localtime')
-        AND s.status != 'CANCELLED'
+        AND s.status = 'COMPLETED'
+        AND (s.payment_type = 'CONTADO' OR s.payment_status = 'PAID')
         GROUP BY s.customer_id
         ORDER BY purchases DESC
         LIMIT :limit
@@ -1215,7 +1222,8 @@ QVariantList DashboardViewModel::getSalesTrendData(int days)
             SUM(total) as sales_total
         FROM sales
         WHERE DATE(created_at) >= DATE('now', 'localtime', '-' || :days || ' days')
-        AND status != 'CANCELLED'
+        AND status = 'COMPLETED'
+        AND (payment_type = 'CONTADO' OR payment_status = 'PAID')
         GROUP BY DATE(created_at)
         ORDER BY sale_date ASC
     )");
