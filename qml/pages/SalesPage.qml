@@ -1308,7 +1308,7 @@ Page {
                         }
                     }
 
-                    // Botón de prueba de escáner (solo desarrollo)
+                    /* Botón de prueba de escáner (solo desarrollo)
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 4
@@ -1374,7 +1374,7 @@ Page {
                             }
                         }
                     }
-
+                    */
                     Button {
                         id: processSaleButton
                         text: qsTr("Procesar Venta")
