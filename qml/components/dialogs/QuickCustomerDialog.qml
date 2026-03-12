@@ -42,23 +42,13 @@ Dialog {
     }
     
     onAccepted: {
-        // Validar campos requeridos
+        // Validar solo campo obligatorio: nombre
         if (nameField.text.trim() === "") {
             globalNotification.show("El nombre es obligatorio", "error")
             return
         }
         
-        if (documentTypeCombo.currentIndex === 0 && documentField.text.trim() === "") {
-            globalNotification.show("El DNI es obligatorio", "error")
-            return
-        }
-        
-        if (documentTypeCombo.currentIndex === 1 && documentField.text.trim() === "") {
-            globalNotification.show("El RUC es obligatorio", "error")
-            return
-        }
-        
-        // Guardar cliente
+        // Guardar cliente (documento es opcional)
         customerViewModel.name = nameField.text.trim()
         customerViewModel.documentType = documentTypeCombo.currentText
         customerViewModel.documentNumber = documentField.text.trim()
@@ -109,7 +99,7 @@ Dialog {
                 spacing: 4
                 
                 Label {
-                    text: qsTr("Tipo de Documento *")
+                    text: qsTr("Tipo de Documento")
                     font.weight: Font.Medium
                     font.pixelSize: 13
                 }
@@ -142,7 +132,7 @@ Dialog {
                 spacing: 4
                 
                 Label {
-                    text: qsTr("Número de Documento *")
+                    text: qsTr("Número de Documento")
                     font.weight: Font.Medium
                     font.pixelSize: 13
                 }
@@ -256,7 +246,7 @@ Dialog {
                     
                     Label {
                         Layout.fillWidth: true
-                        text: qsTr("Los campos marcados con * son obligatorios")
+                        text: qsTr("Solo el nombre es obligatorio")
                         font.pixelSize: 11
                         wrapMode: Text.WordWrap
                         color: Material.secondaryTextColor

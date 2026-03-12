@@ -240,7 +240,15 @@ Dialog {
             text: qsTr("Confirmar Pago")
             enabled: root.amountPaid >= root.totalAmount
             Material.background: Material.color(Material.Green)
-            Material.foreground: "#FFFFFF"
+            
+            contentItem: Label {
+                text: parent.text
+                font: parent.font
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                color: "#000000"
+            }
+            
             DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
             
             onClicked: {

@@ -474,19 +474,6 @@ Page {
                     Material.foreground: Material.theme === Material.Dark ? "#000000" : "#FFFFFF"
                     onClicked: viewModel.loadReport()
                 }
-
-                Item { Layout.fillWidth: true }
-
-                Button {
-                    text: "\uE8CA  " + qsTr("Exportar PDF")
-                    font.family: "Segoe MDL2 Assets"
-                    flat: true
-                    Material.foreground: Material.primary
-                    onClicked: {
-                        // Exportar a carpeta configurada
-                        viewModel.exportToPdf("")
-                    }
-                }
             }
         }
 
@@ -764,7 +751,7 @@ Page {
                             Label {
                                 width: 100
                                 height: parent.height
-                                text: qsTr("Pago")
+                                text: qsTr("Estado")
                                 font.weight: Font.Bold
                                 font.pixelSize: 15
                                 verticalAlignment: Text.AlignVCenter
@@ -772,7 +759,17 @@ Page {
                             }
 
                             Label {
-                                width: 60
+                                width: 80
+                                height: parent.height
+                                text: qsTr("Método")
+                                font.weight: Font.Bold
+                                font.pixelSize: 15
+                                verticalAlignment: Text.AlignVCenter
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+
+                            Label {
+                                width: 50
                                 height: parent.height
                                 text: qsTr("Items")
                                 font.weight: Font.Bold
@@ -782,7 +779,7 @@ Page {
                             }
                             
                             Label {
-                                width: 110
+                                width: 100
                                 height: parent.height
                                 text: qsTr("Detalles")
                                 font.weight: Font.Bold
@@ -861,15 +858,36 @@ Page {
                             Label {
                                 width: 100
                                 height: parent.height
-                                text: modelData.paymentMethod
-                                font.pixelSize: 15
+                                text: {
+                                    if (modelData.paymentStatus === "PAID") return "PAGADO"
+                                    else if (modelData.paymentStatus === "PENDING") return "PENDIENTE"
+                                    else if (modelData.paymentStatus === "PARTIAL") return "PARCIAL"
+                                    else return modelData.paymentStatus || "—"
+                                }
+                                font.pixelSize: 14
+                                verticalAlignment: Text.AlignVCenter
+                                horizontalAlignment: Text.AlignHCenter
+                                font.weight: Font.Bold
+                                color: {
+                                    if (modelData.paymentStatus === "PAID") return Material.color(Material.Green)
+                                    else if (modelData.paymentStatus === "PENDING") return Material.color(Material.Red)
+                                    else if (modelData.paymentStatus === "PARTIAL") return Material.color(Material.Orange)
+                                    else return Material.foreground
+                                }
+                            }
+
+                            Label {
+                                width: 80
+                                height: parent.height
+                                text: modelData.paymentMethod || "—"
+                                font.pixelSize: 13
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignHCenter
                                 opacity: 0.7
                             }
 
                             Label {
-                                width: 60
+                                width: 50
                                 height: parent.height
                                 text: modelData.itemCount
                                 font.pixelSize: 15
@@ -879,7 +897,7 @@ Page {
                             }
                             
                             Button {
-                                width: 110
+                                width: 100
                                 height: parent.height
                                 text: "\uE8A5"
                                 font.family: "Segoe MDL2 Assets"
@@ -945,10 +963,42 @@ Page {
                     }
                     
                     Label { 
-                        text: qsTr("Tipo de Pago:")
+                        text: qsTr("Tipo de Venta:")
                         font.weight: Font.Medium
                     }
-                    Label { text: saleDetailsDialog.saleData.paymentMethod || "" }
+                    Label { 
+                        text: (saleDetailsDialog.saleData.paymentType === "CREDITO" ? "CRÉDITO" : "CONTADO") || ""
+                        color: saleDetailsDialog.saleData.paymentType === "CREDITO" ? Material.color(Material.Orange) : Material.color(Material.Green)
+                        font.weight: Font.Bold
+                    }
+                    
+                    Label { 
+                        text: qsTr("Estado de Pago:")
+                        font.weight: Font.Medium
+                    }
+                    Label { 
+                        text: {
+                            var status = saleDetailsDialog.saleData.paymentStatus
+                            if (status === "PAID") return "PAGADO"
+                            else if (status === "PENDING") return "PENDIENTE"
+                            else if (status === "PARTIAL") return "PARCIAL"
+                            else return status || "—"
+                        }
+                        color: {
+                            var status = saleDetailsDialog.saleData.paymentStatus
+                            if (status === "PAID") return Material.color(Material.Green)
+                            else if (status === "PENDING") return Material.color(Material.Red)
+                            else if (status === "PARTIAL") return Material.color(Material.Orange)
+                            else return Material.foreground
+                        }
+                        font.weight: Font.Bold
+                    }
+                    
+                    Label { 
+                        text: qsTr("Método de Pago:")
+                        font.weight: Font.Medium
+                    }
+                    Label { text: saleDetailsDialog.saleData.paymentMethod || "—" }
                     
                     Label { 
                         text: qsTr("Fecha:")

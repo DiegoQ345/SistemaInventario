@@ -5,6 +5,7 @@
 #include <QDesktopServices>
 #include <QUrl>
 #include <QDebug>
+#include <QSettings>
 
 PrintViewModel::PrintViewModel(QObject *parent)
     : QObject(parent)
@@ -299,6 +300,15 @@ void PrintViewModel::setBusinessInfo(const QString& name,
     m_businessAddress = address;
     m_businessPhone = phone;
     m_businessEmail = email;
+    
+    // Guardar en QSettings para que otros ViewModels puedan acceder
+    QSettings settings("SistemaInventario", "Config");
+    settings.setValue("businessName", name);
+    settings.setValue("businessRuc", taxId);
+    settings.setValue("businessAddress", address);
+    settings.setValue("businessPhone", phone);
+    settings.setValue("businessEmail", email);
+    settings.sync();  // Forzar sincronización inmediata
     
     PdfGeneratorService::BusinessInfo info;
     info.name = name;

@@ -473,10 +473,14 @@ SaleRepository::SalesStats SaleRepository::getStatsForDateRange(const QDate& fro
     SalesStats stats;
     QSqlQuery query(DatabaseManager::instance().database());
     
+    // Solo contar ventas al CONTADO o con pago_status = PAID (crédito ya pagado)
+    // Las ventas al crédito pendientes (CREDITO + PENDING/PARTIAL) no se cuentan como ventas completadas
     query.prepare(
         "SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total "
         "FROM sales "
-        "WHERE DATE(created_at) BETWEEN :from AND :to AND status = 'COMPLETED'"
+        "WHERE DATE(created_at) BETWEEN :from AND :to "
+        "AND status = 'COMPLETED' "
+        "AND (payment_type = 'CONTADO' OR payment_status = 'PAID')"
     );
     query.bindValue(":from", from.toString(Qt::ISODate));
     query.bindValue(":to", to.toString(Qt::ISODate));
@@ -488,6 +492,8 @@ SaleRepository::SalesStats SaleRepository::getStatsForDateRange(const QDate& fro
         if (stats.totalTransactions > 0) {
             stats.averageTicket = stats.totalSales / stats.totalTransactions;
         }
+    } else {
+        qCritical() << "Error obteniendo estadísticas de ventas:" << query.lastError().text();
     }
 
     return stats;
@@ -498,13 +504,15 @@ QList<SaleRepository::DailySales> SaleRepository::getDailySalesInRange(const QDa
     QList<DailySales> dailySales;
     QSqlQuery query(DatabaseManager::instance().database());
     
+    // Solo contar ventas al CONTADO o con payment_status = PAID
     query.prepare(
         "SELECT DATE(created_at) as sale_date, "
         "COUNT(*) as transaction_count, "
         "SUM(total) as total_sales "
         "FROM sales "
         "WHERE DATE(created_at) BETWEEN :from AND :to "
-        "AND status != 'CANCELLED' "
+        "AND status = 'COMPLETED' "
+        "AND (payment_type = 'CONTADO' OR payment_status = 'PAID') "
         "GROUP BY DATE(created_at) "
         "ORDER BY sale_date ASC"
     );
@@ -531,6 +539,7 @@ QList<SaleRepository::TopProduct> SaleRepository::getTopProducts(const QDate& fr
     QList<TopProduct> topProducts;
     QSqlQuery query(DatabaseManager::instance().database());
     
+    // Solo contar productos de ventas al CONTADO o con payment_status = PAID
     query.prepare(
         "SELECT si.product_id, si.product_name, "
         "SUM(si.quantity) as total_quantity, "
@@ -538,7 +547,8 @@ QList<SaleRepository::TopProduct> SaleRepository::getTopProducts(const QDate& fr
         "FROM sale_items si "
         "INNER JOIN sales s ON si.sale_id = s.id "
         "WHERE DATE(s.created_at) BETWEEN :from AND :to "
-        "AND s.status != 'CANCELLED' "
+        "AND s.status = 'COMPLETED' "
+        "AND (s.payment_type = 'CONTADO' OR s.payment_status = 'PAID') "
         "GROUP BY si.product_id, si.product_name "
         "ORDER BY total_revenue DESC "
         "LIMIT :limit"

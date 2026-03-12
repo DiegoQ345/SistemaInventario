@@ -1601,37 +1601,13 @@ Page {
         function saveCustomer() {
             console.log("💾 Intentando guardar nuevo cliente")
             
-            // Validar campos requeridos
+            // Validar solo campo obligatorio: nombre
             if (newCustomerNameField.text.trim() === "") {
                 notificationBar.show("El nombre es obligatorio", "error")
                 return false
             }
             
-            if (newCustomerDocumentTypeCombo.currentIndex < 0) {
-                notificationBar.show("Seleccione un tipo de documento", "error")
-                return false
-            }
-            
-            if (newCustomerDocumentNumberField.text.trim() === "") {
-                notificationBar.show("El número de documento es obligatorio", "error")
-                return false
-            }
-            
-            // Validar formato según tipo de documento
-            var docType = newCustomerDocumentTypeCombo.currentText
-            var docNumber = newCustomerDocumentNumberField.text.trim()
-            
-            if (docType === "DNI" && docNumber.length !== 8) {
-                notificationBar.show("El DNI debe tener 8 dígitos", "error")
-                return false
-            }
-            
-            if (docType === "RUC" && docNumber.length !== 11) {
-                notificationBar.show("El RUC debe tener 11 dígitos", "error")
-                return false
-            }
-            
-            // Asignar valores al ViewModel
+            // Asignar valores al ViewModel (documento es opcional)
             customerViewModel.name = newCustomerNameField.text.trim()
             customerViewModel.documentType = newCustomerDocumentTypeCombo.currentText
             customerViewModel.documentNumber = newCustomerDocumentNumberField.text.trim()
@@ -1682,13 +1658,13 @@ Page {
                     }
                 }
                 
-                // Tipo de documento (requerido)
+                // Tipo de documento (opcional)
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 4
                     
                     Label {
-                        text: qsTr("Tipo de Documento *")
+                        text: qsTr("Tipo de Documento")
                         font.weight: Font.Medium
                         font.pixelSize: 13
                     }
@@ -1701,13 +1677,13 @@ Page {
                     }
                 }
                 
-                // Número de documento (requerido)
+                // Número de documento (opcional)
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 4
                     
                     Label {
-                        text: qsTr("Número de Documento *")
+                        text: qsTr("Número de Documento")
                         font.weight: Font.Medium
                         font.pixelSize: 13
                     }
@@ -1780,7 +1756,7 @@ Page {
                 }
                 
                 Label {
-                    text: qsTr("* Campos obligatorios")
+                    text: qsTr("Solo el nombre es obligatorio")
                     font.pixelSize: 11
                     opacity: 0.6
                     Layout.fillWidth: true

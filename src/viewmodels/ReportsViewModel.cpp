@@ -182,109 +182,131 @@ void ReportsViewModel::exportToPdf(const QString& filePath)
     
     int pageWidth = painter.viewport().width();
     int yPos = 200;
-    int lineHeight = 180;
-    int sectionSpacing = 400;
+    int lineHeight = 60;  // Reducido aún más
+    int sectionSpacing = 120;  // Reducido aún más
     
-    // === ENCABEZADO CON DISEÑO PROFESIONAL ===
-    // Rectángulo de encabezado
-    painter.fillRect(0, 0, pageWidth, 800, QBrush(primaryColor));
+    // === ENCABEZADO CON DISEÑO PROFESIONAL (MÁS COMPACTO) ===
+    // Rectángulo de encabezado más pequeño
+    painter.fillRect(0, 0, pageWidth, 500, QBrush(primaryColor));
     
     // Información del negocio en blanco
     painter.setPen(Qt::white);
-    painter.setFont(QFont("Arial", 20, QFont::Bold));
-    painter.drawText(0, 200, pageWidth, 250, Qt::AlignCenter, businessName);
+    painter.setFont(QFont("Arial", 16, QFont::Bold));  // Reducido de 20 a 16
+    painter.drawText(0, 150, pageWidth, 200, Qt::AlignCenter, businessName);
     
-    painter.setFont(QFont("Arial", 9));
-    yPos = 450;
+    painter.setFont(QFont("Arial", 8));  // Reducido de 9 a 8
+    yPos = 350;  // Reducido de 450 a 350
     if (!businessRuc.isEmpty()) {
-        painter.drawText(0, yPos, pageWidth, 150, Qt::AlignCenter, "RUC: " + businessRuc);
-        yPos += 130;
+        painter.drawText(0, yPos, pageWidth, 100, Qt::AlignCenter, "RUC: " + businessRuc);
+        yPos += 90;  // Reducido de 130 a 90
     }
     if (!businessAddress.isEmpty()) {
-        painter.drawText(0, yPos, pageWidth, 150, Qt::AlignCenter, businessAddress);
-        yPos += 130;
+        painter.drawText(0, yPos, pageWidth, 100, Qt::AlignCenter, businessAddress);
+        yPos += 90;
     }
     if (!businessPhone.isEmpty()) {
-        painter.drawText(0, yPos, pageWidth, 150, Qt::AlignCenter, "Tel: " + businessPhone);
+        painter.drawText(0, yPos, pageWidth, 100, Qt::AlignCenter, "Tel: " + businessPhone);
     }
     
-    yPos = 1000;
+    yPos = 600;  // Reducido de 1000 a 600
     
     // === TÍTULO DEL REPORTE CON DISEÑO ===
     painter.setPen(Qt::black);
-    painter.setFont(sectionFont);
+    painter.setFont(QFont("Arial", 14, QFont::Bold));  // Reducido de 16 a 14
     QString reportTitle = QString("REPORTE DE VENTAS - %1").arg(periodLabel.toUpper());
-    painter.drawText(0, yPos, pageWidth, 300, Qt::AlignCenter, reportTitle);
-    yPos += 350;
+    painter.drawText(0, yPos, pageWidth, 200, Qt::AlignCenter, reportTitle);  // Reducido de 300 a 200
+    yPos += 180;  // Reducido de 250 a 180
     
-    // Información del período con fondo
-    painter.fillRect(100, yPos - 50, pageWidth - 200, 250, QBrush(lightGray));
-    painter.setFont(normalFont);
+    // Información del período con fondo más compacto
+    painter.fillRect(100, yPos - 30, pageWidth - 200, 160, QBrush(lightGray));  // Reducido de 250 a 160
+    painter.setFont(QFont("Arial", 9));  // Reducido de normalFont a 9
     QString periodText = QString("Período: %1 al %2")
         .arg(m_startDate.toString("dd/MM/yyyy"))
         .arg(m_endDate.toString("dd/MM/yyyy"));
-    painter.drawText(100, yPos, pageWidth - 200, lineHeight, Qt::AlignCenter, periodText);
+    painter.drawText(100, yPos + 10, pageWidth - 200, lineHeight, Qt::AlignCenter, periodText);
     yPos += lineHeight;
     QString generatedDate = QString("Generado: %1").arg(QDateTime::currentDateTime().toString("dd/MM/yyyy hh:mm"));
-    painter.drawText(100, yPos, pageWidth - 200, lineHeight, Qt::AlignCenter, generatedDate);
-    yPos += 300;
+    painter.drawText(100, yPos + 10, pageWidth - 200, lineHeight, Qt::AlignCenter, generatedDate);
+    yPos += 100;  // Reducido de 180 a 100
     
-    // === MÉTRICAS PRINCIPALES EN TARJETAS ===
-    yPos += 200;
+    // === MÉTRICAS PRINCIPALES EN TARJETAS (MÁS COMPACTAS) ===
+    yPos += 80;  // Reducido de 150 a 80
     double totalSales = m_summary.value("totalSales").toDouble();
     int totalTransactions = m_summary.value("totalTransactions").toInt();
     double averageTicket = m_summary.value("averageTicket").toDouble();
     double salesGrowth = m_summary.value("salesGrowth").toDouble();
     
-    int cardWidth = (pageWidth - 400) / 3;
-    int cardHeight = 600;
-    int cardSpacing = 100;
+    // Calcular total de productos vendidos
+    QVariantList topProductsList = m_summary.value("topProducts").toList();
+    int totalProductsSold = 0;
+    for (const auto& product : topProductsList) {
+        QVariantMap productMap = product.toMap();
+        totalProductsSold += productMap.value("quantitySold").toInt();
+    }
+    
+    int cardWidth = (pageWidth - 400) / 4;  // Cambiado de /3 a /4 para 4 tarjetas
+    int cardHeight = 380;  // Reducido de 600 a 380
+    int cardSpacing = 80;  // Reducido de 100 a 80
     int cardX = 100;
     
     // Tarjeta 1: Total Ventas
     painter.fillRect(cardX, yPos, cardWidth, cardHeight, QBrush(QColor(230, 240, 255)));
-    painter.setPen(QPen(primaryColor, 3));
+    painter.setPen(QPen(primaryColor, 2));  // Reducido de 3 a 2
     painter.drawRect(cardX, yPos, cardWidth, cardHeight);
     
-    painter.setFont(QFont("Arial", 9));
+    painter.setFont(QFont("Arial", 8));  // Reducido de 9 a 8
     painter.setPen(Qt::darkGray);
-    painter.drawText(cardX, yPos + 150, cardWidth, 150, Qt::AlignCenter, "TOTAL VENTAS");
+    painter.drawText(cardX, yPos + 100, cardWidth, 100, Qt::AlignCenter, "TOTAL VENTAS");
     
-    painter.setFont(QFont("Arial", 18, QFont::Bold));
+    painter.setFont(QFont("Arial", 12, QFont::Bold));  // Reducido de 18 a 12
     painter.setPen(primaryColor);
-    painter.drawText(cardX, yPos + 330, cardWidth, 250, Qt::AlignCenter, 
+    painter.drawText(cardX, yPos + 200, cardWidth, 150, Qt::AlignCenter, 
                      QString("S/ %L1").arg(totalSales, 0, 'f', 2));
     
     // Tarjeta 2: Transacciones
     cardX += cardWidth + cardSpacing;
     painter.fillRect(cardX, yPos, cardWidth, cardHeight, QBrush(QColor(240, 255, 240)));
-    painter.setPen(QPen(successColor, 3));
+    painter.setPen(QPen(successColor, 2));
     painter.drawRect(cardX, yPos, cardWidth, cardHeight);
     
-    painter.setFont(QFont("Arial", 9));
+    painter.setFont(QFont("Arial", 8));
     painter.setPen(Qt::darkGray);
-    painter.drawText(cardX, yPos + 150, cardWidth, 150, Qt::AlignCenter, "TRANSACCIONES");
+    painter.drawText(cardX, yPos + 100, cardWidth, 100, Qt::AlignCenter, "VENTAS");
     
-    painter.setFont(QFont("Arial", 18, QFont::Bold));
+    painter.setFont(QFont("Arial", 12, QFont::Bold));
     painter.setPen(successColor);
-    painter.drawText(cardX, yPos + 330, cardWidth, 250, Qt::AlignCenter, QString::number(totalTransactions));
+    painter.drawText(cardX, yPos + 200, cardWidth, 150, Qt::AlignCenter, QString::number(totalTransactions));
     
-    // Tarjeta 3: Ticket Promedio
+    // Tarjeta 3: Productos vendidos
+    cardX += cardWidth + cardSpacing;
+    painter.fillRect(cardX, yPos, cardWidth, cardHeight, QBrush(QColor(255, 240, 230)));
+    painter.setPen(QPen(QColor(230, 126, 34), 2));
+    painter.drawRect(cardX, yPos, cardWidth, cardHeight);
+    
+    painter.setFont(QFont("Arial", 8));
+    painter.setPen(Qt::darkGray);
+    painter.drawText(cardX, yPos + 100, cardWidth, 100, Qt::AlignCenter, "PRODUCTOS");
+    
+    painter.setFont(QFont("Arial", 12, QFont::Bold));
+    painter.setPen(QColor(230, 126, 34));
+    painter.drawText(cardX, yPos + 200, cardWidth, 150, Qt::AlignCenter, QString::number(totalProductsSold));
+    
+    // Tarjeta 4: Ticket Promedio
     cardX += cardWidth + cardSpacing;
     painter.fillRect(cardX, yPos, cardWidth, cardHeight, QBrush(QColor(255, 245, 230)));
-    painter.setPen(QPen(accentColor, 3));
+    painter.setPen(QPen(accentColor, 2));
     painter.drawRect(cardX, yPos, cardWidth, cardHeight);
     
-    painter.setFont(QFont("Arial", 9));
+    painter.setFont(QFont("Arial", 8));
     painter.setPen(Qt::darkGray);
-    painter.drawText(cardX, yPos + 150, cardWidth, 150, Qt::AlignCenter, "TICKET PROMEDIO");
+    painter.drawText(cardX, yPos + 100, cardWidth, 100, Qt::AlignCenter, "TICKET PROM.");
     
-    painter.setFont(QFont("Arial", 18, QFont::Bold));
+    painter.setFont(QFont("Arial", 12, QFont::Bold));
     painter.setPen(accentColor);
-    painter.drawText(cardX, yPos + 330, cardWidth, 250, Qt::AlignCenter, 
+    painter.drawText(cardX, yPos + 200, cardWidth, 150, Qt::AlignCenter, 
                      QString("S/ %L1").arg(averageTicket, 0, 'f', 2));
     
-    yPos += cardHeight + 300;
+    yPos += cardHeight + 100;  // Reducido de 180 a 100
     
     // Crecimiento vs período anterior
     QColor growthColor = salesGrowth >= 0 ? successColor : dangerColor;
@@ -293,36 +315,61 @@ void ReportsViewModel::exportToPdf(const QString& filePath)
         .arg(growthIcon)
         .arg(qAbs(salesGrowth), 0, 'f', 1);
     
-    painter.setFont(QFont("Arial", 11, QFont::Bold));
+    painter.setFont(QFont("Arial", 10, QFont::Bold));  // Reducido de 11 a 10
     painter.setPen(growthColor);
     painter.drawText(0, yPos, pageWidth, lineHeight, Qt::AlignCenter, growthText);
-    yPos += sectionSpacing;
+    yPos += sectionSpacing - 20;  // Reducido aún más
     
     // === PRODUCTOS MÁS VENDIDOS CON TABLA ===
     painter.setPen(primaryColor);
-    painter.setFont(sectionFont);
+    painter.setFont(QFont("Arial", 12, QFont::Bold));  // Reducido de sectionFont
     painter.drawText(100, yPos, "TOP 5 PRODUCTOS MÁS VENDIDOS");
-    yPos += 300;
+    yPos += 150;  // Reducido de 200 a 150
     
     QVariantList topProducts = m_summary.value("topProducts").toList();
     
     if (!topProducts.isEmpty()) {
-        // Encabezado de tabla
-        int col1X = 150;
-        int col2X = pageWidth - 2500;
-        int col3X = pageWidth - 1500;
-        int col4X = pageWidth - 700;
+        // Configuración de tabla con columnas proporcionales
+        int tableX = 100;
+        int tableWidth = pageWidth - 200;
+        int headerHeight = 150;
+        int rowHeight = lineHeight + 20;
         
-        painter.fillRect(100, yPos, pageWidth - 200, 250, QBrush(primaryColor));
+        // Anchos de columnas proporcionales
+        int colNumW = tableWidth * 0.08;      // 8% para #
+        int colProductW = tableWidth * 0.40;  // 40% para producto
+        int colUnitsW = tableWidth * 0.17;    // 17% para unidades
+        int colTotalW = tableWidth * 0.20;    // 20% para total
+        int colPercentW = tableWidth * 0.15;  // 15% para porcentaje
+        
+        // Posiciones X de cada columna
+        int colNum = tableX;
+        int colProduct = colNum + colNumW;
+        int colUnits = colProduct + colProductW;
+        int colTotal = colUnits + colUnitsW;
+        int colPercent = colTotal + colTotalW;
+        
+        // Encabezado de tabla con bordes
+        painter.fillRect(tableX, yPos, tableWidth, headerHeight, QBrush(primaryColor));
+        painter.setPen(QPen(Qt::white, 2));
+        painter.drawRect(tableX, yPos, tableWidth, headerHeight);
+        
+        // Líneas verticales de separación en encabezado
+        painter.drawLine(colProduct, yPos, colProduct, yPos + headerHeight);
+        painter.drawLine(colUnits, yPos, colUnits, yPos + headerHeight);
+        painter.drawLine(colTotal, yPos, colTotal, yPos + headerHeight);
+        painter.drawLine(colPercent, yPos, colPercent, yPos + headerHeight);
+        
         painter.setPen(Qt::white);
-        painter.setFont(QFont("Arial", 10, QFont::Bold));
+        painter.setFont(QFont("Arial", 9, QFont::Bold));
         
-        painter.drawText(col1X, yPos + 80, "#");
-        painter.drawText(col1X + 150, yPos + 80, "PRODUCTO");
-        painter.drawText(col2X, yPos + 80, "UNIDADES");
-        painter.drawText(col3X, yPos + 80, "TOTAL");
-        painter.drawText(col4X, yPos + 80, "% DEL TOTAL");
-        yPos += 250;
+        // Dibujar encabezados centrados en cada columna
+        painter.drawText(colNum + 10, yPos + 60, colNumW - 20, 100, Qt::AlignCenter, "#");
+        painter.drawText(colProduct + 10, yPos + 60, colProductW - 20, 100, Qt::AlignLeft | Qt::AlignVCenter, "PRODUCTO");
+        painter.drawText(colUnits + 10, yPos + 60, colUnitsW - 20, 100, Qt::AlignCenter, "UNIDADES");
+        painter.drawText(colTotal + 10, yPos + 60, colTotalW - 20, 100, Qt::AlignRight | Qt::AlignVCenter, "TOTAL");
+        painter.drawText(colPercent + 10, yPos + 60, colPercentW - 20, 100, Qt::AlignCenter, "% TOTAL");
+        yPos += headerHeight;
         
         // Filas de productos
         painter.setFont(normalFont);
@@ -334,28 +381,51 @@ void ReportsViewModel::exportToPdf(const QString& filePath)
             double percentage = totalSales > 0 ? (totalRevenue / totalSales) * 100.0 : 0.0;
             
             // Alternar color de fondo
-            if (i % 2 == 0) {
-                painter.fillRect(100, yPos - 30, pageWidth - 200, lineHeight + 60, QBrush(QColor(245, 250, 255)));
-            }
+            QBrush rowBrush = (i % 2 == 0) ? QBrush(QColor(245, 250, 255)) : QBrush(Qt::white);
+            painter.fillRect(tableX, yPos, tableWidth, rowHeight, rowBrush);
+            
+            // Dibujar bordes de la fila
+            painter.setPen(QPen(QColor(220, 220, 220), 1));
+            painter.drawRect(tableX, yPos, tableWidth, rowHeight);
+            
+            // Líneas verticales de separación
+            painter.drawLine(colProduct, yPos, colProduct, yPos + rowHeight);
+            painter.drawLine(colUnits, yPos, colUnits, yPos + rowHeight);
+            painter.drawLine(colTotal, yPos, colTotal, yPos + rowHeight);
+            painter.drawLine(colPercent, yPos, colPercent, yPos + rowHeight);
             
             painter.setPen(Qt::black);
-            painter.drawText(col1X, yPos + 50, QString::number(i + 1));
+            painter.setFont(normalFont);
             
-            // Truncar nombre si es muy largo
-            if (productName.length() > 35) {
-                productName = productName.left(32) + "...";
+            // Truncar nombre si es muy largo según ancho disponible
+            QString displayName = productName;
+            if (painter.fontMetrics().horizontalAdvance(displayName) > colProductW - 20) {
+                displayName = painter.fontMetrics().elidedText(displayName, Qt::ElideRight, colProductW - 20);
             }
-            painter.drawText(col1X + 150, yPos + 50, productName);
-            painter.drawText(col2X, yPos + 50, QString::number(quantitySold));
-            painter.drawText(col3X, yPos + 50, QString("S/ %L1").arg(totalRevenue, 0, 'f', 2));
             
-            // Barra de porcentaje
+            // Dibujar contenido de cada celda
+            int textY = yPos + (rowHeight / 2) + (painter.fontMetrics().height() / 4);
+            
+            // Número centrado
+            painter.drawText(colNum + 10, textY - 10, colNumW - 20, 100, Qt::AlignCenter, QString::number(i + 1));
+            
+            // Producto alineado a la izquierda
+            painter.drawText(colProduct + 10, textY, displayName);
+            
+            // Unidades centradas
+            painter.drawText(colUnits + 10, textY - 10, colUnitsW - 20, 100, Qt::AlignCenter, QString::number(quantitySold));
+            
+            // Total alineado a la derecha
+            painter.drawText(colTotal + 10, textY - 10, colTotalW - 20, 100, Qt::AlignRight, QString("S/ %L1").arg(totalRevenue, 0, 'f', 2));
+            
+            // Porcentaje centrado en verde
             painter.setPen(successColor);
             painter.setFont(QFont("Arial", 9, QFont::Bold));
-            painter.drawText(col4X, yPos + 50, QString("%1%").arg(percentage, 0, 'f', 1));
+            painter.drawText(colPercent + 10, textY - 10, colPercentW - 20, 100, Qt::AlignCenter, QString("%1%").arg(percentage, 0, 'f', 1));
             
+            painter.setPen(Qt::black);
             painter.setFont(normalFont);
-            yPos += lineHeight + 60;
+            yPos += rowHeight;
         }
     } else {
         painter.setPen(Qt::darkGray);
@@ -366,33 +436,54 @@ void ReportsViewModel::exportToPdf(const QString& filePath)
     yPos += sectionSpacing;
     
     // === HISTORIAL DE VENTAS ===
-    if (yPos + 1000 > painter.viewport().height()) {
+    if (yPos + 800 > painter.viewport().height()) {  // Reducido de 1000 a 800
         pdfWriter.newPage();
         yPos = 200;
     }
     
     painter.setPen(primaryColor);
-    painter.setFont(sectionFont);
+    painter.setFont(QFont("Arial", 12, QFont::Bold));  // Reducido de sectionFont
     painter.drawText(100, yPos, "HISTORIAL DETALLADO DE VENTAS");
-    yPos += 300;
+    yPos += 150;  // Reducido de 200 a 150
     
-    // Encabezado de tabla
-    painter.fillRect(100, yPos, pageWidth - 200, 250, QBrush(primaryColor));
+    // Configuración de columnas con ancho proporcional
+    int tableX = 100;
+    int tableWidth = pageWidth - 200;
+    int headerHeight = 180;  // Reducido de 250 a 180
+    int rowHeight = lineHeight + 15;  // Altura de cada fila
+    
+    int colDateW = tableWidth * 0.20;     // 20% para fecha
+    int colInvoiceW = tableWidth * 0.15;  // 15% para factura
+    int colCustomerW = tableWidth * 0.25; // 25% para cliente
+    int colPaymentW = tableWidth * 0.20;  // 20% para pago
+    int colTotalW = tableWidth * 0.20;    // 20% para total
+    
+    int colDate = tableX;
+    int colInvoice = colDate + colDateW;
+    int colCustomer = colInvoice + colInvoiceW;
+    int colPayment = colCustomer + colCustomerW;
+    int colTotal = colPayment + colPaymentW;
+    
+    // Encabezado de tabla con bordes
+    painter.fillRect(tableX, yPos, tableWidth, headerHeight, QBrush(primaryColor));
+    painter.setPen(QPen(Qt::white, 2));
+    painter.drawRect(tableX, yPos, tableWidth, headerHeight);
+    
+    // Líneas verticales de separación en encabezado
+    painter.drawLine(colInvoice, yPos, colInvoice, yPos + headerHeight);
+    painter.drawLine(colCustomer, yPos, colCustomer, yPos + headerHeight);
+    painter.drawLine(colPayment, yPos, colPayment, yPos + headerHeight);
+    painter.drawLine(colTotal, yPos, colTotal, yPos + headerHeight);
+    
     painter.setPen(Qt::white);
     painter.setFont(QFont("Arial", 9, QFont::Bold));
     
-    int colDate = 150;
-    int colInvoice = 1200;
-    int colCustomer = 2300;
-    int colPayment = 4000;
-    int colTotal = pageWidth - 800;
-    
-    painter.drawText(colDate, yPos + 80, "FECHA/HORA");
-    painter.drawText(colInvoice, yPos + 80, "FACTURA");
-    painter.drawText(colCustomer, yPos + 80, "CLIENTE");
-    painter.drawText(colPayment, yPos + 80, "PAGO");
-    painter.drawText(colTotal, yPos + 80, "TOTAL");
-    yPos += 250;
+    painter.drawText(colDate + 10, yPos + 60, colDateW - 20, 100, Qt::AlignLeft | Qt::AlignVCenter, "FECHA/HORA");
+    painter.drawText(colInvoice + 10, yPos + 60, colInvoiceW - 20, 100, Qt::AlignLeft | Qt::AlignVCenter, "FACTURA");
+    painter.drawText(colCustomer + 10, yPos + 60, colCustomerW - 20, 100, Qt::AlignLeft | Qt::AlignVCenter, "CLIENTE");
+    painter.drawText(colPayment + 10, yPos + 60, colPaymentW - 20, 100, Qt::AlignLeft | Qt::AlignVCenter, "PAGO");
+    painter.drawText(colTotal + 10, yPos + 60, colTotalW - 20, 100, Qt::AlignRight | Qt::AlignVCenter, "TOTAL");
+    yPos += headerHeight;
     
     painter.setFont(smallFont);
     
@@ -400,20 +491,29 @@ void ReportsViewModel::exportToPdf(const QString& filePath)
     int maxSales = qMin(50, m_salesHistory.size());  // Limitar a 50 ventas por claridad
     
     for (int i = 0; i < maxSales; ++i) {
-        if (yPos + lineHeight + 50 > painter.viewport().height() - 500) {
+        if (yPos + rowHeight + 50 > painter.viewport().height() - 500) {
             pdfWriter.newPage();
             yPos = 200;
             
-            // Repetir encabezado
-            painter.fillRect(100, yPos, pageWidth - 200, 250, QBrush(primaryColor));
+            // Repetir encabezado con bordes
+            painter.fillRect(tableX, yPos, tableWidth, headerHeight, QBrush(primaryColor));
+            painter.setPen(QPen(Qt::white, 2));
+            painter.drawRect(tableX, yPos, tableWidth, headerHeight);
+            
+            // Líneas verticales en encabezado
+            painter.drawLine(colInvoice, yPos, colInvoice, yPos + headerHeight);
+            painter.drawLine(colCustomer, yPos, colCustomer, yPos + headerHeight);
+            painter.drawLine(colPayment, yPos, colPayment, yPos + headerHeight);
+            painter.drawLine(colTotal, yPos, colTotal, yPos + headerHeight);
+            
             painter.setPen(Qt::white);
             painter.setFont(QFont("Arial", 9, QFont::Bold));
-            painter.drawText(colDate, yPos + 80, "FECHA/HORA");
-            painter.drawText(colInvoice, yPos + 80, "FACTURA");
-            painter.drawText(colCustomer, yPos + 80, "CLIENTE");
-            painter.drawText(colPayment, yPos + 80, "PAGO");
-            painter.drawText(colTotal, yPos + 80, "TOTAL");
-            yPos += 250;
+            painter.drawText(colDate + 10, yPos + 60, colDateW - 20, 100, Qt::AlignLeft | Qt::AlignVCenter, "FECHA/HORA");
+            painter.drawText(colInvoice + 10, yPos + 60, colInvoiceW - 20, 100, Qt::AlignLeft | Qt::AlignVCenter, "FACTURA");
+            painter.drawText(colCustomer + 10, yPos + 60, colCustomerW - 20, 100, Qt::AlignLeft | Qt::AlignVCenter, "CLIENTE");
+            painter.drawText(colPayment + 10, yPos + 60, colPaymentW - 20, 100, Qt::AlignLeft | Qt::AlignVCenter, "PAGO");
+            painter.drawText(colTotal + 10, yPos + 60, colTotalW - 20, 100, Qt::AlignRight | Qt::AlignVCenter, "TOTAL");
+            yPos += headerHeight;
             painter.setFont(smallFont);
         }
         
@@ -425,31 +525,60 @@ void ReportsViewModel::exportToPdf(const QString& filePath)
         double total = sale.value("total").toDouble();
         
         // Alternar color de fondo
-        if (i % 2 == 0) {
-            painter.fillRect(100, yPos - 20, pageWidth - 200, lineHeight + 40, QBrush(QColor(248, 250, 252)));
-        }
+        QBrush rowBrush = (i % 2 == 0) ? QBrush(QColor(248, 250, 252)) : QBrush(Qt::white);
+        painter.fillRect(tableX, yPos, tableWidth, rowHeight, rowBrush);
+        
+        // Dibujar bordes de la fila
+        painter.setPen(QPen(QColor(220, 220, 220), 1));
+        painter.drawRect(tableX, yPos, tableWidth, rowHeight);
+        
+        // Líneas verticales de separación
+        painter.drawLine(colInvoice, yPos, colInvoice, yPos + rowHeight);
+        painter.drawLine(colCustomer, yPos, colCustomer, yPos + rowHeight);
+        painter.drawLine(colPayment, yPos, colPayment, yPos + rowHeight);
+        painter.drawLine(colTotal, yPos, colTotal, yPos + rowHeight);
         
         painter.setPen(Qt::black);
-        
-        // Truncar textos largos
-        if (customer.length() > 18) customer = customer.left(15) + "...";
-        if (payment.length() > 12) payment = payment.left(10) + "..";
-        
-        painter.drawText(colDate, yPos + 40, date);
-        painter.drawText(colInvoice, yPos + 40, invoice);
-        painter.drawText(colCustomer, yPos + 40, customer);
-        painter.drawText(colPayment, yPos + 40, payment);
-        
-        painter.setFont(QFont("Arial", 9, QFont::Bold));
-        painter.drawText(colTotal, yPos + 40, QString("S/ %L1").arg(total, 0, 'f', 2));
         painter.setFont(smallFont);
         
-        yPos += lineHeight + 40;
+        // Truncar textos largos según ancho disponible
+        QString dateText = date;
+        if (painter.fontMetrics().horizontalAdvance(dateText) > colDateW - 20) {
+            dateText = painter.fontMetrics().elidedText(dateText, Qt::ElideRight, colDateW - 20);
+        }
+        
+        QString invoiceText = invoice;
+        if (painter.fontMetrics().horizontalAdvance(invoiceText) > colInvoiceW - 20) {
+            invoiceText = painter.fontMetrics().elidedText(invoiceText, Qt::ElideRight, colInvoiceW - 20);
+        }
+        
+        QString customerText = customer;
+        if (painter.fontMetrics().horizontalAdvance(customerText) > colCustomerW - 20) {
+            customerText = painter.fontMetrics().elidedText(customerText, Qt::ElideRight, colCustomerW - 20);
+        }
+        
+        QString paymentText = payment;
+        if (painter.fontMetrics().horizontalAdvance(paymentText) > colPaymentW - 20) {
+            paymentText = painter.fontMetrics().elidedText(paymentText, Qt::ElideRight, colPaymentW - 20);
+        }
+        
+        // Dibujar texto centrado verticalmente en cada celda
+        int textY = yPos + (rowHeight / 2) + (painter.fontMetrics().height() / 4);
+        painter.drawText(colDate + 10, textY, dateText);
+        painter.drawText(colInvoice + 10, textY, invoiceText);
+        painter.drawText(colCustomer + 10, textY, customerText);
+        painter.drawText(colPayment + 10, textY, paymentText);
+        
+        painter.setFont(QFont("Arial", 9, QFont::Bold));
+        painter.drawText(colTotal + 10, textY - 10, colTotalW - 20, 100, Qt::AlignRight, QString("S/ %L1").arg(total, 0, 'f', 2));
+        painter.setFont(smallFont);
+        
+        yPos += rowHeight;
         salesCount++;
     }
     
     if (m_salesHistory.size() > maxSales) {
-        yPos += 200;
+        yPos += 120;  // Reducido de 200 a 120
         painter.setPen(Qt::darkGray);
         QFont italicFont("Arial", 9);
         italicFont.setItalic(true);
@@ -569,6 +698,8 @@ void ReportsViewModel::loadSalesHistory()
         saleMap["customerName"] = sale.customerName.isEmpty() ? "Cliente General" : sale.customerName;
         saleMap["total"] = sale.total;
         saleMap["paymentMethod"] = sale.paymentMethodName;
+        saleMap["paymentType"] = sale.paymentType;  // CONTADO o CREDITO
+        saleMap["paymentStatus"] = sale.paymentStatus;  // PAID, PENDING, PARTIAL
         saleMap["status"] = sale.status;
         saleMap["date"] = sale.createdAt.toString("dd/MM/yyyy hh:mm");
         saleMap["itemCount"] = sale.items.count();
