@@ -35,8 +35,8 @@ void BarcodeScannerHandler::processCharacter(const QString& character)
         return;
     }
 
-    // Si es Enter, procesar el código completo
-    if (character == "\r" || character == "\n") {
+    // Si es Enter o Tab, procesar el código completo
+    if (character == "\r" || character == "\n" || character == "\t") {
         if (!m_buffer.isEmpty()) {
             qDebug() << "Código de barras escaneado:" << m_buffer;
             emit barcodeScanned(m_buffer);

@@ -46,16 +46,22 @@ Page {
         console.log("*** SalesPage: Keys.onPressed disparado - Tecla:", event.key, "Texto:", event.text, "***")
         // Solo procesar si no hay diálogos abiertos
         if (!successDialog.opened && !errorDialog.opened && !printDialog.opened && !quantityDialog.opened) {
-            // Capturar caracteres alfanuméricos del escáner
-            if (event.text.length > 0) {
-                console.log("SalesPage: Tecla presionada:", event.text)
-                barcodeScanner.processCharacter(event.text)
-                event.accepted = true
-            }
-            // Enter finaliza el escaneo - IMPORTANTE: enviar al handler
-            else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            // Enter finaliza el escaneo
+            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                 console.log("SalesPage: Enter detectado, finalizando escaneo")
                 barcodeScanner.processCharacter("\n")
+                event.accepted = true
+            }
+            // Algunos escáneres finalizan con TAB
+            else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                console.log("SalesPage: Tab detectado, finalizando escaneo")
+                barcodeScanner.processCharacter("\t")
+                event.accepted = true
+            }
+            // Capturar caracteres alfanuméricos del escáner
+            else if (event.text.length > 0) {
+                console.log("SalesPage: Tecla presionada:", event.text)
+                barcodeScanner.processCharacter(event.text)
                 event.accepted = true
             }
         }
@@ -258,40 +264,21 @@ Page {
                 
                 console.log("Producto encontrado:", productData.name, "- Stock:", productData.currentStock)
                 
-                // PASO 2: Verificar modo de venta rápida
-                if (ApplicationWindow.window.settings.quickSaleMode) {
-                    // Modo venta rápida ACTIVADO - Agregar 1 unidad automáticamente siempre
-                    console.log("Modo venta rápida - Agregando 1 unidad automáticamente")
-                    viewModel.searchAndAddProduct(barcode, 1)
-                    
-                    // Feedback visual
+                // PASO 2: Agregar siempre 1 unidad automáticamente al escanear
+                var added = viewModel.searchAndAddProduct(barcode, 1)
+                if (added) {
                     duplicateNotification.productName = productData.name
                     duplicateNotification.open()
+                    root.lastScannedBarcode = barcode
                 } else {
-                    // Modo venta rápida DESACTIVADO - Verificar si es el mismo código escaneado consecutivamente
-                    if (barcode === root.lastScannedBarcode && root.lastScannedBarcode !== "") {
-                        // Es el mismo código - Incrementar cantidad automáticamente
-                        console.log("Código duplicado detectado - Incrementando cantidad automáticamente")
-                        
-                        // Agregar 1 unidad más al carrito
-                        viewModel.searchAndAddProduct(barcode, 1)
-                        
-                        // Feedback visual rápido
-                        duplicateNotification.productName = productData.name
-                        duplicateNotification.open()
-                        
+                    if (productData.sellableStock <= 0) {
+                        errorDialog.errorMessage = qsTr("Sin stock disponible para venta: ") + productData.name
                     } else {
-                        // Es un código nuevo - Abrir diálogo para elegir cantidad
-                        console.log("Código nuevo - Abriendo diálogo de cantidad")
-                        quantityDialog.scannedBarcode = barcode
-                        quantityDialog.productName = productData.name
-                        quantityDialog.currentStock = productData.sellableStock
-                        quantityDialog.open()
+                        errorDialog.errorMessage = qsTr("No se pudo agregar el producto al carrito: ") + productData.name
                     }
+                    errorDialog.open()
+                    root.lastScannedBarcode = ""
                 }
-                
-                // PASO 3: Guardar código como último escaneado
-                root.lastScannedBarcode = barcode
             }
         }
 
