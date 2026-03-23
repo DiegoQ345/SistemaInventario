@@ -8,6 +8,12 @@ Page {
     id: root
     title: qsTr("Clientes")
 
+    function closeAllDialogs() {
+            if (deleteDialog.opened)          deleteDialog.close()
+            if (customerDetailsDialog.opened) customerDetailsDialog.close()
+        }
+
+
     // Refrescar lista cuando la página se activa (para mostrar deudas nuevas de ventas)
     StackView.onActivated: {
         customerListModel.refresh()
@@ -627,14 +633,16 @@ Page {
         }
     }
 
+
+
     // Diálogo de detalles de ventas del cliente
     Dialog {
         id: customerDetailsDialog
         title: qsTr("Detalles de Ventas - %1").arg(customerName)
-        width: Math.min(1150, root.width * 0.95)
-        height: Math.min(750, root.height * 0.9)
+        width: 1100
+        height: 700
         modal: true
-        anchors.centerIn: parent
+        anchors.centerIn: Overlay.overlay
         standardButtons: Dialog.Close
 
         property int customerId: 0

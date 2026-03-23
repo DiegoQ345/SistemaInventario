@@ -10,6 +10,9 @@ import "../components"
 Page {
     id: root
     title: qsTr("Ventas")
+
+    // Agrega esta propiedad para acceder a settings de forma segura
+    property var appSettings: ApplicationWindow.window?.settings ?? null
     
     // Habilitar captura de teclas para escáner de código de barras
     focus: true
@@ -40,6 +43,13 @@ Page {
     
     onActiveFocusChanged: {
         console.log("*** SalesPage: Foco activo =", activeFocus, "***")
+                if (!activeFocus) {
+                    // Recuperar foco automáticamente si no hay diálogos abiertos
+                    if (!successDialog.opened && !errorDialog.opened &&
+                        !printDialog.opened && !quantityDialog.opened) {
+                        root.forceActiveFocus()
+                    }
+                }
     }
     
     Keys.onPressed: function(event) {
@@ -245,39 +255,49 @@ Page {
         BarcodeScannerHandler {
             id: barcodeScanner
             enabled: true
-            timeout: 100  // 100ms entre caracteres del escáner
-            
+            timeout: 100
+
             onBarcodeScanned: function(barcode) {
                 console.log("Código de barras escaneado:", barcode)
-                
-                // PASO 1: Verificar si el producto existe en la base de datos
+
+                // No procesar si hay diálogos abiertos
+                if (successDialog.opened || errorDialog.opened ||
+                    printDialog.opened || quantityDialog.opened) return
+
+                // PASO 1: Verificar si el producto existe
                 var productData = viewModel.findProductByCode(barcode)
-                
+
                 if (!productData || !productData.exists) {
-                    // Producto NO existe - Mostrar error sin abrir diálogo
                     console.log("Producto no encontrado:", barcode)
                     errorDialog.errorMessage = qsTr("Producto no encontrado: ") + barcode
                     errorDialog.open()
-                    root.lastScannedBarcode = ""  // Resetear
+                    root.lastScannedBarcode = ""
                     return
                 }
-                
+
                 console.log("Producto encontrado:", productData.name, "- Stock:", productData.currentStock)
-                
-                // PASO 2: Agregar siempre 1 unidad automáticamente al escanear
-                var added = viewModel.searchAndAddProduct(barcode, 1)
-                if (added) {
-                    duplicateNotification.productName = productData.name
-                    duplicateNotification.open()
-                    root.lastScannedBarcode = barcode
-                } else {
-                    if (productData.sellableStock <= 0) {
-                        errorDialog.errorMessage = qsTr("Sin stock disponible para venta: ") + productData.name
+
+                // PASO 2: Venta rápida o diálogo de cantidad
+                if (root.appSettings?.quickSaleMode ?? false) {
+                    // Modo rápido: agrega directo con cantidad 1
+                    var added = viewModel.searchAndAddProduct(barcode, 1)
+                    if (added) {
+                        duplicateNotification.productName = productData.name
+                        duplicateNotification.open()
+                        root.lastScannedBarcode = barcode
                     } else {
-                        errorDialog.errorMessage = qsTr("No se pudo agregar el producto al carrito: ") + productData.name
+                        errorDialog.errorMessage = productData.sellableStock <= 0
+                            ? qsTr("Sin stock disponible para venta: ") + productData.name
+                            : qsTr("No se pudo agregar el producto al carrito: ") + productData.name
+                        errorDialog.open()
+                        root.lastScannedBarcode = ""
                     }
-                    errorDialog.open()
-                    root.lastScannedBarcode = ""
+                } else {
+                    // Modo normal: abre diálogo de cantidad
+                    quantityDialog.scannedBarcode = barcode
+                    quantityDialog.productName = productData.name
+                    quantityDialog.currentStock = productData.sellableStock
+                    quantityDialog.open()
                 }
             }
         }
@@ -1092,7 +1112,7 @@ Page {
                             Button {
                                 text: qsTr("Nuevo Cliente")
                                 flat: true
-                                icon.source: "qrc:/icons/add.png"
+                                icon.source: ""
                                 Material.foreground: Material.accent
                                 
                                 onClicked: {

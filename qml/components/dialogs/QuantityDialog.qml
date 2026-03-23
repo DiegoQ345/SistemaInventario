@@ -9,9 +9,9 @@ Dialog {
     id: root
     title: qsTr("Cantidad")
     modal: true
-    anchors.centerIn: parent
     width: 320
     height: 500
+    anchors.centerIn: Overlay.overlay
 
     property string scannedBarcode: ""
     property string currentQuantity: "1"
