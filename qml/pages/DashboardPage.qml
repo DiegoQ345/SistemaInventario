@@ -41,7 +41,6 @@ Page {
             // Título
             Label {
                 text: qsTr("Panel de Control")
-                font.pixelSize: ApplicationWindow.window.appStyle.fontHuge
                 font.weight: Font.Bold
                 color: Material.foreground
                 Layout.bottomMargin: root.width > 600 ? 8 : 4

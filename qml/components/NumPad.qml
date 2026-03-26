@@ -6,7 +6,7 @@ import QtQuick.Controls.Material
 // Teclado numérico para ingreso de montos en pantallas táctiles
 Rectangle {
     id: root
-    
+
     property TextField targetField: null
     
     implicitWidth: 280

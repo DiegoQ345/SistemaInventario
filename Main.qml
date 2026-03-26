@@ -988,15 +988,16 @@ ApplicationWindow {
             ignoreUnknownSignals: true
 
             function onBarcodeScannedForCart(barcode) {
-                // FIX: cerrar diálogos antes de navegar
-                var currentPage = stackView.currentItem
-                if (currentPage && typeof currentPage.closeAllDialogs === "function") {
-                    currentPage.closeAllDialogs()
-                }
+                var capturedBarcode = barcode  // capturar antes del replace
+
                 stackView.replace("qml/pages/SalesPage.qml")
-                Qt.callLater(function() {
-                    if (stackView.currentItem && stackView.currentItem.viewModel) {
-                        stackView.currentItem.viewModel.searchAndAddProduct(barcode, 1)
+
+                // Esperar a que la página esté completamente cargada
+                stackView.currentItemChanged.connect(function() {
+                    var page = stackView.currentItem
+                    if (page && page.viewModel && capturedBarcode !== "") {
+                        page.viewModel.searchAndAddProduct(capturedBarcode, 1)
+                        capturedBarcode = ""  // evitar doble ejecución
                     }
                 })
             }
@@ -1022,54 +1023,75 @@ ApplicationWindow {
         }
     }
 
-    // ─── Conexiones dinámicas a SalesCartViewModel ────────────────────────────
+    // REEMPLAZA los dos bloques Connections dinámicos por esto:
+
+    // Propiedad para trackear el viewModel actual de forma segura
+    property var activeSalesViewModel: null
+    property var activePrintViewModel: null
+
+    // Observar cambios en currentItem de forma segura
     Connections {
-        target: stackView.currentItem?.viewModel ?? null
+        target: stackView
+
+        function onCurrentItemChanged() {
+            var page = stackView.currentItem
+            console.log("*** StackView: página cambió a:", page)
+
+            // Desconectar viewModels anteriores de forma segura
+            root.activeSalesViewModel = null
+            root.activePrintViewModel = null
+
+            // Conectar nuevos viewModels con delay para asegurar que la página está lista
+            if (page && page.viewModel) {
+                root.activeSalesViewModel = page.viewModel
+            }
+            if (page && page.printViewModel) {
+                root.activePrintViewModel = page.printViewModel
+            }
+        }
+    }
+
+    // Connections estático apuntando a la propiedad (no al item directamente)
+    Connections {
+        target: root.activeSalesViewModel
         ignoreUnknownSignals: true
-        enabled: stackView.currentItem?.viewModel !== undefined
 
         function onProductAdded(productName, quantity) {
             globalNotification.showSuccess("Agregado: " + productName + " (x" + quantity + ")")
         }
-
         function onProductNotFound(code) {
             globalNotification.showError("Producto no encontrado: " + code)
         }
-
         function onInsufficientStock(productName, available, requested) {
             globalNotification.showError(
                 "Stock insuficiente de " + productName +
                 ". Disponible: " + available + ", solicitado: " + requested
             )
         }
-
         function onSaleCompleted(invoiceNumber, total, voucherType, items, subtotal, discount) {
             globalNotification.showSuccess("Venta completada - Comprobante: " + invoiceNumber)
         }
-
         function onSaleFailed(errorMessage) {
             globalNotification.showError("Error en la venta: " + errorMessage)
         }
     }
 
-    // ─── Conexiones dinámicas a PrintViewModel ────────────────────────────────
     Connections {
-        target: stackView.currentItem?.printViewModel ?? null
+        target: root.activePrintViewModel
         ignoreUnknownSignals: true
-        enabled: stackView.currentItem?.printViewModel !== undefined
 
         function onPdfGenerated(filePath) {
             globalNotification.showSuccess("PDF generado exitosamente")
         }
-
         function onPrintCompleted() {
             globalNotification.showSuccess("Impresión completada")
         }
-
         function onPrintFailed(error) {
             globalNotification.showError("Error al imprimir: " + error)
         }
     }
+
+
 
     // ─── Página en construcción ───────────────────────────────────────────────
     Component {

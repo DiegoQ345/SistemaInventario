@@ -12,47 +12,76 @@ Page {
     title: qsTr("Ventas")
 
     // Agrega esta propiedad para acceder a settings de forma segura
-    property var appSettings: ApplicationWindow.window?.settings ?? null
+    property var appSettings: ApplicationWindow.window?.settings ?? nul
+
+    property bool pageActive: false
     
     // Habilitar captura de teclas para escáner de código de barras
     focus: true
-    
+
+
+
+
     Component.onCompleted: {
-        console.log("*** SalesPage: Página cargada, forzando foco ***")
-        root.forceActiveFocus()
-        // Los totales se calculan automáticamente desde el ViewModel
-        console.log("*** SalesPage: ViewModels inicializados ***")
-        
-        // Asignar automáticamente el usuario logueado como cajero
-        if (authService && authService.currentUserFullName) {
-            viewModel.cashierName = authService.currentUserFullName
-            console.log("*** SalesPage: Cajero asignado automáticamente:", authService.currentUserFullName, "***")
+        pageActive = true
+        try {
+            console.log("*** SalesPage: onCompleted START ***")
+            root.forceActiveFocus()
+
+            if (authService && authService.currentUserFullName) {
+                viewModel.cashierName = authService.currentUserFullName
+                console.log("*** SalesPage: Cajero:", authService.currentUserFullName)
+            } else {
+                console.warn("*** SalesPage: authService no disponible o sin usuario ***")
+            }
+
+            if (salesSettings.savedRuc !== "") rucField.text = salesSettings.savedRuc
+            if (salesSettings.savedBusinessName !== "") businessNameField.text = salesSettings.savedBusinessName
+            if (salesSettings.savedAddress !== "") addressField.text = salesSettings.savedAddress
+
+            console.log("*** SalesPage: onCompleted OK ***")
+        } catch(e) {
+            console.error("*** SalesPage: CRASH en onCompleted:", e, "***")
         }
-        
-        // Cargar datos guardados de factura
-        if (salesSettings.savedRuc !== "") {
-            rucField.text = salesSettings.savedRuc
-        }
-        if (salesSettings.savedBusinessName !== "") {
-            businessNameField.text = salesSettings.savedBusinessName
-        }
-        if (salesSettings.savedAddress !== "") {
-            addressField.text = salesSettings.savedAddress
-        }
+    }
+
+    Component.onDestruction: {
+        pageActive = false  // ← PRIMERO, antes de cualquier log
+        barcodeScanner.enabled = false
+        refreshTimer.stop()
+        console.log("*** SalesPage: onDestruction START ***")
+        console.log("*** SalesPage: successDialog.opened:", successDialog.opened)
+        console.log("*** SalesPage: errorDialog.opened:", errorDialog.opened)
+        console.log("*** SalesPage: printDialog.opened:", printDialog.opened)
+        console.log("*** SalesPage: quantityDialog.opened:", quantityDialog.opened)
+        console.log("*** SalesPage: refreshTimer.running:", refreshTimer.running)
+        console.log("*** SalesPage: cart.count:", viewModel.cart.count)
+        console.log("*** SalesPage: onDestruction END ***")
     }
     
     onActiveFocusChanged: {
-        console.log("*** SalesPage: Foco activo =", activeFocus, "***")
-                if (!activeFocus) {
-                    // Recuperar foco automáticamente si no hay diálogos abiertos
-                    if (!successDialog.opened && !errorDialog.opened &&
-                        !printDialog.opened && !quantityDialog.opened) {
-                        root.forceActiveFocus()
-                    }
-                }
+        if (!pageActive) return
+        if (!activeFocus) {
+            focusRecoveryTimer.restart()
+        }
     }
+
+    Timer {
+        id: focusRecoveryTimer
+        interval: 100
+        repeat: false
+        onTriggered: {
+            if (!pageActive) return  // ← guard también aquí
+            if (!successDialog.opened && !errorDialog.opened &&
+                !printDialog.opened && !quantityDialog.opened) {
+                root.forceActiveFocus()
+            }
+        }
+    }
+
     
     Keys.onPressed: function(event) {
+        if (!pageActive) return
         console.log("*** SalesPage: Keys.onPressed disparado - Tecla:", event.key, "Texto:", event.text, "***")
         // Solo procesar si no hay diálogos abiertos
         if (!successDialog.opened && !errorDialog.opened && !printDialog.opened && !quantityDialog.opened) {
@@ -77,6 +106,9 @@ Page {
         }
     }
     
+
+
+
     // Configuración del blur cuando se activa
     layer.enabled: false
     layer.effect: MultiEffect {
@@ -121,6 +153,25 @@ Page {
             root.forceActiveFocus()
             mouse.accepted = false
         }
+    }
+
+    // En SalesPage.qml, junto a las otras propiedades del root:
+    function closeAllDialogs() {
+        console.log("*** SalesPage: closeAllDialogs llamado ***")
+        if (successDialog.opened) successDialog.close()
+        if (errorDialog.opened) errorDialog.close()
+        if (printDialog.opened) printDialog.close()
+        if (quantityDialog.opened) quantityDialog.close()
+        if (quickCustomerDialog.opened) quickCustomerDialog.close()
+        if (paymentAmountDialog.opened) paymentAmountDialog.close()
+
+        // Detener timers activos
+        refreshTimer.stop()  // si ya lo agregaste
+
+        // Deshabilitar escáner
+        barcodeScanner.enabled = false
+
+        console.log("*** SalesPage: todos los diálogos cerrados ***")
     }
     
     // Función para procesar la venta después de confirmar el pago
@@ -177,6 +228,8 @@ Page {
             }
 
             onSaleCompleted: function(invoiceNumber, total, voucherType, items, subtotal, discount, customerName, amountPaid, changeGiven) {
+
+
                 // Guardar todos los datos recibidos del ViewModel
                 successDialog.invoiceNumber = invoiceNumber
                 successDialog.total = total
@@ -258,47 +311,55 @@ Page {
             timeout: 100
 
             onBarcodeScanned: function(barcode) {
-                console.log("Código de barras escaneado:", barcode)
+                try {
+                        console.log("*** barcodeScanned:", barcode)
+                        console.log("*** appSettings:", root.appSettings)
+                        console.log("*** quickSaleMode:", root.appSettings?.quickSaleMode)
 
-                // No procesar si hay diálogos abiertos
-                if (successDialog.opened || errorDialog.opened ||
-                    printDialog.opened || quantityDialog.opened) return
+                    console.log("Código de barras escaneado:", barcode)
 
-                // PASO 1: Verificar si el producto existe
-                var productData = viewModel.findProductByCode(barcode)
+                                    // No procesar si hay diálogos abiertos
+                                    if (successDialog.opened || errorDialog.opened ||
+                                        printDialog.opened || quantityDialog.opened) return
 
-                if (!productData || !productData.exists) {
-                    console.log("Producto no encontrado:", barcode)
-                    errorDialog.errorMessage = qsTr("Producto no encontrado: ") + barcode
-                    errorDialog.open()
-                    root.lastScannedBarcode = ""
-                    return
-                }
+                                    // PASO 1: Verificar si el producto existe
+                                    var productData = viewModel.findProductByCode(barcode)
 
-                console.log("Producto encontrado:", productData.name, "- Stock:", productData.currentStock)
+                                    if (!productData || !productData.exists) {
+                                        console.log("Producto no encontrado:", barcode)
+                                        errorDialog.errorMessage = qsTr("Producto no encontrado: ") + barcode
+                                        errorDialog.open()
+                                        root.lastScannedBarcode = ""
+                                        return
+                                    }
 
-                // PASO 2: Venta rápida o diálogo de cantidad
-                if (root.appSettings?.quickSaleMode ?? false) {
-                    // Modo rápido: agrega directo con cantidad 1
-                    var added = viewModel.searchAndAddProduct(barcode, 1)
-                    if (added) {
-                        duplicateNotification.productName = productData.name
-                        duplicateNotification.open()
-                        root.lastScannedBarcode = barcode
-                    } else {
-                        errorDialog.errorMessage = productData.sellableStock <= 0
-                            ? qsTr("Sin stock disponible para venta: ") + productData.name
-                            : qsTr("No se pudo agregar el producto al carrito: ") + productData.name
-                        errorDialog.open()
-                        root.lastScannedBarcode = ""
+                                    console.log("Producto encontrado:", productData.name, "- Stock:", productData.currentStock)
+
+                                    // PASO 2: Venta rápida o diálogo de cantidad
+                                    if (root.appSettings?.quickSaleMode ?? false) {
+                                        // Modo rápido: agrega directo con cantidad 1
+                                        var added = viewModel.searchAndAddProduct(barcode, 1)
+                                        if (added) {
+                                            duplicateNotification.productName = productData.name
+                                            duplicateNotification.open()
+                                            root.lastScannedBarcode = barcode
+                                        } else {
+                                            errorDialog.errorMessage = productData.sellableStock <= 0
+                                                ? qsTr("Sin stock disponible para venta: ") + productData.name
+                                                : qsTr("No se pudo agregar el producto al carrito: ") + productData.name
+                                            errorDialog.open()
+                                            root.lastScannedBarcode = ""
+                                        }
+                                    } else {
+                                        // Modo normal: abre diálogo de cantidad
+                                        quantityDialog.scannedBarcode = barcode
+                                        quantityDialog.productName = productData.name
+                                        quantityDialog.currentStock = productData.sellableStock
+                                        quantityDialog.open()
+                                    }
+                    } catch(e) {
+                        console.error("*** CRASH en onBarcodeScanned:", e)
                     }
-                } else {
-                    // Modo normal: abre diálogo de cantidad
-                    quantityDialog.scannedBarcode = barcode
-                    quantityDialog.productName = productData.name
-                    quantityDialog.currentStock = productData.sellableStock
-                    quantityDialog.open()
-                }
             }
         }
 
@@ -1525,72 +1586,90 @@ Page {
             property int maxRetries: 3
             
             onTriggered: {
-                console.log("🔄 Refrescando lista de clientes (intento " + (retryCount + 1) + "/" + maxRetries + ")...")
-                
-                // Forzar refresco completo del modelo
-                customerSelector.model.refresh()
-                
-                // Esperar a que se complete el refresco del modelo
-                Qt.callLater(function() {
-                    console.log("🔍 Buscando cliente recién creado (ID:" + savedCustomerId + ")...")
-                    console.log("   Total clientes en lista:", customerSelector.model.count)
-                    
-                    var found = false
-                    for (var i = 0; i < customerSelector.model.count; i++) {
-                        var customer = customerSelector.model.get(i)
-                        
-                        if (customer.customerId === savedCustomerId) {
-                            found = true
-                            console.log("✅ Cliente encontrado en posición", i)
-                            
-                            // Actualizar las propiedades del selector
-                            customerSelector.selectedCustomerId = savedCustomerId
-                            customerSelector.selectedCustomerName = savedCustomerName
-                            customerSelector.selectedDocumentNumber = customer.documentNumber || ""
-                            customerSelector.selectedAddress = customer.address || ""
-                            
-                            // Actualizar las propiedades del root
-                            root.currentCustomerId = savedCustomerId
-                            root.currentCustomerName = savedCustomerName
-                            root.currentCustomerDocument = customer.documentNumber || ""
-                            
-                            // Emitir señal de selección
-                            customerSelector.customerSelected(
-                                savedCustomerId,
-                                savedCustomerName,
-                                customer.documentNumber || "",
-                                customer.address || ""
-                            )
-                            
-                            notificationBar.show("Cliente '" + savedCustomerName + "' creado y seleccionado", "success")
-                            console.log("✅ Cliente auto-seleccionado exitosamente")
-                            
-                            // Cerrar el diálogo
-                            quickCustomerDialog.close()
-                            
-                            // Resetear contador de reintentos
-                            retryCount = 0
-                            break
+                try {
+                            console.log("*** refreshTimer: onTriggered, verificando página activa ***")
+
+                            // GUARD: Si la página ya no está activa, abortar
+                            if (!root || !root.visible) {
+                                console.warn("*** refreshTimer: página destruida o invisible, abortando ***")
+                                return
+                            }
+
+                            console.log("*** refreshTimer: customerSelector válido:", customerSelector !== null)
+                            console.log("*** refreshTimer: model count:", customerSelector.model.count)
+
+                            {
+                                            console.log("🔄 Refrescando lista de clientes (intento " + (retryCount + 1) + "/" + maxRetries + ")...")
+
+                                            // Forzar refresco completo del modelo
+                                            customerSelector.model.refresh()
+
+                                            // Esperar a que se complete el refresco del modelo
+                                            Qt.callLater(function() {
+                                                console.log("🔍 Buscando cliente recién creado (ID:" + savedCustomerId + ")...")
+                                                console.log("   Total clientes en lista:", customerSelector.model.count)
+
+                                                var found = false
+                                                for (var i = 0; i < customerSelector.model.count; i++) {
+                                                    var customer = customerSelector.model.get(i)
+
+                                                    if (customer.customerId === savedCustomerId) {
+                                                        found = true
+                                                        console.log("✅ Cliente encontrado en posición", i)
+
+                                                        // Actualizar las propiedades del selector
+                                                        customerSelector.selectedCustomerId = savedCustomerId
+                                                        customerSelector.selectedCustomerName = savedCustomerName
+                                                        customerSelector.selectedDocumentNumber = customer.documentNumber || ""
+                                                        customerSelector.selectedAddress = customer.address || ""
+
+                                                        // Actualizar las propiedades del root
+                                                        root.currentCustomerId = savedCustomerId
+                                                        root.currentCustomerName = savedCustomerName
+                                                        root.currentCustomerDocument = customer.documentNumber || ""
+
+                                                        // Emitir señal de selección
+                                                        customerSelector.customerSelected(
+                                                            savedCustomerId,
+                                                            savedCustomerName,
+                                                            customer.documentNumber || "",
+                                                            customer.address || ""
+                                                        )
+
+                                                        notificationBar.show("Cliente '" + savedCustomerName + "' creado y seleccionado", "success")
+                                                        console.log("✅ Cliente auto-seleccionado exitosamente")
+
+                                                        // Cerrar el diálogo
+                                                        quickCustomerDialog.close()
+
+                                                        // Resetear contador de reintentos
+                                                        retryCount = 0
+                                                        break
+                                                    }
+                                                }
+
+                                                if (!found) {
+                                                    retryCount++
+                                                    if (retryCount < maxRetries) {
+                                                        console.warn("⚠️ Cliente no encontrado, reintentando en " + interval + "ms...")
+                                                        // Aumentar el intervalo para el siguiente intento
+                                                        interval = interval + 200
+                                                        restart()
+                                                    } else {
+                                                        console.error("❌ No se encontró el cliente después de " + maxRetries + " intentos")
+                                                        notificationBar.show("Cliente creado. Actualice manualmente si no aparece.", "warning")
+                                                        retryCount = 0
+                                                        interval = 200 // Resetear intervalo
+                                                        quickCustomerDialog.close()
+                                                    }
+                                                }
+                                            })
+                                        }
+
+                        } catch(e) {
+                            console.error("*** CRASH en refreshTimer:", e, "***")
                         }
                     }
-                    
-                    if (!found) {
-                        retryCount++
-                        if (retryCount < maxRetries) {
-                            console.warn("⚠️ Cliente no encontrado, reintentando en " + interval + "ms...")
-                            // Aumentar el intervalo para el siguiente intento
-                            interval = interval + 200
-                            restart()
-                        } else {
-                            console.error("❌ No se encontró el cliente después de " + maxRetries + " intentos")
-                            notificationBar.show("Cliente creado. Actualice manualmente si no aparece.", "warning")
-                            retryCount = 0
-                            interval = 200 // Resetear intervalo
-                            quickCustomerDialog.close()
-                        }
-                    }
-                })
-            }
         }
         
         onAboutToShow: {

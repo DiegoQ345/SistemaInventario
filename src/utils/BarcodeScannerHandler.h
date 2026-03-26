@@ -16,6 +16,7 @@
  */
 class BarcodeScannerHandler : public QObject
 {
+
     Q_OBJECT
     // QML_ELEMENT - Registrado manualmente en main.cpp
 

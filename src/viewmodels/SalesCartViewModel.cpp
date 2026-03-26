@@ -5,6 +5,9 @@
 // CartItemModel Implementation
 // ============================================================================
 
+
+
+
 CartItemModel::CartItemModel(QObject *parent)
     : QAbstractListModel(parent)
 {
